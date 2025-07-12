@@ -1,6 +1,9 @@
 package service
 
-import "github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+import (
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"errors"
+)
 
 type DepartmentService struct {
 	repo *repository.DepartmentRepository
@@ -23,5 +26,14 @@ func (s *DepartmentService) DeleteDepartment(id int) error {
 }
 
 func (s *DepartmentService) UpdateDepartment(id int, req repository.UpdateDepartmentRequest) (*repository.Department, error) {
+	isTaken, err := s.repo.IsNameTaken(req.Name, id)
+	if err != nil {
+		
+		return nil, err
+	}
+	if isTaken {
+		return nil, errors.New("department name already exists")
+	}
+
 	return s.repo.Update(id, req)
 }

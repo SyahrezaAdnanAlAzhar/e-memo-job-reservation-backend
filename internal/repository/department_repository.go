@@ -29,6 +29,27 @@ func NewDepartmentRepository(db *sql.DB) *DepartmentRepository {
 	return &DepartmentRepository{DB: db}
 }
 
+// HELPER
+
+// CHECK UNIQUE NAME
+func (r *DepartmentRepository) IsNameTaken(name string, currentID int) (bool, error) {
+	var existsID int
+	query := "SELECT id FROM department WHERE name = $1 AND id != $2 LIMIT 1"
+
+	err := r.DB.QueryRow(query, name, currentID).Scan(&existsID)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, err
+	}
+	
+	return true, nil
+} 
+
+
+// MAIN
 
 // GET ALL
 func (r *DepartmentRepository) FindAll() ([]Department, error) {
@@ -103,7 +124,7 @@ func (r *DepartmentRepository) Update(id int, req UpdateDepartmentRequest) (*Dep
 		&updatedDept.ReceiveJob, &updatedDept.IsActive,
 		&updatedDept.CreatedAt, &updatedDept.UpdatedAt,
 	)
-	
+
 	if err != nil {
 		return nil, err
 	}

@@ -85,6 +85,11 @@ func (h *DepartmentHandler) UpdateDepartment(c *gin.Context) {
 
 	updatedDept, err := h.service.UpdateDepartment(id, req)
 	if err != nil {
+		if err.Error() == "department name already exists" {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Department not found"})
 			return
