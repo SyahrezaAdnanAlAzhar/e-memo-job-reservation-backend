@@ -37,6 +37,7 @@ func main() {
 		{
 			deptRoutes.GET("", departmentHandler.GetAllDepartments)
 			deptRoutes.GET("/:id", departmentHandler.GetDepartmentByID)
+			deptRoutes.DELETE("/:id", departmentHandler.DeleteDepartment)
 		}
 	}
 

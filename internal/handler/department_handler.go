@@ -46,3 +46,24 @@ func (h *DepartmentHandler) GetDepartmentByID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, department)
 }
+
+// DELETE /departments/:id
+func (h *DepartmentHandler) DeleteDepartment(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid department ID"})
+		return
+	}
+
+	err = h.service.DeleteDepartment(id)
+	if err != nil {
+		if err.Error() == "department not found or already deleted" {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete department"})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}

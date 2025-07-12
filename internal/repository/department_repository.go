@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"time"
+	"errors"
 )
 
 type Department struct {
@@ -56,4 +57,25 @@ func (r *DepartmentRepository) FindByID(id int) (*Department, error) {
 		return nil, err
 	}
 	return &d, nil
+}
+
+
+// DELETE
+func (r *DepartmentRepository) Delete(id int) error {
+	query := "DELETE FROM department WHERE id = $1"
+	result, err := r.DB.Exec(query, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return errors.New("department not found or already deleted")
+	}
+
+	return nil
 }
