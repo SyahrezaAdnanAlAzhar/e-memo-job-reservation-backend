@@ -18,22 +18,25 @@ func main() {
 	// REPOSITORY
 	// employeeRepo := repository.NewEmployeeRepository(db)
 	departmentRepo := repository.NewDepartmentRepository(db)
+	areaRepo := repository.NewAreaRepository(db)
 
 
 	// SERVICE
 	departmentService := service.NewDepartmentService(departmentRepo)
+	areaService := service.NewAreaService(areaRepo)
 
 
 	// HANDLER
 	// employeeHandler := handler.NewEmployeeHandler(employeeRepo)
 	departmentHandler := handler.NewDepartmentHandler(departmentService)
+	areaHandler := handler.NewAreaHandler(areaService)
 
 
 	// SETUP
 	router := gin.Default()
 	api := router.Group("/api/e-memo-job-reservation")
 	{
-		deptRoutes := api.Group("/departments")
+		deptRoutes := api.Group("/department")
 		{
 			deptRoutes.POST("", departmentHandler.CreateDepartment)
 			deptRoutes.GET("", departmentHandler.GetAllDepartments)
@@ -41,6 +44,11 @@ func main() {
 			deptRoutes.DELETE("/:id", departmentHandler.DeleteDepartment)
 			deptRoutes.PUT("/:id", departmentHandler.UpdateDepartment)
 			deptRoutes.PATCH("/:id/status", departmentHandler.UpdateDepartmentActiveStatus)
+		}
+
+		areaRoutes := api.Group("/area")
+		{
+			areaRoutes.POST("", areaHandler.CreateArea)
 		}
 	}
 

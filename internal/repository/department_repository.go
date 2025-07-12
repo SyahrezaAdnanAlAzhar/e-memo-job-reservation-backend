@@ -62,11 +62,11 @@ func (r *DepartmentRepository) IsNameTaken(name string, currentID int) (bool, er
 
 // MAIN
 
-// INSERT
+// CREATE
 func (r *DepartmentRepository) Create(req CreateDepartmentRequest) (*Department, error) {
 	query := `
         INSERT INTO department (name, receive_job, is_active)
-        VALUES ($1, $2, true)
+        VALUES ($1, $2, false)
         RETURNING id, name, receive_job, is_active, created_at, updated_at`
 
 	row := r.DB.QueryRow(query, req.Name, req.ReceiveJob)
