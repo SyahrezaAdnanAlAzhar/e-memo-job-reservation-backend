@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"net/http"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/handler"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
@@ -30,10 +29,15 @@ func main() {
 	departmentHandler := handler.NewDepartmentHandler(departmentService)
 
 
+	// SETUP
 	router := gin.Default()
-	apiV1 := router.Group("/api/e-memo-job-reservation")
+	api := router.Group("/api/e-memo-job-reservation")
 	{
-		apiV1.GET("/departments", departmentHandler.GetAllDepartments)
+		deptRoutes := api.Group("/departments")
+		{
+			deptRoutes.GET("", departmentHandler.GetAllDepartments)
+			deptRoutes.GET("/:id", departmentHandler.GetDepartmentByID)
+		}
 	}
 
 	

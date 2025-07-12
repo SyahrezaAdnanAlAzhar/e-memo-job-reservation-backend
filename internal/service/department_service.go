@@ -14,3 +14,6 @@ func (s *DepartmentService) GetAllDepartments() ([]repository.Department, error)
 	return s.repo.FindAll()
 }
 
+func (s *DepartmentService) GetDepartmentByID(id int) (*repository.Department, error) {
+	return s.repo.FindByID(id)
+}
