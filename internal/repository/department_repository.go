@@ -21,6 +21,11 @@ type UpdateDepartmentRequest struct {
 	IsActive   bool   `json:"is_active"`
 }
 
+type CreateDepartmentRequest struct {
+	Name       string `json:"name" binding:"required"`
+	ReceiveJob bool   `json:"receive_job"`
+}
+
 type DepartmentRepository struct {
 	DB *sql.DB
 }
@@ -44,12 +49,33 @@ func (r *DepartmentRepository) IsNameTaken(name string, currentID int) (bool, er
 		}
 		return false, err
 	}
-	
+
 	return true, nil
 } 
 
 
 // MAIN
+
+// INSERT
+func (r *DepartmentRepository) Create(req CreateDepartmentRequest) (*Department, error) {
+	query := `
+        INSERT INTO department (name, receive_job, is_active)
+        VALUES ($1, $2, true)
+        RETURNING id, name, receive_job, is_active, created_at, updated_at`
+
+	row := r.DB.QueryRow(query, req.Name, req.ReceiveJob)
+	
+	var newDept Department
+	err := row.Scan(
+		&newDept.ID, &newDept.Name, &newDept.ReceiveJob, 
+		&newDept.IsActive, &newDept.CreatedAt, &newDept.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &newDept, nil
+}
+
 
 // GET ALL
 func (r *DepartmentRepository) FindAll() ([]Department, error) {

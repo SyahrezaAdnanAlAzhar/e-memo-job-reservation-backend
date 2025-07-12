@@ -3,6 +3,7 @@ package service
 import (
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	"errors"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type DepartmentService struct {
@@ -11,6 +12,23 @@ type DepartmentService struct {
 
 func NewDepartmentService(repo *repository.DepartmentRepository) *DepartmentService {
 	return &DepartmentService{repo: repo}
+}
+
+func (s *DepartmentService) CreateDepartment(req repository.CreateDepartmentRequest) (*repository.Department, error) {
+	if req.Name == "" {
+		return nil, errors.New("department name is required")
+	}
+
+	newDept, err := s.repo.Create(req)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return nil, errors.New("department name already exists")
+		}
+		return nil, err
+	}
+
+	return newDept, nil
 }
 
 func (s *DepartmentService) GetAllDepartments() ([]repository.Department, error) {

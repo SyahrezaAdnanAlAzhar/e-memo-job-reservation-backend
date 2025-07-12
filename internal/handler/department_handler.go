@@ -17,6 +17,27 @@ func NewDepartmentHandler(service *service.DepartmentService) *DepartmentHandler
 	return &DepartmentHandler{service: service}
 }
 
+// POST /departments
+func (h *DepartmentHandler) CreateDepartment(c *gin.Context) {
+	var req repository.CreateDepartmentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	newDept, err := h.service.CreateDepartment(req)
+	if err != nil {
+		if err.Error() == "department name already exists" {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()}) 
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create department"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, newDept)
+}
+
 // GET /departments
 func (h *DepartmentHandler) GetAllDepartments(c *gin.Context) {
 	departments, err := h.service.GetAllDepartments()

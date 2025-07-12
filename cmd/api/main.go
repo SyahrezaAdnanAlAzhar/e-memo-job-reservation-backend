@@ -35,6 +35,7 @@ func main() {
 	{
 		deptRoutes := api.Group("/departments")
 		{
+			deptRoutes.POST("", departmentHandler.CreateDepartment)
 			deptRoutes.GET("", departmentHandler.GetAllDepartments)
 			deptRoutes.GET("/:id", departmentHandler.GetDepartmentByID)
 			deptRoutes.DELETE("/:id", departmentHandler.DeleteDepartment)
