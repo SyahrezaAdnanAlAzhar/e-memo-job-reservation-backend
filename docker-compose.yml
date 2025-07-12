@@ -2,7 +2,7 @@ version: '3.8'
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: my_postgres_db
+    container_name: job-reservations-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}

@@ -87,7 +87,7 @@ func seedStatusTickets(db *sql.DB) {
 	}
 
 	for _, s := range statuses {
-		_, err := db.Exec("INSERT INTO status_ticket (name, sequence, is_active) VALUES ($1, $2, $3) ON CONFLICT(sequence) DO NOTHING", s.name, s.sequence, s.is_active)
+		_, err := db.Exec("INSERT INTO status_ticket (name, sequence, is_active) VALUES ($1, $2, $3) ON CONFLICT(name, sequence) DO NOTHING", s.name, s.sequence, s.is_active)
 		if err != nil {
 			log.Fatalf("Failed to insert status ticket (%v): %v", s.name, err)
 		}
