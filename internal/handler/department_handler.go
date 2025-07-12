@@ -2,6 +2,7 @@ package handler
 
 import (
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	"net/http"
 	"database/sql"
 	"strconv"
@@ -66,4 +67,31 @@ func (h *DepartmentHandler) DeleteDepartment(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+// PUT /departments/:id
+func (h *DepartmentHandler) UpdateDepartment(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid department ID"})
+		return
+	}
+
+	var req repository.UpdateDepartmentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	updatedDept, err := h.service.UpdateDepartment(id, req)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Department not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update department"})
+		return
+	}
+
+	c.JSON(http.StatusOK, updatedDept)
 }

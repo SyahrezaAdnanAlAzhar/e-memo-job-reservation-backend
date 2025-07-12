@@ -21,3 +21,7 @@ func (s *DepartmentService) GetDepartmentByID(id int) (*repository.Department, e
 func (s *DepartmentService) DeleteDepartment(id int) error {
 	return s.repo.Delete(id)
 }
+
+func (s *DepartmentService) UpdateDepartment(id int, req repository.UpdateDepartmentRequest) (*repository.Department, error) {
+	return s.repo.Update(id, req)
+}

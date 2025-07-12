@@ -15,6 +15,12 @@ type Department struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
+type UpdateDepartmentRequest struct {
+	Name       string `json:"name" binding:"required"`
+	ReceiveJob bool   `json:"receive_job"`
+	IsActive   bool   `json:"is_active"`
+}
+
 type DepartmentRepository struct {
 	DB *sql.DB
 }
@@ -78,4 +84,28 @@ func (r *DepartmentRepository) Delete(id int) error {
 	}
 
 	return nil
+}
+
+
+// UPDATE
+func (r *DepartmentRepository) Update(id int, req UpdateDepartmentRequest) (*Department, error) {
+	query := `
+		UPDATE department 
+        SET name = $1, receive_job = $2, is_active = $3, updated_at = NOW() 
+        WHERE id = $4 
+        RETURNING id, name, receive_job, is_active, created_at, updated_at`
+
+	row := r.DB.QueryRow(query, req.Name, req.ReceiveJob, req.IsActive, id)
+
+	var updatedDept Department
+	err := row.Scan(
+		&updatedDept.ID, &updatedDept.Name,
+		&updatedDept.ReceiveJob, &updatedDept.IsActive,
+		&updatedDept.CreatedAt, &updatedDept.UpdatedAt,
+	)
+	
+	if err != nil {
+		return nil, err
+	}
+	return &updatedDept, nil
 }
