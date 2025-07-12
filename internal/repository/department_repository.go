@@ -127,7 +127,7 @@ func (r *DepartmentRepository) FindAll(filters map[string]string) ([]Department,
 }
 
 
-// SELECT BY ID
+// GET BY ID
 func (r *DepartmentRepository) FindByID(id int) (*Department, error) {
 	query := "SELECT id, name, receive_job, is_active, created_at, updated_at FROM department WHERE id = $1"
 	row := r.DB.QueryRow(query, id)

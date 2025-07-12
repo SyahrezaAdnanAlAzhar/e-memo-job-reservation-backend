@@ -14,6 +14,7 @@ func NewDepartmentService(repo *repository.DepartmentRepository) *DepartmentServ
 	return &DepartmentService{repo: repo}
 }
 
+// CREATE
 func (s *DepartmentService) CreateDepartment(req repository.CreateDepartmentRequest) (*repository.Department, error) {
 	if req.Name == "" {
 		return nil, errors.New("department name is required")
@@ -31,18 +32,26 @@ func (s *DepartmentService) CreateDepartment(req repository.CreateDepartmentRequ
 	return newDept, nil
 }
 
+
+// GET ALL
 func (s *DepartmentService) GetAllDepartments(filters map[string]string) ([]repository.Department, error) {
 	return s.repo.FindAll(filters)
 }
 
+
+// GET BY ID
 func (s *DepartmentService) GetDepartmentByID(id int) (*repository.Department, error) {
 	return s.repo.FindByID(id)
 }
 
+
+// DELETE
 func (s *DepartmentService) DeleteDepartment(id int) error {
 	return s.repo.Delete(id)
 }
 
+
+// UPDATE
 func (s *DepartmentService) UpdateDepartment(id int, req repository.UpdateDepartmentRequest) (*repository.Department, error) {
 	isTaken, err := s.repo.IsNameTaken(req.Name, id)
 	if err != nil {
@@ -56,6 +65,8 @@ func (s *DepartmentService) UpdateDepartment(id int, req repository.UpdateDepart
 	return s.repo.Update(id, req)
 }
 
+
+// CHANGE ACTIVE STATUS
 func (s *DepartmentService) UpdateDepartmentActiveStatus(id int, req repository.UpdateStatusRequest) error {
 	return s.repo.UpdateActiveStatus(id, req.IsActive)
 }
