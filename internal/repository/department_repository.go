@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"time"
 	"errors"
+	"strconv"
+    "strings"
 )
 
 type Department struct {
@@ -82,9 +84,31 @@ func (r *DepartmentRepository) Create(req CreateDepartmentRequest) (*Department,
 
 
 // GET ALL
-func (r *DepartmentRepository) FindAll() ([]Department, error) {
-	query := "SELECT id, name, receive_job, is_active, created_at, updated_at FROM department ORDER BY id ASC"
-	rows, err := r.DB.Query(query)
+func (r *DepartmentRepository) FindAll(filters map[string]string) ([]Department, error) {
+	query := "SELECT id, name, receive_job, is_active, created_at, updated_at FROM department"
+	
+	var conditions []string
+	var args []interface{}
+	argID := 1
+
+	if val, ok := filters["is_active"]; ok {
+		conditions = append(conditions, "is_active = $"+strconv.Itoa(argID))
+		args = append(args, val)
+		argID++
+	}
+	if val, ok := filters["receive_job"]; ok {
+		conditions = append(conditions, "receive_job = $"+strconv.Itoa(argID))
+		args = append(args, val)
+		argID++
+	}
+
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	query += " ORDER BY id ASC"
+	
+	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}

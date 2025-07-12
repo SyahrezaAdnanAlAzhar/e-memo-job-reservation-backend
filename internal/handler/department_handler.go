@@ -40,11 +40,26 @@ func (h *DepartmentHandler) CreateDepartment(c *gin.Context) {
 
 // GET /departments
 func (h *DepartmentHandler) GetAllDepartments(c *gin.Context) {
-	departments, err := h.service.GetAllDepartments()
+	filters := make(map[string]string)
+
+	if isActive, exists := c.GetQuery("is_active"); exists {
+		filters["is_active"] = isActive
+	}
+	if receiveJob, exists := c.GetQuery("receive_job"); exists {
+		filters["receive_job"] = receiveJob
+	}
+
+	departments, err := h.service.GetAllDepartments(filters)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve departments"})
 		return
 	}
+	
+	if departments == nil {
+		c.JSON(http.StatusOK, []repository.Department{})
+        return
+	}
+
 	c.JSON(http.StatusOK, departments)
 }
 

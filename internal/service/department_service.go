@@ -31,8 +31,8 @@ func (s *DepartmentService) CreateDepartment(req repository.CreateDepartmentRequ
 	return newDept, nil
 }
 
-func (s *DepartmentService) GetAllDepartments() ([]repository.Department, error) {
-	return s.repo.FindAll()
+func (s *DepartmentService) GetAllDepartments(filters map[string]string) ([]repository.Department, error) {
+	return s.repo.FindAll(filters)
 }
 
 func (s *DepartmentService) GetDepartmentByID(id int) (*repository.Department, error) {
