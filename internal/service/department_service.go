@@ -55,3 +55,7 @@ func (s *DepartmentService) UpdateDepartment(id int, req repository.UpdateDepart
 
 	return s.repo.Update(id, req)
 }
+
+func (s *DepartmentService) UpdateDepartmentActiveStatus(id int, req repository.UpdateStatusRequest) error {
+	return s.repo.UpdateActiveStatus(id, req.IsActive)
+}

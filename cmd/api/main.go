@@ -40,6 +40,7 @@ func main() {
 			deptRoutes.GET("/:id", departmentHandler.GetDepartmentByID)
 			deptRoutes.DELETE("/:id", departmentHandler.DeleteDepartment)
 			deptRoutes.PUT("/:id", departmentHandler.UpdateDepartment)
+			deptRoutes.PATCH("/:id/status", departmentHandler.UpdateDepartmentActiveStatus)
 		}
 	}
 

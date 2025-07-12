@@ -121,3 +121,30 @@ func (h *DepartmentHandler) UpdateDepartment(c *gin.Context) {
 
 	c.JSON(http.StatusOK, updatedDept)
 }
+
+// PATCH /departments/:id/status
+func (h *DepartmentHandler) UpdateDepartmentActiveStatus(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid department ID"})
+		return
+	}
+
+	var req repository.UpdateStatusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = h.service.UpdateDepartmentActiveStatus(id, req)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Department not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update department status"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Department status updated successfully"})
+}

@@ -26,6 +26,10 @@ type CreateDepartmentRequest struct {
 	ReceiveJob bool   `json:"receive_job"`
 }
 
+type UpdateStatusRequest struct {
+	IsActive bool `json:"is_active"`
+}
+
 type DepartmentRepository struct {
 	DB *sql.DB
 }
@@ -155,4 +159,20 @@ func (r *DepartmentRepository) Update(id int, req UpdateDepartmentRequest) (*Dep
 		return nil, err
 	}
 	return &updatedDept, nil
+}
+
+
+// CHANGE ACTIVE STATUS
+func (r *DepartmentRepository) UpdateActiveStatus(id int, isActive bool) error {
+	query := "UPDATE department SET is_active = $1, updated_at = NOW() WHERE id = $2"
+	result, err := r.DB.Exec(query, isActive, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows 
+	}
+	return nil
 }
