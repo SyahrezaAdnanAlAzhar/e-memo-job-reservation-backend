@@ -2,6 +2,8 @@ package repository
 
 import (
 	"database/sql"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -46,4 +48,47 @@ func (r *AreaRepository) Create(req CreateAreaRequest) (*Area, error) {
 	}
 
 	return &newArea, nil
+}
+
+
+// GET ALL
+func (r *AreaRepository) FindAll(filters map[string]string) ([]Area, error) {
+	baseQuery := "SELECT id, department_id, name, is_active, created_at, updated_at FROM area"
+	var conditions []string
+	var args []interface{}
+	argID := 1
+
+	if val, ok := filters["is_active"]; ok {
+		conditions = append(conditions, "is_active = $"+strconv.Itoa(argID))
+		args = append(args, val)
+		argID++
+	}
+	if val, ok := filters["department_id"]; ok {
+		conditions = append(conditions, "department_id = $"+strconv.Itoa(argID))
+		args = append(args, val)
+		argID++
+	}
+
+	if len(conditions) > 0 {
+		baseQuery += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	baseQuery += " ORDER BY department_id ASC, id ASC"
+
+	rows, err := r.DB.Query(baseQuery, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var areas []Area
+	for rows.Next() {
+		var a Area
+		err := rows.Scan(&a.ID, &a.DepartmentID, &a.Name, &a.IsActive, &a.CreatedAt, &a.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		areas = append(areas, a)
+	}
+	return areas, nil
 }

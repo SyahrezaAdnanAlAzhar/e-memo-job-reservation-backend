@@ -38,3 +38,29 @@ func (h *AreaHandler) CreateArea(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, newArea)
 }
+
+// GET /area
+func (h *AreaHandler) GetAllAreas(c *gin.Context) {
+	filters := make(map[string]string)
+
+	if isActive, exists := c.GetQuery("is_active"); exists {
+		filters["is_active"] = isActive
+	}
+
+	if deptID, exists := c.GetQuery("department_id"); exists {
+		filters["department_id"] = deptID
+	}
+
+	areas, err := h.service.GetAllAreas(filters)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve areas"})
+		return
+	}
+
+	if areas == nil {
+		c.JSON(http.StatusOK, []repository.Area{})
+		return
+	}
+
+	c.JSON(http.StatusOK, areas)
+}

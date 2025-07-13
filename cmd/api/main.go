@@ -49,6 +49,7 @@ func main() {
 		areaRoutes := api.Group("/area")
 		{
 			areaRoutes.POST("", areaHandler.CreateArea)
+			areaRoutes.GET("", areaHandler.GetAllAreas)
 		}
 	}
 

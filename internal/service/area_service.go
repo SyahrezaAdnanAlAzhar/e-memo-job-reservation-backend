@@ -14,6 +14,7 @@ func NewAreaService(repo *repository.AreaRepository) *AreaService {
 	return &AreaService{repo: repo}
 }
 
+// CREATE
 func (s *AreaService) CreateArea(req repository.CreateAreaRequest) (*repository.Area, error) {
 	if req.Name == "" {
 		return nil, errors.New("area name is required")
@@ -32,4 +33,10 @@ func (s *AreaService) CreateArea(req repository.CreateAreaRequest) (*repository.
 	}
 
 	return newArea, nil
+}
+
+
+// GET ALL
+func (s *AreaService) GetAllAreas(filters map[string]string) ([]repository.Area, error) {
+	return s.repo.FindAll(filters)
 }
