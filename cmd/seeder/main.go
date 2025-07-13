@@ -40,14 +40,14 @@ func main() {
 	seedWorkflow(db)
 
 	// 2. Master Data Dependen
-	seedAreas(db) 
-	seedSpecifiedLocation(db) 
-	seedStatusTicket(db) 
-	seedWorkflowStep(db) 
+	seedAreas(db)
+	seedSpecifiedLocation(db)
+	seedStatusTicket(db)
+	seedWorkflowStep(db)
 
 	// 3. Main Data
-	seedPositionToWorkflowMapping(db) 
-	seedEmployees(db) 
+	seedPositionToWorkflowMapping(db)
+	seedEmployees(db)
 
 	log.Println("Finish Seeding!")
 }
@@ -82,7 +82,6 @@ func truncateTables(db *sql.DB) {
 
 	log.Println("All tables truncated successfully.")
 }
-
 
 // 1. Master Data Independen
 
@@ -122,10 +121,10 @@ func seedPhysicalLocation(db *sql.DB) {
 		name      string
 		is_active bool
 	}{
-		{"Forging", true},          // 1
-		{"Production", true},       // 2
-		{"Log", true},              // 3
-		{"Building Office", true},  // 4
+		{"Forging", true},         // 1
+		{"Production", true},      // 2
+		{"Log", true},             // 3
+		{"Building Office", true}, // 4
 	}
 
 	for _, p := range physicalLocation {
@@ -138,14 +137,14 @@ func seedPhysicalLocation(db *sql.DB) {
 	log.Println("Finish insert data on Physical Location")
 }
 
-// 1.3. 
+// 1.3.
 func seedPosition(db *sql.DB) {
-	log.Println("Seeding positions...")
+	log.Println("Seeding position...")
 	positions := []string{"Department", "Section", "Frontman", "Leader"}
 	for _, p := range positions {
-		_, err := db.Exec("INSERT INTO positions (name, is_active) VALUES ($1, true) ON CONFLICT(name) DO NOTHING", p)
+		_, err := db.Exec("INSERT INTO position (name, is_active) VALUES ($1, true) ON CONFLICT(name) DO NOTHING", p)
 		if err != nil {
-			log.Fatalf("Failed to seed positions: %v", err)
+			log.Fatalf("Failed to seed position: %v", err)
 		}
 	}
 }
@@ -153,7 +152,7 @@ func seedPosition(db *sql.DB) {
 // 1.4.
 func seedSectionStatusTickets(db *sql.DB) {
 	log.Println("Seeding section_status_ticket...")
-	
+
 	sections := []struct {
 		name     string
 		sequence int
@@ -173,16 +172,15 @@ func seedSectionStatusTickets(db *sql.DB) {
 
 // 1.5.
 func seedWorkflow(db *sql.DB) {
-	log.Println("Seeding workflows...")
+	log.Println("Seeding workflow...")
 	workflows := []string{"Direct to Job Workflow", "Department Approval Workflow", "Full Approval Workflow"}
 	for _, w := range workflows {
-		_, err := db.Exec("INSERT INTO workflows (name, is_active) VALUES ($1, true) ON CONFLICT(name) DO NOTHING", w)
+		_, err := db.Exec("INSERT INTO workflow (name, is_active) VALUES ($1, true) ON CONFLICT(name) DO NOTHING", w)
 		if err != nil {
-			log.Fatalf("Failed to seed workflows: %v", err)
+			log.Fatalf("Failed to seed workflow: %v", err)
 		}
 	}
 }
-
 
 // 2. Master Data Dependen
 
@@ -248,16 +246,16 @@ func seedStatusTicket(db *sql.DB) {
 	log.Println("Seed Status Ticket")
 
 	statuses := []struct {
-		name      string
+		name       string
 		section_id int
-		sequence  int
+		sequence   int
 	}{
 		// DELETE SECTION
 		{"Dibatalkan", 1, 0},
 
 		// APPROVAL SECTION
 		{"Approval Section", 2, 1},
-		{"Approval Department",2, 2},
+		{"Approval Department", 2, 2},
 
 		// ACTUAL SECTION
 		{"Menunggu Job", 3, 3},
@@ -267,7 +265,7 @@ func seedStatusTicket(db *sql.DB) {
 	}
 
 	for _, s := range statuses {
-		_, err := db.Exec("INSERT INTO status_ticket (name, section_id, sequence, is_active) VALUES ($1, $2, $3, true) ON CONFLICT(name, sequence) DO NOTHING", s.name, s.section_id, s.sequence)
+		_, err := db.Exec("INSERT INTO status_ticket (name, section_id, sequence, is_active) VALUES ($1, $2, $3, true) ON CONFLICT ON CONSTRAINT status_ticket_unique_name DO NOTHING", s.name, s.section_id, s.sequence)
 		if err != nil {
 			log.Fatalf("Failed to insert status ticket (%v): %v", s.name, err)
 		}
@@ -277,7 +275,7 @@ func seedStatusTicket(db *sql.DB) {
 
 // 2.4.
 func seedWorkflowStep(db *sql.DB) {
-	log.Println("Seeding workflow_steps...")
+	log.Println("Seeding workflow_step...")
 
 	steps := []struct {
 		workflow_id      int
@@ -298,14 +296,13 @@ func seedWorkflowStep(db *sql.DB) {
 	}
 	for _, s := range steps {
 		_, err := db.Exec(`
-            INSERT INTO workflow_steps (workflow_id, status_ticket_id, step_sequence, is_active) VALUES ($1, $2, $3, true)
+            INSERT INTO workflow_step (workflow_id, status_ticket_id, step_sequence, is_active) VALUES ($1, $2, $3, true)
             ON CONFLICT (workflow_id, step_sequence) DO NOTHING`, s.workflow_id, s.status_ticket_id, s.step_sequence)
 		if err != nil {
-			log.Fatalf("Failed to seed workflow_steps: %v", err)
+			log.Fatalf("Failed to seed workflow_step: %v", err)
 		}
 	}
 }
-
 
 // 3. Main Data
 
@@ -347,7 +344,7 @@ func seedEmployees(db *sql.DB) {
 	positionIDs := []int{1, 2, 3, 4}
 
 	for _, dept := range deptIDs {
-		log.Printf("... Seeding employees for Department: %s", dept)
+		log.Printf("... Seeding employees for Department: %v", dept)
 
 		// --- Kelompok A: Karyawan dengan Department, Area, dan Position ---
 		if areaIDs, ok := areaIDsByDept[dept]; ok {

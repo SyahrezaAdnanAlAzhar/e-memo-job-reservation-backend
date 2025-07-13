@@ -147,7 +147,7 @@ func (r *PhysicalLocationRepository) Delete(id int) error {
 	if err != nil {
 		return err
 	}
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
 	
 	if err != nil {
 		return err
