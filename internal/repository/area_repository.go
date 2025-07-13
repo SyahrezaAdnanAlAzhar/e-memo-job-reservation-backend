@@ -27,6 +27,10 @@ type UpdateAreaRequest struct {
 	IsActive     bool   `json:"is_active"`
 }
 
+type UpdateAreaStatusRequest struct {
+	IsActive bool `json:"is_active"`
+}
+
 type AreaRepository struct {
 	DB *sql.DB
 }
@@ -179,4 +183,19 @@ func (r *AreaRepository) Update(id int, req UpdateAreaRequest) (*Area, error) {
 		return nil, err
 	}
 	return &updatedArea, nil
+}
+
+
+// CHANGE ACTIVE STATUS
+func (r *AreaRepository) UpdateActiveStatus(id int, isActive bool) error {
+	query := "UPDATE area SET is_active = $1, updated_at = NOW() WHERE id = $2"
+	result, err := r.DB.Exec(query, isActive, id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }

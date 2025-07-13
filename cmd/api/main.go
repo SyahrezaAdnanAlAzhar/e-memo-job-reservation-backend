@@ -51,6 +51,8 @@ func main() {
 			areaRoutes.POST("", areaHandler.CreateArea)
 			areaRoutes.GET("", areaHandler.GetAllAreas)
 			areaRoutes.GET("/:id", areaHandler.GetAreaByID)
+			areaRoutes.PUT("/:id", areaHandler.UpdateArea)
+			areaRoutes.PATCH("/:id/status", areaHandler.UpdateAreaActiveStatus)
 		}
 	}
 

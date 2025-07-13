@@ -140,3 +140,30 @@ func (h *AreaHandler) UpdateArea(c *gin.Context) {
 
 	c.JSON(http.StatusOK, updatedArea)
 }
+
+// PATCH /area/:id/status
+func (h *AreaHandler) UpdateAreaActiveStatus(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid area ID format"})
+		return
+	}
+
+	var req repository.UpdateAreaStatusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = h.service.UpdateAreaActiveStatus(id, req)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Area not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update area status"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Area status updated successfully"})
+}

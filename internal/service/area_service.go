@@ -65,3 +65,8 @@ func (s *AreaService) UpdateArea(id int, req repository.UpdateAreaRequest) (*rep
 
 	return s.repo.Update(id, req)
 }
+
+// CHANGE ACTIVE STATUS
+func (s *AreaService) UpdateAreaActiveStatus(id int, req repository.UpdateAreaStatusRequest) error {
+	return s.repo.UpdateActiveStatus(id, req.IsActive)
+}
