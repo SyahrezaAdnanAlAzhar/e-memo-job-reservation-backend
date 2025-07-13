@@ -19,17 +19,20 @@ func main() {
 	// employeeRepo := repository.NewEmployeeRepository(db)
 	departmentRepo := repository.NewDepartmentRepository(db)
 	areaRepo := repository.NewAreaRepository(db)
+	statusTicketRepo := repository.NewStatusTicketRepository(db)
 
 
 	// SERVICE
 	departmentService := service.NewDepartmentService(departmentRepo)
 	areaService := service.NewAreaService(areaRepo)
+	statusTicketService := service.NewStatusTicketService(statusTicketRepo) 
 
 
 	// HANDLER
 	// employeeHandler := handler.NewEmployeeHandler(employeeRepo)
 	departmentHandler := handler.NewDepartmentHandler(departmentService)
 	areaHandler := handler.NewAreaHandler(areaService)
+	statusTicketHandler := handler.NewStatusTicketHandler(statusTicketService)
 
 
 	// SETUP
@@ -53,6 +56,13 @@ func main() {
 			areaRoutes.GET("/:id", areaHandler.GetAreaByID)
 			areaRoutes.PUT("/:id", areaHandler.UpdateArea)
 			areaRoutes.PATCH("/:id/status", areaHandler.UpdateAreaActiveStatus)
+		}
+
+		statusTicketRoutes := api.Group("/status-ticket")
+		{
+			statusTicketRoutes.POST("", statusTicketHandler.CreateStatusTicket)
+			statusTicketRoutes.GET("", statusTicketHandler.GetAllStatusTickets)
+			statusTicketRoutes.GET("/:id", statusTicketHandler.GetStatusTicketByID)
 		}
 	}
 
