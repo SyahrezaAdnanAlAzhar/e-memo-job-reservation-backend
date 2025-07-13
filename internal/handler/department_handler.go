@@ -17,7 +17,7 @@ func NewDepartmentHandler(service *service.DepartmentService) *DepartmentHandler
 	return &DepartmentHandler{service: service}
 }
 
-// POST /departments
+// POST /department
 func (h *DepartmentHandler) CreateDepartment(c *gin.Context) {
 	var req repository.CreateDepartmentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -38,7 +38,7 @@ func (h *DepartmentHandler) CreateDepartment(c *gin.Context) {
 	c.JSON(http.StatusCreated, newDept)
 }
 
-// GET /departments
+// GET /department
 func (h *DepartmentHandler) GetAllDepartments(c *gin.Context) {
 	filters := make(map[string]string)
 
@@ -63,7 +63,7 @@ func (h *DepartmentHandler) GetAllDepartments(c *gin.Context) {
 	c.JSON(http.StatusOK, departments)
 }
 
-// GET /departments/:id
+// GET /department/:id
 func (h *DepartmentHandler) GetDepartmentByID(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -84,7 +84,7 @@ func (h *DepartmentHandler) GetDepartmentByID(c *gin.Context) {
 	c.JSON(http.StatusOK, department)
 }
 
-// DELETE /departments/:id
+// DELETE /department/:id
 func (h *DepartmentHandler) DeleteDepartment(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -105,7 +105,7 @@ func (h *DepartmentHandler) DeleteDepartment(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// PUT /departments/:id
+// PUT /department/:id
 func (h *DepartmentHandler) UpdateDepartment(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -137,7 +137,7 @@ func (h *DepartmentHandler) UpdateDepartment(c *gin.Context) {
 	c.JSON(http.StatusOK, updatedDept)
 }
 
-// PATCH /departments/:id/status
+// PATCH /department/:id/status
 func (h *DepartmentHandler) UpdateDepartmentActiveStatus(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
