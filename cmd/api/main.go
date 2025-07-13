@@ -68,6 +68,9 @@ func main() {
 			physicalLocationRoutes.POST("", physicalLocationHandler.CreatePhysicalLocation)
 			physicalLocationRoutes.GET("", physicalLocationHandler.GetAllPhysicalLocations)
 			physicalLocationRoutes.GET("/:id", physicalLocationHandler.GetPhysicalLocationByID)
+			physicalLocationRoutes.PUT("/:id", physicalLocationHandler.UpdatePhysicalLocation)
+			physicalLocationRoutes.DELETE("/:id", physicalLocationHandler.DeletePhysicalLocation)
+			physicalLocationRoutes.PATCH("/:id/status", physicalLocationHandler.UpdatePhysicalLocationActiveStatus)
 		}
 
 		// MASTER DATA DEPENDENT

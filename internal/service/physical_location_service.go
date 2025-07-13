@@ -40,3 +40,27 @@ func (s *PhysicalLocationService) GetAllPhysicalLocations(filters map[string]str
 func (s *PhysicalLocationService) GetPhysicalLocationByID(id int) (*repository.PhysicalLocation, error) {
 	return s.repo.FindByID(id)
 }
+
+
+// UPDATE
+func (s *PhysicalLocationService) UpdatePhysicalLocation(id int, req repository.UpdatePhysicalLocationRequest) (*repository.PhysicalLocation, error) {
+	isTaken, err := s.repo.IsNameTaken(req.Name, id)
+	if err != nil {
+		return nil, err // Teruskan error database
+	}
+	if isTaken {
+		return nil, errors.New("physical location name already exists")
+	}
+
+	return s.repo.Update(id, req)
+}
+
+// DELETE
+func (s *PhysicalLocationService) DeletePhysicalLocation(id int) error {
+	return s.repo.Delete(id)
+}
+
+// CHANGE STATUS
+func (s *PhysicalLocationService) UpdatePhysicalLocationActiveStatus(id int, req repository.UpdatePhysicalLocationStatusRequest) error {
+	return s.repo.UpdateActiveStatus(id, req.IsActive)
+}
