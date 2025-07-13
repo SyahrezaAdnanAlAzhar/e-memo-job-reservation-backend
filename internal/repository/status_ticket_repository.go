@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"context"
 )
 
 type StatusTicket struct {
@@ -19,6 +20,16 @@ type StatusTicket struct {
 type CreateStatusTicketRequest struct {
 	Name     string `json:"name" binding:"required"`
 	Sequence int    `json:"sequence"`
+}
+
+type UpdateStatusTicketStatusRequest struct {
+	IsActive bool `json:"is_active"`
+}
+
+type ReorderStatusTicketsRequest struct {
+	DeleteSectionOrder   []int `json:"delete_section_order"`
+	ApprovalSectionOrder []int `json:"approval_section_order"`
+	ActualSectionOrder   []int `json:"actual_section_order"`
 }
 
 type StatusTicketRepository struct {
@@ -103,4 +114,42 @@ func (r *StatusTicketRepository) FindByID(id int) (*StatusTicket, error) {
 		return nil, err
 	}
 	return &s, nil
+}
+
+
+// DELETE
+func (r *StatusTicketRepository) Delete(id int) error {
+	query := "DELETE FROM status_ticket WHERE id = $1"
+	result, err := r.DB.Exec(query, id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+
+// CHANGE ACTIVE STATUS
+func (r *StatusTicketRepository) UpdateActiveStatus(id int, isActive bool) error {
+	query := "UPDATE status_ticket SET is_active = $1, updated_at = NOW() WHERE id = $2"
+	result, err := r.DB.Exec(query, isActive, id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+
+// REORDER
+func (r *StatusTicketRepository) Reorder(ctx context.Context, tx *sql.Tx, id int, newSequence int) error {
+	query := "UPDATE status_ticket SET sequence = $1, updated_at = NOW() WHERE id = $2"
+	_, err := tx.ExecContext(ctx, query, newSequence, id)
+	return err
 }

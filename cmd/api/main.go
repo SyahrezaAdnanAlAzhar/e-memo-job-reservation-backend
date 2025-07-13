@@ -63,6 +63,9 @@ func main() {
 			statusTicketRoutes.POST("", statusTicketHandler.CreateStatusTicket)
 			statusTicketRoutes.GET("", statusTicketHandler.GetAllStatusTickets)
 			statusTicketRoutes.GET("/:id", statusTicketHandler.GetStatusTicketByID)
+			statusTicketRoutes.DELETE("/:id", statusTicketHandler.DeleteStatusTicket)
+			statusTicketRoutes.PATCH("/:id/status", statusTicketHandler.UpdateStatusTicketActiveStatus)
+			statusTicketRoutes.PUT("/reorder", statusTicketHandler.ReorderStatusTickets)
 		}
 	}
 

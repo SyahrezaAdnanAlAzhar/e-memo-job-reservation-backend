@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"context"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository" 
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -36,4 +37,54 @@ func (s *StatusTicketService) GetAllStatusTickets(filters map[string]string) ([]
 // GET BY ID
 func (s *StatusTicketService) GetStatusTicketByID(id int) (*repository.StatusTicket, error) {
 	return s.repo.FindByID(id)
+}
+
+// DELETE
+func (s *StatusTicketService) DeleteStatusTicket(id int) error {
+	return s.repo.Delete(id)
+}
+
+// CHANGE STATUS
+func (s *StatusTicketService) UpdateStatusTicketActiveStatus(id int, req repository.UpdateStatusTicketStatusRequest) error {
+	return s.repo.UpdateActiveStatus(id, req.IsActive)
+}
+
+// REORDER
+func (s *StatusTicketService) ReorderStatusTickets(req repository.ReorderStatusTicketsRequest) error {
+	ctx := context.Background()
+	tx, err := s.repo.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	
+	defer tx.Rollback()
+
+	// Delete Section (Sequence <= -100)
+	// -100, -101, -102...
+	for i, id := range req.DeleteSectionOrder {
+		newSequence := -100 - i
+		if err := s.repo.Reorder(ctx, tx, id, newSequence); err != nil {
+			return err
+		}
+	}
+
+	// Approval Section (-99 < Sequence < 0)
+	// -1, -2, -3...
+	for i, id := range req.ApprovalSectionOrder {
+		newSequence := -1 - i
+		if err := s.repo.Reorder(ctx, tx, id, newSequence); err != nil {
+			return err
+		}
+	}
+
+	// Actual Section (Sequence >= 0)
+	// 0, 1, 2...
+	for i, id := range req.ActualSectionOrder {
+		newSequence := i
+		if err := s.repo.Reorder(ctx, tx, id, newSequence); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
