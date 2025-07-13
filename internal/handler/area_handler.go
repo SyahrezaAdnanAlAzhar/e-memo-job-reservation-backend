@@ -4,7 +4,8 @@ import (
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"   
 	"net/http"
-
+	"database/sql"
+	"strconv"
 	"github.com/gin-gonic/gin"
 )
 
@@ -63,4 +64,47 @@ func (h *AreaHandler) GetAllAreas(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, areas)
+}
+
+// GET /area/:id
+func (h *AreaHandler) GetAreaByID(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid area ID format"})
+		return
+	}
+
+	area, err := h.service.GetAreaByID(id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Area not found"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve area"})
+		return
+	}
+
+	c.JSON(http.StatusOK, area)
+}
+
+// DELETE /area/:id
+func (h *AreaHandler) DeleteArea(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid area ID format"})
+		return
+	}
+
+	err = h.service.DeleteArea(id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Area not found or already deleted"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete area"})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }

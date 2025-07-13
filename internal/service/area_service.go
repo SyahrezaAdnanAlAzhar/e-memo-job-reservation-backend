@@ -40,3 +40,15 @@ func (s *AreaService) CreateArea(req repository.CreateAreaRequest) (*repository.
 func (s *AreaService) GetAllAreas(filters map[string]string) ([]repository.Area, error) {
 	return s.repo.FindAll(filters)
 }
+
+
+// GET BY ID 
+func (s *AreaService) GetAreaByID(id int) (*repository.Area, error) {
+	return s.repo.FindByID(id)
+}
+
+
+// DELETE
+func (s *AreaService) DeleteArea(id int) error {
+	return s.repo.Delete(id)
+}

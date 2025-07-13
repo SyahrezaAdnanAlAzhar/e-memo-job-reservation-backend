@@ -92,3 +92,39 @@ func (r *AreaRepository) FindAll(filters map[string]string) ([]Area, error) {
 	}
 	return areas, nil
 }
+
+
+// GET BY ID
+func (r *AreaRepository) FindByID(id int) (*Area, error) {
+	query := "SELECT id, department_id, name, is_active, created_at, updated_at FROM area WHERE id = $1"
+	row := r.DB.QueryRow(query, id)
+
+	var a Area
+	err := row.Scan(&a.ID, &a.DepartmentID, &a.Name, &a.IsActive, &a.CreatedAt, &a.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+
+	return &a, nil
+}
+
+
+// DELETE
+func (r *AreaRepository) Delete(id int) error {
+	query := "DELETE FROM area WHERE id = $1"
+	result, err := r.DB.Exec(query, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return sql.ErrNoRows 
+	}
+
+	return nil
+}
