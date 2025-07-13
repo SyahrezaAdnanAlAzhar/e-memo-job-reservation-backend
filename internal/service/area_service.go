@@ -52,3 +52,16 @@ func (s *AreaService) GetAreaByID(id int) (*repository.Area, error) {
 func (s *AreaService) DeleteArea(id int) error {
 	return s.repo.Delete(id)
 }
+
+// UPDATE
+func (s *AreaService) UpdateArea(id int, req repository.UpdateAreaRequest) (*repository.Area, error) {
+	isTaken, err := s.repo.IsNameTakenInDepartment(req.Name, req.DepartmentID, id)
+	if err != nil {
+		return nil, err
+	}
+	if isTaken {
+		return nil, errors.New("area name already exists in this department")
+	}
+
+	return s.repo.Update(id, req)
+}

@@ -1,11 +1,12 @@
 package handler
 
 import (
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"   
-	"net/http"
 	"database/sql"
+	"net/http"
 	"strconv"
+
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
@@ -29,7 +30,7 @@ func (h *AreaHandler) CreateArea(c *gin.Context) {
 	newArea, err := h.service.CreateArea(req)
 	if err != nil {
 		if err.Error() == "area name already exists in this department" {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()}) 
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 			return
 		}
 
@@ -107,4 +108,35 @@ func (h *AreaHandler) DeleteArea(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+// PUT /area/:id
+func (h *AreaHandler) UpdateArea(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid area ID format"})
+		return
+	}
+
+	var req repository.UpdateAreaRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	updatedArea, err := h.service.UpdateArea(id, req)
+	if err != nil {
+		if err.Error() == "area name already exists in this department" {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Area not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update area"})
+		return
+	}
+
+	c.JSON(http.StatusOK, updatedArea)
 }

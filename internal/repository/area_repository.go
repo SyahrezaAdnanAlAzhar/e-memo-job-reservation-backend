@@ -21,6 +21,12 @@ type CreateAreaRequest struct {
 	Name         string `json:"name" binding:"required"`
 }
 
+type UpdateAreaRequest struct {
+	DepartmentID int    `json:"department_id" binding:"required,gt=0"`
+	Name         string `json:"name" binding:"required"`
+	IsActive     bool   `json:"is_active"`
+}
+
 type AreaRepository struct {
 	DB *sql.DB
 }
@@ -28,6 +34,30 @@ type AreaRepository struct {
 func NewAreaRepository(db *sql.DB) *AreaRepository {
 	return &AreaRepository{DB: db}
 }
+
+
+// HELPER
+
+// CHECK UNIQUE NAME
+func (r *AreaRepository) IsNameTakenInDepartment(name string, departmentID int, currentAreaID int) (bool, error) {
+	var existsID int
+	query := `
+        SELECT id FROM area 
+        WHERE name = $1 AND department_id = $2 AND id != $3 
+        LIMIT 1`
+	
+	err := r.DB.QueryRow(query, name, departmentID, currentAreaID).Scan(&existsID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+
+// MAIN
 
 // CREATE
 func (r *AreaRepository) Create(req CreateAreaRequest) (*Area, error) {
@@ -127,4 +157,26 @@ func (r *AreaRepository) Delete(id int) error {
 	}
 
 	return nil
+}
+
+
+// UPDATE
+func (r *AreaRepository) Update(id int, req UpdateAreaRequest) (*Area, error) {
+	query := `
+        UPDATE area 
+        SET department_id = $1, name = $2, is_active = $3, updated_at = NOW()
+        WHERE id = $4
+        RETURNING id, department_id, name, is_active, created_at, updated_at`
+
+	row := r.DB.QueryRow(query, req.DepartmentID, req.Name, req.IsActive, id)
+
+	var updatedArea Area
+	err := row.Scan(
+		&updatedArea.ID, &updatedArea.DepartmentID, &updatedArea.Name,
+		&updatedArea.IsActive, &updatedArea.CreatedAt, &updatedArea.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &updatedArea, nil
 }
