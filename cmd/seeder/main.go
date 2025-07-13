@@ -38,12 +38,14 @@ func main() {
 	seedPosition(db)
 	seedSectionStatusTickets(db)
 	seedWorkflow(db)
+	seedPermission(db)
 
 	// 2. Master Data Dependen
 	seedAreas(db)
 	seedSpecifiedLocation(db)
 	seedStatusTicket(db)
 	seedWorkflowStep(db)
+	seedPositionPermission(db)
 
 	// 3. Main Data
 	seedPositionToWorkflowMapping(db)
@@ -182,6 +184,18 @@ func seedWorkflow(db *sql.DB) {
 	}
 }
 
+// 1.6.
+func seedPermission(db *sql.DB) {
+	log.Println("Seeding permission...")
+	permission := []string{"job_assign_pic", "ticket_change_priority", "job_change_priority"}
+	for _, p := range permission {
+		_, err := db.Exec("INSERT INTO permission (name, is_active) VALUES ($1, true) ON CONFLICT(name) DO NOTHING", p)
+		if err != nil {
+			log.Fatalf("Failed to seed permission: %v", err)
+		}
+	}
+}
+
 // 2. Master Data Dependen
 
 // 2.1.
@@ -303,6 +317,12 @@ func seedWorkflowStep(db *sql.DB) {
 		}
 	}
 }
+
+// 2.5.
+// func seedPositionPermission(db *sql.DB) {
+// 	log.Println("Seeding position_permission...")
+
+// }
 
 // 3. Main Data
 
