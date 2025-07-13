@@ -142,7 +142,7 @@ func seedPhysicalLocation(db *sql.DB) {
 // 1.3.
 func seedPosition(db *sql.DB) {
 	log.Println("Seeding position...")
-	positions := []string{"Department", "Section", "Frontman", "Leader"}
+	positions := []string{"Head of Department", "Head of Section", "Frontman", "Leader"}
 	for _, p := range positions {
 		_, err := db.Exec("INSERT INTO position (name, is_active) VALUES ($1, true) ON CONFLICT(name) DO NOTHING", p)
 		if err != nil {
@@ -319,10 +319,26 @@ func seedWorkflowStep(db *sql.DB) {
 }
 
 // 2.5.
-// func seedPositionPermission(db *sql.DB) {
-// 	log.Println("Seeding position_permission...")
+func seedPositionPermission(db *sql.DB) {
+	log.Println("Seeding position_permission...")
 
-// }
+	positionPermission := []struct {
+		position_id   int
+		permission_id int
+	}{
+		{1, 1}, {1, 2}, {1, 3},
+		{2, 1}, {2, 2}, {2, 3},
+	}
+
+	for _, p := range positionPermission {
+		_, err := db.Exec(
+			"INSERT INTO position_permission (position_id, permission_id, is_active) VALUES ($1, $2, true)", 
+			p.position_id, p.permission_id)
+		if err != nil {
+			log.Fatalf("Failed to seed position_permission: %v", err)
+		}
+	}
+}
 
 // 3. Main Data
 
