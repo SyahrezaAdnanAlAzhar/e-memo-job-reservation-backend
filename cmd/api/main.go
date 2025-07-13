@@ -17,20 +17,34 @@ func main() {
 
 	// REPOSITORY
 	// employeeRepo := repository.NewEmployeeRepository(db)
+	// MASTER DATA INDEPENDENT
+	physicalLocationRepo := repository.NewPhysicalLocationRepository(db)
 	departmentRepo := repository.NewDepartmentRepository(db)
+
+	// MASTER DATA DEPENDENT
 	areaRepo := repository.NewAreaRepository(db)
 	statusTicketRepo := repository.NewStatusTicketRepository(db)
 
 
+	
 	// SERVICE
+	// MASTER DATA INDEPENDENT
 	departmentService := service.NewDepartmentService(departmentRepo)
+	physicalLocationService := service.NewPhysicalLocationService(physicalLocationRepo)
+
+	// MASTER DATA DEPENDENT
 	areaService := service.NewAreaService(areaRepo)
 	statusTicketService := service.NewStatusTicketService(statusTicketRepo) 
 
 
+
 	// HANDLER
 	// employeeHandler := handler.NewEmployeeHandler(employeeRepo)
+	// MASTER DATA INDEPENDENT
 	departmentHandler := handler.NewDepartmentHandler(departmentService)
+	physicalLocationHandler := handler.NewPhysicalLocationHandler(physicalLocationService)
+
+	// MASTER DATA DEPENDENT
 	areaHandler := handler.NewAreaHandler(areaService)
 	statusTicketHandler := handler.NewStatusTicketHandler(statusTicketService)
 
@@ -39,6 +53,7 @@ func main() {
 	router := gin.Default()
 	api := router.Group("/api/e-memo-job-reservation")
 	{
+		// MASTER DATA INDEPENDENT
 		deptRoutes := api.Group("/department")
 		{
 			deptRoutes.POST("", departmentHandler.CreateDepartment)
@@ -48,7 +63,14 @@ func main() {
 			deptRoutes.PUT("/:id", departmentHandler.UpdateDepartment)
 			deptRoutes.PATCH("/:id/status", departmentHandler.UpdateDepartmentActiveStatus)
 		}
+		physicalLocationRoutes := api.Group("/physical-location")
+		{
+			physicalLocationRoutes.POST("", physicalLocationHandler.CreatePhysicalLocation)
+			physicalLocationRoutes.GET("", physicalLocationHandler.GetAllPhysicalLocations)
+			physicalLocationRoutes.GET("/:id", physicalLocationHandler.GetPhysicalLocationByID)
+		}
 
+		// MASTER DATA DEPENDENT
 		areaRoutes := api.Group("/area")
 		{
 			areaRoutes.POST("", areaHandler.CreateArea)
