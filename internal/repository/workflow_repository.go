@@ -1,0 +1,42 @@
+package repository
+
+import (
+	"context"
+	"database/sql"
+)
+
+type WorkflowRepository struct {
+	DB *sql.DB
+}
+
+func NewWorkflowRepository(db *sql.DB) *WorkflowRepository {
+	return &WorkflowRepository{DB: db}
+}
+
+
+// HELPER
+// GET INITIAL STATUS BY RULE
+func (r *WorkflowRepository) GetInitialStatusByPosition(ctx context.Context, positionID int) (int, error) {
+	var statusID int
+	query := `
+        SELECT ws.status_ticket_id
+        FROM workflow_steps ws
+        JOIN position_to_workflow_mapping ptwm ON ws.workflow_id = ptwm.workflow_id
+        WHERE ptwm.position_id = $1 AND ws.step_sequence = 0
+        LIMIT 1`
+	
+	err := r.DB.QueryRowContext(ctx, query, positionID).Scan(&statusID)
+	if err != nil {
+		return 0, err
+	}
+	return statusID, nil
+}
+
+
+// GET EMPLOYEE DATA
+func (r *WorkflowRepository) GetEmployeeData(ctx context.Context, npk string) (int, error) {
+    var positionID int
+    query := "SELECT position_id FROM employee WHERE npk = $1"
+    err := r.DB.QueryRowContext(ctx, query, npk).Scan(&positionID)
+    return positionID, err
+}
