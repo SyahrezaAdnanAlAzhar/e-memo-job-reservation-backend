@@ -44,8 +44,8 @@ func (r *TicketRepository) GetLastPriority(ctx context.Context, tx *sql.Tx, depa
 	if err != nil && err != sql.ErrNoRows {
 		return 0, err
 	}
-	if !lastPriority.Valid { // Jika belum ada tiket di departemen itu
-		return 1, nil // Mulai dari 1
+	if !lastPriority.Valid { 
+		return 1, nil 
 	}
 	return int(lastPriority.Int64) + 1, nil
 }
@@ -68,7 +68,7 @@ func (r *TicketRepository) Create(ctx context.Context, tx *sql.Tx, ticket Ticket
 		ticket.TicketPriority,
 	)
 
-	var newTicket Ticket = ticket // Salin data awal
+	var newTicket Ticket = ticket 
 	err := row.Scan(&newTicket.ID, &newTicket.CreatedAt, &newTicket.UpdatedAt)
 	if err != nil {
 		return nil, err
