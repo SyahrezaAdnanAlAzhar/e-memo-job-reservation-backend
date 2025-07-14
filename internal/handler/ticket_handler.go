@@ -1,9 +1,10 @@
 package handler
 
 import (
+	"net/http"
+
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -25,7 +26,7 @@ func (h *TicketHandler) CreateTicket(c *gin.Context) {
 		return
 	}
 
-	requestorNPK := "EMP001"
+	requestorNPK := "EMP0001"
 
 	createdTicket, err := h.service.CreateTicket(c.Request.Context(), req, requestorNPK)
 	if err != nil {
