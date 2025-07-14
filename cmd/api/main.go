@@ -25,6 +25,11 @@ func main() {
 	areaRepo := repository.NewAreaRepository(db)
 	statusTicketRepo := repository.NewStatusTicketRepository(db)
 
+	// MAIN DATA
+	ticketRepo := repository.NewTicketRepository(db)
+	jobRepo := repository.NewJobRepository(db)
+	workflowRepo := repository.NewWorkflowRepository(db)
+
 
 	
 	// SERVICE
@@ -35,6 +40,14 @@ func main() {
 	// MASTER DATA DEPENDENT
 	areaService := service.NewAreaService(areaRepo)
 	statusTicketService := service.NewStatusTicketService(statusTicketRepo) 
+
+	// MAIN DATA
+	ticketService := service.NewTicketService(&service.TicketServiceConfig{
+		TicketRepo:   ticketRepo,
+		JobRepo:      jobRepo,
+		WorkflowRepo: workflowRepo,
+		DB:           db, 
+	})
 
 
 
@@ -48,6 +61,8 @@ func main() {
 	areaHandler := handler.NewAreaHandler(areaService)
 	statusTicketHandler := handler.NewStatusTicketHandler(statusTicketService)
 
+	// MAIN DATA
+	ticketHandler := handler.NewTicketHandler(ticketService)
 
 	// SETUP
 	router := gin.Default()
@@ -91,6 +106,12 @@ func main() {
 			statusTicketRoutes.DELETE("/:id", statusTicketHandler.DeleteStatusTicket)
 			statusTicketRoutes.PATCH("/:id/status", statusTicketHandler.UpdateStatusTicketActiveStatus)
 			statusTicketRoutes.PUT("/reorder", statusTicketHandler.ReorderStatusTickets)
+		}
+
+		// MAIN DATA
+		ticketRoutes := api.Group("/ticket")
+		{
+			ticketRoutes.POST("", ticketHandler.CreateTicket)
 		}
 	}
 

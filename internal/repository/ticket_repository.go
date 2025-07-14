@@ -7,16 +7,16 @@ import (
 )
 
 type Ticket struct {
-	ID                  int            `json:"id"`
-	RequestorNPK        string         `json:"requestor_npk"`
-	DepartmentTargetID  int            `json:"department_target_id"`
-	PhysicalLocationID  sql.NullInt64  `json:"physical_location_id"` 
-	SpecifiedLocationID sql.NullInt64  `json:"specified_location_id"`
-	Description         string         `json:"description"`
-	TicketPriority      int            `json:"ticket_priority"`
-	SupportFile         []string       `json:"support_file"` 
-	CreatedAt           time.Time      `json:"created_at"`
-	UpdatedAt           time.Time      `json:"updated_at"`
+	ID                  int           `json:"id"`
+	Requestor           string        `json:"requestor"`
+	DepartmentTargetID  int           `json:"department_target_id"`
+	PhysicalLocationID  sql.NullInt64 `json:"physical_location_id"`
+	SpecifiedLocationID sql.NullInt64 `json:"specified_location_id"`
+	Description         string        `json:"description"`
+	TicketPriority      int           `json:"ticket_priority"`
+	SupportFile         []string      `json:"support_file"`
+	CreatedAt           time.Time     `json:"created_at"`
+	UpdatedAt           time.Time     `json:"updated_at"`
 }
 
 type CreateTicketRequest struct {
@@ -50,18 +50,17 @@ func (r *TicketRepository) GetLastPriority(ctx context.Context, tx *sql.Tx, depa
 	return int(lastPriority.Int64) + 1, nil
 }
 
-
-// MAIN 
+// MAIN
 
 // CREATE TICKET
 func (r *TicketRepository) Create(ctx context.Context, tx *sql.Tx, ticket Ticket) (*Ticket, error) {
 	query := `
-        INSERT INTO ticket (requestor_npk, department_target_id, physical_location_id, specified_location_id, description, ticket_priority)
+        INSERT INTO ticket (requestor, department_target_id, physical_location_id, specified_location_id, description, ticket_priority)
         VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING id, created_at, updated_at`
 
 	row := tx.QueryRowContext(ctx, query,
-		ticket.RequestorNPK,
+		ticket.Requestor,
 		ticket.DepartmentTargetID,
 		ticket.PhysicalLocationID,
 		ticket.SpecifiedLocationID,
