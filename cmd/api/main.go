@@ -6,6 +6,7 @@ import (
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/handler"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/auth"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/database"
 
 	"github.com/gin-gonic/gin"
@@ -29,6 +30,7 @@ func main() {
 	ticketRepo := repository.NewTicketRepository(db)
 	jobRepo := repository.NewJobRepository(db)
 	workflowRepo := repository.NewWorkflowRepository(db)
+	employeeRepo := repository.NewEmployeeRepository(db)
 
 
 	
@@ -64,12 +66,26 @@ func main() {
 	// MAIN DATA
 	ticketHandler := handler.NewTicketHandler(ticketService)
 
+	// AUTHENTICATION
+	authHandler := handler.NewAuthHandler(employeeRepo)
+
 	// SETUP
 	router := gin.Default()
-	api := router.Group("/api/e-memo-job-reservation")
+
+
+	// PUBLIC API
+	public := router.Group("/api/e-memo-job-reservation")
+	{
+		public.POST("/login", authHandler.Login)
+	}
+
+
+	// PRIVATE API
+	private := router.Group("/api/e-memo-job-reservation")
+	private.Use(auth.JWTMiddleware())
 	{
 		// MASTER DATA INDEPENDENT
-		deptRoutes := api.Group("/department")
+		deptRoutes := private.Group("/department")
 		{
 			deptRoutes.POST("", departmentHandler.CreateDepartment)
 			deptRoutes.GET("", departmentHandler.GetAllDepartments)
@@ -78,7 +94,7 @@ func main() {
 			deptRoutes.PUT("/:id", departmentHandler.UpdateDepartment)
 			deptRoutes.PATCH("/:id/status", departmentHandler.UpdateDepartmentActiveStatus)
 		}
-		physicalLocationRoutes := api.Group("/physical-location")
+		physicalLocationRoutes := private.Group("/physical-location")
 		{
 			physicalLocationRoutes.POST("", physicalLocationHandler.CreatePhysicalLocation)
 			physicalLocationRoutes.GET("", physicalLocationHandler.GetAllPhysicalLocations)
@@ -89,7 +105,7 @@ func main() {
 		}
 
 		// MASTER DATA DEPENDENT
-		areaRoutes := api.Group("/area")
+		areaRoutes := private.Group("/area")
 		{
 			areaRoutes.POST("", areaHandler.CreateArea)
 			areaRoutes.GET("", areaHandler.GetAllAreas)
@@ -98,7 +114,7 @@ func main() {
 			areaRoutes.PATCH("/:id/status", areaHandler.UpdateAreaActiveStatus)
 		}
 
-		statusTicketRoutes := api.Group("/status-ticket")
+		statusTicketRoutes := private.Group("/status-ticket")
 		{
 			statusTicketRoutes.POST("", statusTicketHandler.CreateStatusTicket)
 			statusTicketRoutes.GET("", statusTicketHandler.GetAllStatusTickets)
@@ -109,7 +125,7 @@ func main() {
 		}
 
 		// MAIN DATA
-		ticketRoutes := api.Group("/ticket")
+		ticketRoutes := private.Group("/ticket")
 		{
 			ticketRoutes.POST("", ticketHandler.CreateTicket)
 		}

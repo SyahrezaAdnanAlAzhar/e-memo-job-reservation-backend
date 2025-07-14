@@ -26,7 +26,11 @@ func (h *TicketHandler) CreateTicket(c *gin.Context) {
 		return
 	}
 
-	requestorNPK := "EMP0001"
+	requestorNPK := c.GetString("user_npk")
+	if requestorNPK == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User NPK not found in token"})
+		return
+	}
 
 	createdTicket, err := h.service.CreateTicket(c.Request.Context(), req, requestorNPK)
 	if err != nil {
