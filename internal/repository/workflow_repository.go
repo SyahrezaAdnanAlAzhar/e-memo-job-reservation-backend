@@ -20,7 +20,7 @@ func (r *WorkflowRepository) GetInitialStatusByPosition(ctx context.Context, pos
 	var statusID int
 	query := `
         SELECT ws.status_ticket_id
-        FROM workflow_steps ws
+        FROM workflow_step ws
         JOIN position_to_workflow_mapping ptwm ON ws.workflow_id = ptwm.workflow_id
         WHERE ptwm.position_id = $1 AND ws.step_sequence = 0
         LIMIT 1`
