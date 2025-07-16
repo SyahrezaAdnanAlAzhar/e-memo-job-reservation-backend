@@ -51,7 +51,12 @@ func (s *AuthService) Logout(ctx context.Context, tokenString string) error {
 		return nil 
 	}
 
-	return s.authRepo.BlacklistToken(ctx, claims.TokenID, remainingDuration)
+	err = s.authRepo.BlacklistToken(ctx, claims.TokenID, remainingDuration)
+	if err != nil {
+		return err
+	}
+
+	return s.authRepo.DeleteAllUserRefreshTokens(ctx, claims.NPK)
 }
 
 func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenString string) (string, string, error) {
@@ -69,6 +74,6 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenString strin
 	if err != nil {
 		return "", "", err
 	}
-	
+
 	return accessToken, newRefreshToken, nil
 }
