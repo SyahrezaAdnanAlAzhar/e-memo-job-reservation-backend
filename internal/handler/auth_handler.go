@@ -56,11 +56,11 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	
 	accessToken, newRefreshToken, err := h.Service.RefreshToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
-		if err.Error() == "invalid or expired refresh token" || err.Error() == "invalid refresh token, possibly already used or revoked" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		if err.Error() == "invalid or expired refresh token" || err.Error() == "token not found or already used" || err.Error() == "token-user mismatch" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process refresh token", "details": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process refresh token"})
 		return
 	}
 

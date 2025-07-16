@@ -60,20 +60,15 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenString strin
 		return "", "", errors.New("invalid or expired refresh token")
 	}
 
-	isValid, err := s.authRepo.IsRefreshTokenValid(ctx, claims.NPK, claims.TokenID)
+	err = s.authRepo.ValidateAndDelRefreshToken(ctx, claims.NPK, claims.TokenID)
 	if err != nil {
-		return "", "", err
-	}
-	if !isValid {
-		return "", "", errors.New("invalid refresh token, possibly already used or revoked")
+		return "", "", err 
 	}
 
-	_ = s.authRepo.DeleteRefreshToken(ctx, claims.NPK, claims.TokenID)
-	
 	accessToken, newRefreshToken, err := auth.GenerateTokens(claims.NPK, claims.PositionID, s.authRepo)
 	if err != nil {
 		return "", "", err
 	}
-
+	
 	return accessToken, newRefreshToken, nil
 }

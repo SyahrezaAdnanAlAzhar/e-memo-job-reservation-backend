@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	"time"
-
+	"errors"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -17,25 +17,32 @@ func NewAuthRepository(rdb *redis.Client) *AuthRepository {
 
 // STORE REFRESH TOKEN TO Redis WITH Time-to-live (TTL)
 func (r *AuthRepository) StoreRefreshToken(ctx context.Context, npk string, tokenID string, expiresIn time.Duration) error {
-	key := "refresh_token:" + npk
-	err := r.RDB.SAdd(ctx, key, tokenID).Err() 
+	key := "refresh_token:" + tokenID
+	return r.RDB.Set(ctx, key, npk, expiresIn).Err()
+}
+
+// VALIDATE AND DELETE TOKEN
+func (r *AuthRepository) ValidateAndDelRefreshToken(ctx context.Context, npk string, tokenID string) error {
+	key := "refresh_token:" + tokenID
+
+	// Menggunakan Lua Script atau GETDEL untuk atomicity adalah cara terbaik.
+	// GETDEL akan mengambil nilai dan menghapus key dalam satu perintah.
+	val, err := r.RDB.GetDel(ctx, key).Result()
 	if err != nil {
+		if err == redis.Nil {
+			// Jika key tidak ada, berarti token tidak valid atau sudah digunakan.
+			return errors.New("token not found or already used")
+		}
+		// Error redis lain.
 		return err
 	}
+	
+	// (Opsional tapi direkomendasikan) Cek apakah NPK di Redis cocok dengan NPK di klaim.
+	if val != npk {
+		return errors.New("token-user mismatch")
+	}
 
-	return r.RDB.Expire(ctx, key, expiresIn).Err()
-}
-
-// VALIDATE TOKEN
-func (r *AuthRepository) IsRefreshTokenValid(ctx context.Context, npk string, tokenID string) (bool, error) {
-	key := "refresh_token:" + npk
-	return r.RDB.SIsMember(ctx, key, tokenID).Result() 
-}
-
-// DELETE REFRESH TOKEN
-func (r *AuthRepository) DeleteRefreshToken(ctx context.Context, npk string, tokenID string) error {
-	key := "refresh_token:" + npk
-	return r.RDB.SRem(ctx, key, tokenID).Err() // SRem: Hapus item dari SET
+	return nil
 }
 
 // BLACKLIST TOKEN
