@@ -12,6 +12,15 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: always
+  
+  redis:
+    image: redis:8-alpine
+    container_name: redis_cache
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
 
   api:
     container_name: job_reservation_api
@@ -22,9 +31,11 @@ services:
       - "8080:8080"
     depends_on:
       - postgres
+      - redis
     restart: always
     env_file:
       - .env
 
 volumes:
   postgres_data:
+  redis_data: {}

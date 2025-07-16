@@ -2,32 +2,60 @@ package auth
 
 import (
 	"errors"
+	"context"
 	"fmt"
 	"os"
 	"strconv"
 	"time"
-
+	"github.com/google/uuid"
 	"github.com/golang-jwt/jwt/v5"
 )
 
 type Claims struct {
+	TokenID    string `json:"jti"`
 	NPK        string `json:"npk"`
 	PositionID int    `json:"position_id"`
 	jwt.RegisteredClaims
 }
 
-func GenerateTokens(npk string, positionID int) (accessToken string, refreshToken string, err error) {
-
-	accessToken, err = generateAccessToken(npk, positionID)
+func GenerateTokens(npk string, positionID int, authRepo interface {
+	StoreRefreshToken(ctx context.Context, npk string, tokenID string, expiresIn time.Duration) error}) (accessToken string, refreshToken string, err error) {
+	accessLifespan, _ := strconv.Atoi(os.Getenv("ACCESS_TOKEN_LIFESPAN")) 
+	accessClaims := &Claims{
+		TokenID:    uuid.New().String(), 
+		NPK:        npk,
+		PositionID: positionID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * time.Duration(accessLifespan))),
+		},
+	}
+	accessToken, err = jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims).SignedString([]byte(os.Getenv("JWT_SECRET_KEY")))
 	if err != nil {
 		return "", "", err
 	}
 
-	refreshToken, err = generateRefreshToken(npk, positionID)
+	// REFRESH TOKEN
+	refreshLifespan, _ := strconv.Atoi(os.Getenv("REFRESH_TOKEN_LIFESPAN")) 
+	refreshDuration := time.Hour * time.Duration(refreshLifespan)
+	refreshClaims := &Claims{
+		TokenID:    uuid.New().String(), 
+		NPK:        npk,
+		PositionID: positionID, 
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(refreshDuration)),
+		},
+	}
+	refreshToken, err = jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString([]byte(os.Getenv("JWT_REFRESH_SECRET_KEY")))
 	if err != nil {
 		return "", "", err
 	}
-
+	
+	// REFRESH TOKEN TO REDIS
+	err = authRepo.StoreRefreshToken(context.Background(), npk, refreshClaims.TokenID, refreshDuration)
+	if err != nil {
+		return "", "", err
+	}
+	
 	return accessToken, refreshToken, nil
 }
 

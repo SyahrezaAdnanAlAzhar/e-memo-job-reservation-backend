@@ -8,7 +8,7 @@ import (
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/auth"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/database"
-
+	redisClient "github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/redis"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,7 +16,13 @@ func main() {
 	db := database.Connect()
 	defer db.Close()
 
+	rdb := redisClient.Connect() 
+	defer rdb.Close()
+
 	// REPOSITORY
+
+	authRepo := repository.NewAuthRepository(rdb)
+
 	// employeeRepo := repository.NewEmployeeRepository(db)
 	// MASTER DATA INDEPENDENT
 	physicalLocationRepo := repository.NewPhysicalLocationRepository(db)
@@ -54,6 +60,9 @@ func main() {
 
 
 	// HANDLER
+
+	authHandler := handler.NewAuthHandler(employeeRepo, authRepo)
+
 	// employeeHandler := handler.NewEmployeeHandler(employeeRepo)
 	// MASTER DATA INDEPENDENT
 	departmentHandler := handler.NewDepartmentHandler(departmentService)
@@ -67,7 +76,6 @@ func main() {
 	ticketHandler := handler.NewTicketHandler(ticketService)
 
 	// AUTHENTICATION
-	authHandler := handler.NewAuthHandler(employeeRepo)
 
 	// SETUP
 	router := gin.Default()
@@ -77,6 +85,7 @@ func main() {
 	public := router.Group("/api/e-memo-job-reservation")
 	{
 		public.POST("/login", authHandler.Login)
+		public.POST("/refresh", authHandler.RefreshToken)
 	}
 
 
