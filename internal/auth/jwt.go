@@ -5,8 +5,8 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"time"
+	"log"
 	"github.com/google/uuid"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -18,15 +18,26 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func GenerateTokens(npk string, positionID int, authRepo interface {
-	StoreRefreshToken(ctx context.Context, npk string, tokenID string, expiresIn time.Duration) error}) (accessToken string, refreshToken string, err error) {
-	accessLifespan, _ := strconv.Atoi(os.Getenv("ACCESS_TOKEN_LIFESPAN")) 
+type TokenStorer interface {
+	StoreRefreshToken(ctx context.Context, npk string, tokenID string, expiresIn time.Duration) error
+}
+
+func GenerateTokens(npk string, positionID int, tokenStore TokenStorer) (accessToken string, refreshToken string, err error) {
+	// GENERATE ACCESS TOKEN
+	accessLifespanStr := os.Getenv("ACCESS_TOKEN_LIFESPAN")
+	accessDuration, err := time.ParseDuration(accessLifespanStr)
+	
+	if err != nil {
+		log.Printf("Invalid ACCESS_TOKEN_LIFESPAN format, defaulting to 15m. Error: %v", err)
+		accessDuration = 15 * time.Minute
+	}
+
 	accessClaims := &Claims{
 		TokenID:    uuid.New().String(), 
 		NPK:        npk,
 		PositionID: positionID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * time.Duration(accessLifespan))),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(accessDuration)),
 		},
 	}
 	accessToken, err = jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims).SignedString([]byte(os.Getenv("JWT_SECRET_KEY")))
@@ -34,9 +45,14 @@ func GenerateTokens(npk string, positionID int, authRepo interface {
 		return "", "", err
 	}
 
-	// REFRESH TOKEN
-	refreshLifespan, _ := strconv.Atoi(os.Getenv("REFRESH_TOKEN_LIFESPAN")) 
-	refreshDuration := time.Hour * time.Duration(refreshLifespan)
+	// GENERATE REFRESH TOKEN
+	refreshLifespanStr := os.Getenv("REFRESH_TOKEN_LIFESPAN")
+	refreshDuration, err := time.ParseDuration(refreshLifespanStr)
+	if err != nil {
+		log.Printf("Invalid REFRESH_TOKEN_LIFESPAN format, defaulting to 720h. Error: %v", err)
+		refreshDuration = 720 * time.Hour
+	}
+
 	refreshClaims := &Claims{
 		TokenID:    uuid.New().String(), 
 		NPK:        npk,
@@ -50,8 +66,8 @@ func GenerateTokens(npk string, positionID int, authRepo interface {
 		return "", "", err
 	}
 	
-	// REFRESH TOKEN TO REDIS
-	err = authRepo.StoreRefreshToken(context.Background(), npk, refreshClaims.TokenID, refreshDuration)
+	// STORE REFRESH TOKEN TO REDIS
+	err = tokenStore.StoreRefreshToken(context.Background(), npk, refreshClaims.TokenID, refreshDuration)
 	if err != nil {
 		return "", "", err
 	}
@@ -59,46 +75,14 @@ func GenerateTokens(npk string, positionID int, authRepo interface {
 	return accessToken, refreshToken, nil
 }
 
-func generateAccessToken(npk string, positionID int) (string, error) {
-	lifespan, err := strconv.Atoi(os.Getenv("ACCESS_TOKEN_LIFESPAN"))
-	if err != nil {
-		lifespan = 15 
-	}
-
-	claims := &Claims{
-		NPK:        npk,
-		PositionID: positionID,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * time.Duration(lifespan))),
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(os.Getenv("JWT_SECRET_KEY")))
-}
-
-func generateRefreshToken(npk string, positionID int) (string, error) {
-	lifespan, err := strconv.Atoi(os.Getenv("REFRESH_TOKEN_LIFESPAN"))
-	if err != nil {
-		lifespan = 720
-	}
-
-	claims := &Claims{
-		NPK:        npk,
-		PositionID: positionID,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * time.Duration(lifespan))),
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(os.Getenv("JWT_REFRESH_SECRET_KEY")))
-}
-
 func ValidateToken(tokenString string, isRefreshToken bool) (*Claims, error) {
 	secretKey := os.Getenv("JWT_SECRET_KEY")
 	if isRefreshToken {
 		secretKey = os.Getenv("JWT_REFRESH_SECRET_KEY")
+	}
+
+	if secretKey == "" {
+		return nil, errors.New("jwt secret key is not set")
 	}
 
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
