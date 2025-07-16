@@ -37,3 +37,9 @@ func (r *AuthRepository) DeleteRefreshToken(ctx context.Context, npk string, tok
 	key := "refresh_token:" + npk
 	return r.RDB.SRem(ctx, key, tokenID).Err() // SRem: Hapus item dari SET
 }
+
+// BLACKLIST TOKEN
+func (r *AuthRepository) BlacklistToken(ctx context.Context, tokenID string, expiresIn time.Duration) error {
+	key := "blacklist:" + tokenID
+	return r.RDB.Set(ctx, key, 1, expiresIn).Err()
+}

@@ -3,19 +3,17 @@ package handler
 import (
 	"net/http"
 	"log"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/auth"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
-
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
+	"strings"
 	"github.com/gin-gonic/gin"
 )
 
 type AuthHandler struct {
-	UserRepo *repository.EmployeeRepository
-	AuthRepo *repository.AuthRepository
+	Service *service.AuthService
 }
 
-func NewAuthHandler(userRepo *repository.EmployeeRepository, authRepo *repository.AuthRepository) *AuthHandler {
-	return &AuthHandler{UserRepo: userRepo, AuthRepo: authRepo}
+func NewAuthHandler(service *service.AuthService) *AuthHandler {
+	return &AuthHandler{Service: service}
 }
 
 type LoginRequest struct {
@@ -33,15 +31,13 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	employee, err := h.UserRepo.FindByNPK(req.NPK)
+	accessToken, refreshToken, err := h.Service.Login(c.Request.Context(), req.NPK)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid NPK"})
-		return
-	}
-
-	accessToken, refreshToken, err := auth.GenerateTokens(employee.NPK, employee.PositionID, h.AuthRepo)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate tokens"})
+		if err.Error() == "invalid npk" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid NPK"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to login"})
 		return
 	}
 
@@ -58,26 +54,13 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		return
 	}
 	
-	claims, err := auth.ValidateToken(req.RefreshToken, true)
+	accessToken, newRefreshToken, err := h.Service.RefreshToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired refresh token"})
-		return
-	}
-	
-	isValid, err := h.AuthRepo.IsRefreshTokenValid(c.Request.Context(), claims.NPK, claims.TokenID)
-	if err != nil || !isValid {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token, possibly already used or revoked"})
-		return
-	}
-	
-	err = h.AuthRepo.DeleteRefreshToken(c.Request.Context(), claims.NPK, claims.TokenID)
-	if err != nil {
-		log.Printf("Warning: failed to delete old refresh token for user %s: %v", claims.NPK, err)
-	}
-
-	accessToken, newRefreshToken, err := auth.GenerateTokens(claims.NPK, claims.PositionID, h.AuthRepo)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate new tokens"})
+		if err.Error() == "invalid or expired refresh token" || err.Error() == "invalid refresh token, possibly already used or revoked" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process refresh token", "details": err.Error()})
 		return
 	}
 
@@ -85,4 +68,26 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		"access_token":  accessToken,
 		"refresh_token": newRefreshToken,
 	})
+}
+
+func (h *AuthHandler) Logout(c *gin.Context) {
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Authorization header is required"})
+		return
+	}
+
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid token format"})
+		return
+	}
+	tokenString := parts[1]
+
+	err := h.Service.Logout(c.Request.Context(), tokenString) 
+	if err != nil {
+		log.Printf("Error during logout process: %v", err)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Successfully logged out"})
 }

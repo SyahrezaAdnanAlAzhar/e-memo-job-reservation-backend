@@ -41,6 +41,9 @@ func main() {
 
 	
 	// SERVICE
+
+	authService := service.NewAuthService(authRepo, employeeRepo)
+
 	// MASTER DATA INDEPENDENT
 	departmentService := service.NewDepartmentService(departmentRepo)
 	physicalLocationService := service.NewPhysicalLocationService(physicalLocationRepo)
@@ -61,7 +64,7 @@ func main() {
 
 	// HANDLER
 
-	authHandler := handler.NewAuthHandler(employeeRepo, authRepo)
+	authHandler := handler.NewAuthHandler(authService)
 
 	// employeeHandler := handler.NewEmployeeHandler(employeeRepo)
 	// MASTER DATA INDEPENDENT
@@ -93,6 +96,7 @@ func main() {
 	private := router.Group("/api/e-memo-job-reservation")
 	private.Use(auth.JWTMiddleware())
 	{
+		private.POST("/logout", authHandler.Logout)
 		// MASTER DATA INDEPENDENT
 		deptRoutes := private.Group("/department")
 		{
