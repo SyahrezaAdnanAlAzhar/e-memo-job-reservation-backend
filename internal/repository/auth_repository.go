@@ -43,3 +43,13 @@ func (r *AuthRepository) BlacklistToken(ctx context.Context, tokenID string, exp
 	key := "blacklist:" + tokenID
 	return r.RDB.Set(ctx, key, 1, expiresIn).Err()
 }
+
+func (r *AuthRepository) IsTokenBlacklisted(ctx context.Context, tokenID string) (bool, error) {
+	key := "blacklist:" + tokenID
+	// EXISTS WILL RETURN 1 IF THERE IS KEY,
+	result, err := r.RDB.Exists(ctx, key).Result()
+	if err != nil {
+		return false, err
+	}
+	return result == 1, nil
+}

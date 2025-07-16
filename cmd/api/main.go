@@ -80,6 +80,8 @@ func main() {
 
 	// AUTHENTICATION
 
+
+	authMiddleware := auth.NewAuthMiddleware(authRepo)
 	// SETUP
 	router := gin.Default()
 
@@ -94,7 +96,7 @@ func main() {
 
 	// PRIVATE API
 	private := router.Group("/api/e-memo-job-reservation")
-	private.Use(auth.JWTMiddleware())
+	private.Use(authMiddleware.JWTMiddleware()) 
 	{
 		private.POST("/logout", authHandler.Logout)
 		// MASTER DATA INDEPENDENT
