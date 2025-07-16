@@ -1,10 +1,11 @@
 package handler
 
 import (
-	"net/http"
 	"log"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
+	"net/http"
 	"strings"
+
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
@@ -53,7 +54,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Refresh token is required"})
 		return
 	}
-	
+
 	accessToken, newRefreshToken, err := h.Service.RefreshToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
 		if err.Error() == "invalid or expired refresh token" || err.Error() == "token not found or already used" || err.Error() == "token-user mismatch" {
@@ -63,7 +64,6 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process refresh token"})
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{
 		"access_token":  accessToken,
 		"refresh_token": newRefreshToken,
@@ -84,7 +84,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	}
 	tokenString := parts[1]
 
-	err := h.Service.Logout(c.Request.Context(), tokenString) 
+	err := h.Service.Logout(c.Request.Context(), tokenString)
 	if err != nil {
 		log.Printf("Error during logout process: %v", err)
 	}

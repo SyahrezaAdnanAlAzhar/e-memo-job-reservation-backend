@@ -2,8 +2,9 @@ package repository
 
 import (
 	"context"
-	"time"
 	"errors"
+	"time"
+
 	"github.com/redis/go-redis/v9"
 )
 
@@ -58,6 +59,6 @@ func (r *AuthRepository) IsTokenBlacklisted(ctx context.Context, tokenID string)
 
 // DELETE REFRESH TOKEN WHEN USER LOG OUT
 func (r *AuthRepository) DeleteAllUserRefreshTokens(ctx context.Context, npk string) error {
-    key := "refresh_tokens:" + npk
-    return r.RDB.Del(ctx, key).Err()
+	key := "refresh_tokens:" + npk
+	return r.RDB.Del(ctx, key).Err()
 }
