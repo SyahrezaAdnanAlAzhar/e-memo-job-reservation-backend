@@ -5,7 +5,7 @@
 -- Dumped from database version 17.5
 -- Dumped by pg_dump version 17.5
 
--- Started on 2025-07-12 14:44:35
+-- Started on 2025-07-16 11:45:52
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -20,7 +20,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- TOC entry 249 (class 1255 OID 16609)
+-- TOC entry 270 (class 1255 OID 16609)
 -- Name: trigger_set_timestamp(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -72,7 +72,7 @@ CREATE SEQUENCE public.area_department_id_seq
 ALTER SEQUENCE public.area_department_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3621 (class 0 OID 0)
+-- TOC entry 3747 (class 0 OID 0)
 -- Dependencies: 222
 -- Name: area_department_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -97,7 +97,7 @@ CREATE SEQUENCE public.area_id_seq
 ALTER SEQUENCE public.area_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3622 (class 0 OID 0)
+-- TOC entry 3748 (class 0 OID 0)
 -- Dependencies: 221
 -- Name: area_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -139,7 +139,7 @@ CREATE SEQUENCE public.department_id_seq
 ALTER SEQUENCE public.department_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3623 (class 0 OID 0)
+-- TOC entry 3749 (class 0 OID 0)
 -- Dependencies: 219
 -- Name: department_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -157,10 +157,10 @@ CREATE TABLE public.employee (
     department_id smallint,
     area_id smallint,
     name text NOT NULL,
-    "position" text NOT NULL,
     is_active boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    position_id smallint NOT NULL
 );
 
 
@@ -183,7 +183,7 @@ CREATE SEQUENCE public.employee_area_id_seq
 ALTER SEQUENCE public.employee_area_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3624 (class 0 OID 0)
+-- TOC entry 3750 (class 0 OID 0)
 -- Dependencies: 225
 -- Name: employee_area_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -208,12 +208,37 @@ CREATE SEQUENCE public.employee_department_id_seq
 ALTER SEQUENCE public.employee_department_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3625 (class 0 OID 0)
+-- TOC entry 3751 (class 0 OID 0)
 -- Dependencies: 224
 -- Name: employee_department_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.employee_department_id_seq OWNED BY public.employee.department_id;
+
+
+--
+-- TOC entry 253 (class 1259 OID 18261)
+-- Name: employee_position_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.employee_position_id_seq
+    AS smallint
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.employee_position_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3752 (class 0 OID 0)
+-- Dependencies: 253
+-- Name: employee_position_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.employee_position_id_seq OWNED BY public.employee.position_id;
 
 
 --
@@ -250,7 +275,7 @@ CREATE SEQUENCE public.job_id_seq
 ALTER SEQUENCE public.job_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3626 (class 0 OID 0)
+-- TOC entry 3753 (class 0 OID 0)
 -- Dependencies: 241
 -- Name: job_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -274,12 +299,53 @@ CREATE SEQUENCE public.job_ticket_id_seq
 ALTER SEQUENCE public.job_ticket_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3627 (class 0 OID 0)
+-- TOC entry 3754 (class 0 OID 0)
 -- Dependencies: 242
 -- Name: job_ticket_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.job_ticket_id_seq OWNED BY public.job.ticket_id;
+
+
+--
+-- TOC entry 265 (class 1259 OID 20527)
+-- Name: permission; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.permission (
+    id smallint NOT NULL,
+    name text NOT NULL,
+    is_active boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.permission OWNER TO postgres;
+
+--
+-- TOC entry 264 (class 1259 OID 20526)
+-- Name: permission_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.permission_id_seq
+    AS smallint
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.permission_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3755 (class 0 OID 0)
+-- Dependencies: 264
+-- Name: permission_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.permission_id_seq OWNED BY public.permission.id;
 
 
 --
@@ -315,12 +381,211 @@ CREATE SEQUENCE public.physical_location_id_seq
 ALTER SEQUENCE public.physical_location_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3628 (class 0 OID 0)
+-- TOC entry 3756 (class 0 OID 0)
 -- Dependencies: 227
 -- Name: physical_location_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.physical_location_id_seq OWNED BY public.physical_location.id;
+
+
+--
+-- TOC entry 252 (class 1259 OID 18249)
+-- Name: position; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."position" (
+    id smallint NOT NULL,
+    name text NOT NULL,
+    is_active boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public."position" OWNER TO postgres;
+
+--
+-- TOC entry 251 (class 1259 OID 18248)
+-- Name: position_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.position_id_seq
+    AS smallint
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.position_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3757 (class 0 OID 0)
+-- Dependencies: 251
+-- Name: position_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.position_id_seq OWNED BY public."position".id;
+
+
+--
+-- TOC entry 268 (class 1259 OID 20543)
+-- Name: position_permission; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.position_permission (
+    position_id smallint NOT NULL,
+    permission_id smallint NOT NULL,
+    is_active boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.position_permission OWNER TO postgres;
+
+--
+-- TOC entry 267 (class 1259 OID 20542)
+-- Name: position_permission_permission_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.position_permission_permission_id_seq
+    AS smallint
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.position_permission_permission_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3758 (class 0 OID 0)
+-- Dependencies: 267
+-- Name: position_permission_permission_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.position_permission_permission_id_seq OWNED BY public.position_permission.permission_id;
+
+
+--
+-- TOC entry 266 (class 1259 OID 20541)
+-- Name: position_permission_position_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.position_permission_position_id_seq
+    AS smallint
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.position_permission_position_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3759 (class 0 OID 0)
+-- Dependencies: 266
+-- Name: position_permission_position_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.position_permission_position_id_seq OWNED BY public.position_permission.position_id;
+
+
+--
+-- TOC entry 263 (class 1259 OID 18324)
+-- Name: position_to_workflow_mapping; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.position_to_workflow_mapping (
+    id smallint NOT NULL,
+    position_id smallint NOT NULL,
+    workflow_id smallint NOT NULL,
+    is_active boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.position_to_workflow_mapping OWNER TO postgres;
+
+--
+-- TOC entry 260 (class 1259 OID 18321)
+-- Name: position_to_workflow_mapping_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.position_to_workflow_mapping_id_seq
+    AS smallint
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.position_to_workflow_mapping_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3760 (class 0 OID 0)
+-- Dependencies: 260
+-- Name: position_to_workflow_mapping_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.position_to_workflow_mapping_id_seq OWNED BY public.position_to_workflow_mapping.id;
+
+
+--
+-- TOC entry 261 (class 1259 OID 18322)
+-- Name: position_to_workflow_mapping_position_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.position_to_workflow_mapping_position_id_seq
+    AS smallint
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.position_to_workflow_mapping_position_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3761 (class 0 OID 0)
+-- Dependencies: 261
+-- Name: position_to_workflow_mapping_position_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.position_to_workflow_mapping_position_id_seq OWNED BY public.position_to_workflow_mapping.position_id;
+
+
+--
+-- TOC entry 262 (class 1259 OID 18323)
+-- Name: position_to_workflow_mapping_workflow_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.position_to_workflow_mapping_workflow_id_seq
+    AS smallint
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.position_to_workflow_mapping_workflow_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3762 (class 0 OID 0)
+-- Dependencies: 262
+-- Name: position_to_workflow_mapping_workflow_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.position_to_workflow_mapping_workflow_id_seq OWNED BY public.position_to_workflow_mapping.workflow_id;
 
 
 --
@@ -357,7 +622,7 @@ CREATE SEQUENCE public.rejected_ticket_id_seq
 ALTER SEQUENCE public.rejected_ticket_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3629 (class 0 OID 0)
+-- TOC entry 3763 (class 0 OID 0)
 -- Dependencies: 244
 -- Name: rejected_ticket_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -381,12 +646,54 @@ CREATE SEQUENCE public.rejected_ticket_ticket_id_seq
 ALTER SEQUENCE public.rejected_ticket_ticket_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3630 (class 0 OID 0)
+-- TOC entry 3764 (class 0 OID 0)
 -- Dependencies: 245
 -- Name: rejected_ticket_ticket_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.rejected_ticket_ticket_id_seq OWNED BY public.rejected_ticket.ticket_id;
+
+
+--
+-- TOC entry 249 (class 1259 OID 18206)
+-- Name: section_status_ticket; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.section_status_ticket (
+    id smallint NOT NULL,
+    name text NOT NULL,
+    sequence smallint NOT NULL,
+    is_active boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.section_status_ticket OWNER TO postgres;
+
+--
+-- TOC entry 248 (class 1259 OID 18205)
+-- Name: section_status_ticket_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.section_status_ticket_id_seq
+    AS smallint
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.section_status_ticket_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3765 (class 0 OID 0)
+-- Dependencies: 248
+-- Name: section_status_ticket_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.section_status_ticket_id_seq OWNED BY public.section_status_ticket.id;
 
 
 --
@@ -423,7 +730,7 @@ CREATE SEQUENCE public.specified_location_id_seq
 ALTER SEQUENCE public.specified_location_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3631 (class 0 OID 0)
+-- TOC entry 3766 (class 0 OID 0)
 -- Dependencies: 229
 -- Name: specified_location_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -448,7 +755,7 @@ CREATE SEQUENCE public.specified_location_physical_location_id_seq
 ALTER SEQUENCE public.specified_location_physical_location_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3632 (class 0 OID 0)
+-- TOC entry 3767 (class 0 OID 0)
 -- Dependencies: 230
 -- Name: specified_location_physical_location_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -467,7 +774,8 @@ CREATE TABLE public.status_ticket (
     sequence smallint NOT NULL,
     is_active boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    section_id smallint NOT NULL
 );
 
 
@@ -490,12 +798,37 @@ CREATE SEQUENCE public.status_ticket_id_seq
 ALTER SEQUENCE public.status_ticket_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3633 (class 0 OID 0)
+-- TOC entry 3768 (class 0 OID 0)
 -- Dependencies: 217
 -- Name: status_ticket_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.status_ticket_id_seq OWNED BY public.status_ticket.id;
+
+
+--
+-- TOC entry 250 (class 1259 OID 18227)
+-- Name: status_ticket_section_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.status_ticket_section_id_seq
+    AS smallint
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.status_ticket_section_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3769 (class 0 OID 0)
+-- Dependencies: 250
+-- Name: status_ticket_section_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.status_ticket_section_id_seq OWNED BY public.status_ticket.section_id;
 
 
 --
@@ -536,7 +869,7 @@ CREATE SEQUENCE public.ticket_department_target_id_seq
 ALTER SEQUENCE public.ticket_department_target_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3634 (class 0 OID 0)
+-- TOC entry 3770 (class 0 OID 0)
 -- Dependencies: 233
 -- Name: ticket_department_target_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -560,7 +893,7 @@ CREATE SEQUENCE public.ticket_id_seq
 ALTER SEQUENCE public.ticket_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3635 (class 0 OID 0)
+-- TOC entry 3771 (class 0 OID 0)
 -- Dependencies: 232
 -- Name: ticket_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -585,7 +918,7 @@ CREATE SEQUENCE public.ticket_physical_location_id_seq
 ALTER SEQUENCE public.ticket_physical_location_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3636 (class 0 OID 0)
+-- TOC entry 3772 (class 0 OID 0)
 -- Dependencies: 234
 -- Name: ticket_physical_location_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -610,7 +943,7 @@ CREATE SEQUENCE public.ticket_specified_location_id_seq
 ALTER SEQUENCE public.ticket_specified_location_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3637 (class 0 OID 0)
+-- TOC entry 3773 (class 0 OID 0)
 -- Dependencies: 235
 -- Name: ticket_specified_location_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -650,7 +983,7 @@ CREATE SEQUENCE public.track_status_ticket_id_seq
 ALTER SEQUENCE public.track_status_ticket_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3638 (class 0 OID 0)
+-- TOC entry 3774 (class 0 OID 0)
 -- Dependencies: 237
 -- Name: track_status_ticket_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -675,7 +1008,7 @@ CREATE SEQUENCE public.track_status_ticket_status_ticket_id_seq
 ALTER SEQUENCE public.track_status_ticket_status_ticket_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3639 (class 0 OID 0)
+-- TOC entry 3775 (class 0 OID 0)
 -- Dependencies: 239
 -- Name: track_status_ticket_status_ticket_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -699,7 +1032,7 @@ CREATE SEQUENCE public.track_status_ticket_ticket_id_seq
 ALTER SEQUENCE public.track_status_ticket_ticket_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3640 (class 0 OID 0)
+-- TOC entry 3776 (class 0 OID 0)
 -- Dependencies: 238
 -- Name: track_status_ticket_ticket_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -708,7 +1041,7 @@ ALTER SEQUENCE public.track_status_ticket_ticket_id_seq OWNED BY public.track_st
 
 
 --
--- TOC entry 248 (class 1259 OID 16624)
+-- TOC entry 247 (class 1259 OID 16624)
 -- Name: view_calculation_ticket_each_status; Type: VIEW; Schema: public; Owner: postgres
 --
 
@@ -759,40 +1092,190 @@ CREATE VIEW public.view_calculation_ticket_each_status AS
 ALTER VIEW public.view_calculation_ticket_each_status OWNER TO postgres;
 
 --
--- TOC entry 247 (class 1259 OID 16619)
+-- TOC entry 269 (class 1259 OID 20564)
 -- Name: view_ticket_list; Type: VIEW; Schema: public; Owner: postgres
 --
 
 CREATE VIEW public.view_ticket_list AS
+ WITH ticket_actual_start AS (
+         SELECT tst.ticket_id,
+            min(tst.start_date) AS actual_start_date
+           FROM ((public.track_status_ticket tst
+             JOIN public.status_ticket st ON ((tst.status_ticket_id = st.id)))
+             JOIN public.section_status_ticket sst ON ((st.section_id = sst.id)))
+          WHERE (sst.name = 'Actual Section'::text)
+          GROUP BY tst.ticket_id
+        )
  SELECT t.id AS ticket_id,
     t.description,
+    t.department_target_id,
     t.ticket_priority,
-    loc.name AS location_name,
-    spec_loc.name AS specified_location_name,
-    ((now())::date - (t.created_at)::date) AS ticket_age_days,
+    j.job_priority,
+        CASE
+            WHEN (tas.actual_start_date IS NOT NULL) THEN ((now())::date - (tas.actual_start_date)::date)
+            ELSE NULL::integer
+        END AS ticket_age_days,
     req_emp.name AS requestor_name,
     req_dept.name AS requestor_department,
     ( SELECT st.name
            FROM (public.track_status_ticket tst
              JOIN public.status_ticket st ON ((tst.status_ticket_id = st.id)))
-          WHERE ((tst.ticket_id = t.id) AND (tst.finish_date IS NULL))
+          WHERE (tst.ticket_id = t.id)
+          ORDER BY tst.start_date DESC, tst.id DESC
          LIMIT 1) AS current_status,
     pic_emp.name AS pic_name,
-    pic_area.name AS pic_area_name
-   FROM (((((((public.ticket t
+    pic_area.name AS pic_area_name,
+    phys_loc.name AS location_name,
+    spec_loc.name AS specified_location_name
+   FROM ((((((((public.ticket t
+     LEFT JOIN public.job j ON ((t.id = j.ticket_id)))
+     LEFT JOIN ticket_actual_start tas ON ((t.id = tas.ticket_id)))
      JOIN public.employee req_emp ON ((t.requestor = req_emp.npk)))
      LEFT JOIN public.department req_dept ON ((req_emp.department_id = req_dept.id)))
-     LEFT JOIN public.physical_location loc ON ((t.physical_location_id = loc.id)))
-     LEFT JOIN public.specified_location spec_loc ON ((t.specified_location_id = spec_loc.id)))
-     LEFT JOIN public.job j ON ((t.id = j.ticket_id)))
      LEFT JOIN public.employee pic_emp ON ((j.pic_job = pic_emp.npk)))
-     LEFT JOIN public.area pic_area ON ((pic_emp.area_id = pic_area.id)));
+     LEFT JOIN public.area pic_area ON ((pic_emp.area_id = pic_area.id)))
+     LEFT JOIN public.physical_location phys_loc ON ((t.physical_location_id = phys_loc.id)))
+     LEFT JOIN public.specified_location spec_loc ON ((t.specified_location_id = spec_loc.id)));
 
 
 ALTER VIEW public.view_ticket_list OWNER TO postgres;
 
 --
--- TOC entry 3344 (class 2604 OID 16423)
+-- TOC entry 255 (class 1259 OID 18277)
+-- Name: workflow; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.workflow (
+    id smallint NOT NULL,
+    name text NOT NULL,
+    is_active boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.workflow OWNER TO postgres;
+
+--
+-- TOC entry 254 (class 1259 OID 18276)
+-- Name: workflow_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.workflow_id_seq
+    AS smallint
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.workflow_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3777 (class 0 OID 0)
+-- Dependencies: 254
+-- Name: workflow_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.workflow_id_seq OWNED BY public.workflow.id;
+
+
+--
+-- TOC entry 259 (class 1259 OID 18294)
+-- Name: workflow_step; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.workflow_step (
+    id smallint NOT NULL,
+    workflow_id smallint NOT NULL,
+    status_ticket_id smallint NOT NULL,
+    step_sequence smallint NOT NULL,
+    is_active boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.workflow_step OWNER TO postgres;
+
+--
+-- TOC entry 256 (class 1259 OID 18291)
+-- Name: workflow_step_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.workflow_step_id_seq
+    AS smallint
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.workflow_step_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3778 (class 0 OID 0)
+-- Dependencies: 256
+-- Name: workflow_step_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.workflow_step_id_seq OWNED BY public.workflow_step.id;
+
+
+--
+-- TOC entry 258 (class 1259 OID 18293)
+-- Name: workflow_step_status_ticket_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.workflow_step_status_ticket_id_seq
+    AS smallint
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.workflow_step_status_ticket_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3779 (class 0 OID 0)
+-- Dependencies: 258
+-- Name: workflow_step_status_ticket_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.workflow_step_status_ticket_id_seq OWNED BY public.workflow_step.status_ticket_id;
+
+
+--
+-- TOC entry 257 (class 1259 OID 18292)
+-- Name: workflow_step_workflow_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.workflow_step_workflow_id_seq
+    AS smallint
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.workflow_step_workflow_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3780 (class 0 OID 0)
+-- Dependencies: 257
+-- Name: workflow_step_workflow_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.workflow_step_workflow_id_seq OWNED BY public.workflow_step.workflow_id;
+
+
+--
+-- TOC entry 3386 (class 2604 OID 16423)
 -- Name: area id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -800,15 +1283,7 @@ ALTER TABLE ONLY public.area ALTER COLUMN id SET DEFAULT nextval('public.area_id
 
 
 --
--- TOC entry 3345 (class 2604 OID 16424)
--- Name: area department_id; Type: DEFAULT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.area ALTER COLUMN department_id SET DEFAULT nextval('public.area_department_id_seq'::regclass);
-
-
---
--- TOC entry 3339 (class 2604 OID 16407)
+-- TOC entry 3381 (class 2604 OID 16407)
 -- Name: department id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -816,23 +1291,7 @@ ALTER TABLE ONLY public.department ALTER COLUMN id SET DEFAULT nextval('public.d
 
 
 --
--- TOC entry 3349 (class 2604 OID 16444)
--- Name: employee department_id; Type: DEFAULT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.employee ALTER COLUMN department_id SET DEFAULT nextval('public.employee_department_id_seq'::regclass);
-
-
---
--- TOC entry 3350 (class 2604 OID 16445)
--- Name: employee area_id; Type: DEFAULT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.employee ALTER COLUMN area_id SET DEFAULT nextval('public.employee_area_id_seq'::regclass);
-
-
---
--- TOC entry 3373 (class 2604 OID 16565)
+-- TOC entry 3406 (class 2604 OID 16565)
 -- Name: job id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -840,15 +1299,15 @@ ALTER TABLE ONLY public.job ALTER COLUMN id SET DEFAULT nextval('public.job_id_s
 
 
 --
--- TOC entry 3374 (class 2604 OID 16566)
--- Name: job ticket_id; Type: DEFAULT; Schema: public; Owner: postgres
+-- TOC entry 3433 (class 2604 OID 20530)
+-- Name: permission id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.job ALTER COLUMN ticket_id SET DEFAULT nextval('public.job_ticket_id_seq'::regclass);
+ALTER TABLE ONLY public.permission ALTER COLUMN id SET DEFAULT nextval('public.permission_id_seq'::regclass);
 
 
 --
--- TOC entry 3354 (class 2604 OID 16467)
+-- TOC entry 3393 (class 2604 OID 16467)
 -- Name: physical_location id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -856,7 +1315,23 @@ ALTER TABLE ONLY public.physical_location ALTER COLUMN id SET DEFAULT nextval('p
 
 
 --
--- TOC entry 3377 (class 2604 OID 16590)
+-- TOC entry 3417 (class 2604 OID 18252)
+-- Name: position id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."position" ALTER COLUMN id SET DEFAULT nextval('public.position_id_seq'::regclass);
+
+
+--
+-- TOC entry 3429 (class 2604 OID 18327)
+-- Name: position_to_workflow_mapping id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.position_to_workflow_mapping ALTER COLUMN id SET DEFAULT nextval('public.position_to_workflow_mapping_id_seq'::regclass);
+
+
+--
+-- TOC entry 3409 (class 2604 OID 16590)
 -- Name: rejected_ticket id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -864,15 +1339,15 @@ ALTER TABLE ONLY public.rejected_ticket ALTER COLUMN id SET DEFAULT nextval('pub
 
 
 --
--- TOC entry 3378 (class 2604 OID 16591)
--- Name: rejected_ticket ticket_id; Type: DEFAULT; Schema: public; Owner: postgres
+-- TOC entry 3413 (class 2604 OID 18209)
+-- Name: section_status_ticket id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.rejected_ticket ALTER COLUMN ticket_id SET DEFAULT nextval('public.rejected_ticket_ticket_id_seq'::regclass);
+ALTER TABLE ONLY public.section_status_ticket ALTER COLUMN id SET DEFAULT nextval('public.section_status_ticket_id_seq'::regclass);
 
 
 --
--- TOC entry 3358 (class 2604 OID 16482)
+-- TOC entry 3397 (class 2604 OID 16482)
 -- Name: specified_location id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -880,15 +1355,7 @@ ALTER TABLE ONLY public.specified_location ALTER COLUMN id SET DEFAULT nextval('
 
 
 --
--- TOC entry 3359 (class 2604 OID 16483)
--- Name: specified_location physical_location_id; Type: DEFAULT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.specified_location ALTER COLUMN physical_location_id SET DEFAULT nextval('public.specified_location_physical_location_id_seq'::regclass);
-
-
---
--- TOC entry 3335 (class 2604 OID 16393)
+-- TOC entry 3377 (class 2604 OID 16393)
 -- Name: status_ticket id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -896,7 +1363,7 @@ ALTER TABLE ONLY public.status_ticket ALTER COLUMN id SET DEFAULT nextval('publi
 
 
 --
--- TOC entry 3363 (class 2604 OID 16505)
+-- TOC entry 3401 (class 2604 OID 16505)
 -- Name: ticket id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -904,31 +1371,7 @@ ALTER TABLE ONLY public.ticket ALTER COLUMN id SET DEFAULT nextval('public.ticke
 
 
 --
--- TOC entry 3364 (class 2604 OID 16506)
--- Name: ticket department_target_id; Type: DEFAULT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.ticket ALTER COLUMN department_target_id SET DEFAULT nextval('public.ticket_department_target_id_seq'::regclass);
-
-
---
--- TOC entry 3365 (class 2604 OID 16507)
--- Name: ticket physical_location_id; Type: DEFAULT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.ticket ALTER COLUMN physical_location_id SET DEFAULT nextval('public.ticket_physical_location_id_seq'::regclass);
-
-
---
--- TOC entry 3366 (class 2604 OID 16508)
--- Name: ticket specified_location_id; Type: DEFAULT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.ticket ALTER COLUMN specified_location_id SET DEFAULT nextval('public.ticket_specified_location_id_seq'::regclass);
-
-
---
--- TOC entry 3369 (class 2604 OID 16541)
+-- TOC entry 3404 (class 2604 OID 16541)
 -- Name: track_status_ticket id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -936,240 +1379,23 @@ ALTER TABLE ONLY public.track_status_ticket ALTER COLUMN id SET DEFAULT nextval(
 
 
 --
--- TOC entry 3370 (class 2604 OID 16542)
--- Name: track_status_ticket ticket_id; Type: DEFAULT; Schema: public; Owner: postgres
+-- TOC entry 3421 (class 2604 OID 18280)
+-- Name: workflow id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.track_status_ticket ALTER COLUMN ticket_id SET DEFAULT nextval('public.track_status_ticket_ticket_id_seq'::regclass);
-
-
---
--- TOC entry 3371 (class 2604 OID 16543)
--- Name: track_status_ticket status_ticket_id; Type: DEFAULT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.track_status_ticket ALTER COLUMN status_ticket_id SET DEFAULT nextval('public.track_status_ticket_status_ticket_id_seq'::regclass);
+ALTER TABLE ONLY public.workflow ALTER COLUMN id SET DEFAULT nextval('public.workflow_id_seq'::regclass);
 
 
 --
--- TOC entry 3592 (class 0 OID 16420)
--- Dependencies: 223
--- Data for Name: area; Type: TABLE DATA; Schema: public; Owner: postgres
+-- TOC entry 3425 (class 2604 OID 18297)
+-- Name: workflow_step id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
-COPY public.area (id, department_id, name, is_active, created_at, updated_at) FROM stdin;
-1	1	Building	t	2025-07-12 07:32:05.979478+00	2025-07-12 07:32:05.979478+00
-2	1	Electrical	t	2025-07-12 07:32:05.981947+00	2025-07-12 07:32:05.981947+00
-3	1	Office	t	2025-07-12 07:32:05.982805+00	2025-07-12 07:32:05.982805+00
-4	2	Maintenance 1	t	2025-07-12 07:32:05.983605+00	2025-07-12 07:32:05.983605+00
-5	2	Maintenance 2	t	2025-07-12 07:32:05.984402+00	2025-07-12 07:32:05.984402+00
-6	2	Maintenance Support	t	2025-07-12 07:32:05.985197+00	2025-07-12 07:32:05.985197+00
-7	3	Pengukuran	t	2025-07-12 07:32:05.985945+00	2025-07-12 07:32:05.985945+00
-8	3	Pengujian	t	2025-07-12 07:32:05.986603+00	2025-07-12 07:32:05.986603+00
-\.
+ALTER TABLE ONLY public.workflow_step ALTER COLUMN id SET DEFAULT nextval('public.workflow_step_id_seq'::regclass);
 
 
 --
--- TOC entry 3589 (class 0 OID 16404)
--- Dependencies: 220
--- Data for Name: department; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-COPY public.department (id, name, receive_job, is_active, created_at, updated_at) FROM stdin;
-1	HRGA	t	t	2025-07-12 07:32:05.972199+00	2025-07-12 07:32:05.972199+00
-2	Maintenance	t	t	2025-07-12 07:32:05.973629+00	2025-07-12 07:32:05.973629+00
-3	Quality	t	t	2025-07-12 07:32:05.97451+00	2025-07-12 07:32:05.97451+00
-4	PE	t	t	2025-07-12 07:32:05.975168+00	2025-07-12 07:32:05.975168+00
-5	Office	f	t	2025-07-12 07:32:05.975864+00	2025-07-12 07:32:05.975864+00
-6	Marketing	f	t	2025-07-12 07:32:05.976535+00	2025-07-12 07:32:05.976535+00
-7	Finance	f	t	2025-07-12 07:32:05.9772+00	2025-07-12 07:32:05.9772+00
-8	Operation	f	t	2025-07-12 07:32:05.977841+00	2025-07-12 07:32:05.977841+00
-\.
-
-
---
--- TOC entry 3595 (class 0 OID 16441)
--- Dependencies: 226
--- Data for Name: employee; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-COPY public.employee (npk, department_id, area_id, name, "position", is_active, created_at, updated_at) FROM stdin;
-EMP0001	1	1	Nadia Kusumo	Head of Department	t	2025-07-12 07:32:05.999088+00	2025-07-12 07:32:05.999088+00
-EMP0002	1	2	Sari Nugroho	Section	t	2025-07-12 07:32:06.000282+00	2025-07-12 07:32:06.000282+00
-EMP0003	1	2	Hadi Kusumo	Section	t	2025-07-12 07:32:06.001285+00	2025-07-12 07:32:06.001285+00
-EMP0004	1	1	Lia Susanto	Leader	t	2025-07-12 07:32:06.002186+00	2025-07-12 07:32:06.002186+00
-EMP0005	1	2	Lia Setiawan	Leader	t	2025-07-12 07:32:06.002947+00	2025-07-12 07:32:06.002947+00
-EMP0006	1	1	Tono Setiawan	Staff	t	2025-07-12 07:32:06.003687+00	2025-07-12 07:32:06.003687+00
-EMP0007	1	2	Fajar Susanto	Staff	t	2025-07-12 07:32:06.004394+00	2025-07-12 07:32:06.004394+00
-EMP0008	1	3	Eka Wijaya	Staff	t	2025-07-12 07:32:06.004988+00	2025-07-12 07:32:06.004988+00
-EMP0009	1	2	Lia Purnama	Staff	t	2025-07-12 07:32:06.00558+00	2025-07-12 07:32:06.00558+00
-EMP0010	1	3	Sari Pratama	Staff	t	2025-07-12 07:32:06.006134+00	2025-07-12 07:32:06.006134+00
-EMP0011	2	6	Deni Lestari	Head of Department	t	2025-07-12 07:32:06.006785+00	2025-07-12 07:32:06.006785+00
-EMP0012	2	4	Deni Lestari	Section	t	2025-07-12 07:32:06.007391+00	2025-07-12 07:32:06.007391+00
-EMP0013	2	6	Kartika Pratama	Section	t	2025-07-12 07:32:06.007975+00	2025-07-12 07:32:06.007975+00
-EMP0014	2	6	Deni Kusumo	Leader	t	2025-07-12 07:32:06.008638+00	2025-07-12 07:32:06.008638+00
-EMP0015	2	5	Fajar Nugroho	Leader	t	2025-07-12 07:32:06.009281+00	2025-07-12 07:32:06.009281+00
-EMP0016	2	4	Sari Kusumo	Staff	t	2025-07-12 07:32:06.009814+00	2025-07-12 07:32:06.009814+00
-EMP0017	2	5	Hadi Pratama	Staff	t	2025-07-12 07:32:06.010384+00	2025-07-12 07:32:06.010384+00
-EMP0018	2	4	Deni Setiawan	Staff	t	2025-07-12 07:32:06.01092+00	2025-07-12 07:32:06.01092+00
-EMP0019	2	5	Lia Hidayat	Staff	t	2025-07-12 07:32:06.01163+00	2025-07-12 07:32:06.01163+00
-EMP0020	2	5	Gita Susanto	Staff	t	2025-07-12 07:32:06.012384+00	2025-07-12 07:32:06.012384+00
-EMP0021	2	5	Deni Lestari	Staff	t	2025-07-12 07:32:06.013243+00	2025-07-12 07:32:06.013243+00
-EMP0022	3	8	Fajar Kusumo	Head of Department	t	2025-07-12 07:32:06.014049+00	2025-07-12 07:32:06.014049+00
-EMP0023	3	7	Fajar Setiawan	Section	t	2025-07-12 07:32:06.014885+00	2025-07-12 07:32:06.014885+00
-EMP0024	3	7	Eka Hidayat	Section	t	2025-07-12 07:32:06.015482+00	2025-07-12 07:32:06.015482+00
-EMP0025	3	8	Sari Nugroho	Leader	t	2025-07-12 07:32:06.016068+00	2025-07-12 07:32:06.016068+00
-EMP0026	3	8	Oscar Wahyuni	Leader	t	2025-07-12 07:32:06.016815+00	2025-07-12 07:32:06.016815+00
-EMP0027	3	7	Deni Kusumo	Leader	t	2025-07-12 07:32:06.017372+00	2025-07-12 07:32:06.017372+00
-EMP0028	3	7	Cahyo Pratama	Staff	t	2025-07-12 07:32:06.017938+00	2025-07-12 07:32:06.017938+00
-EMP0029	3	8	Adi Kusumo	Staff	t	2025-07-12 07:32:06.01876+00	2025-07-12 07:32:06.01876+00
-EMP0030	3	7	Nadia Lestari	Staff	t	2025-07-12 07:32:06.019311+00	2025-07-12 07:32:06.019311+00
-EMP0031	3	7	Cahyo Setiawan	Staff	t	2025-07-12 07:32:06.02003+00	2025-07-12 07:32:06.02003+00
-EMP0032	3	7	Rina Lestari	Staff	t	2025-07-12 07:32:06.020581+00	2025-07-12 07:32:06.020581+00
-EMP0033	3	7	Indra Nugroho	Staff	t	2025-07-12 07:32:06.021148+00	2025-07-12 07:32:06.021148+00
-EMP0034	3	7	Rina Lestari	Staff	t	2025-07-12 07:32:06.021845+00	2025-07-12 07:32:06.021845+00
-EMP0035	3	7	Hadi Susanto	Staff	t	2025-07-12 07:32:06.02239+00	2025-07-12 07:32:06.02239+00
-EMP0036	3	8	Putra Setiawan	Staff	t	2025-07-12 07:32:06.023085+00	2025-07-12 07:32:06.023085+00
-EMP0037	4	\N	Tono Susanto	Head of Department	t	2025-07-12 07:32:06.023825+00	2025-07-12 07:32:06.023825+00
-EMP0038	4	\N	Wati Hidayat	Section	t	2025-07-12 07:32:06.024548+00	2025-07-12 07:32:06.024548+00
-EMP0039	4	\N	Adi Lestari	Section	t	2025-07-12 07:32:06.025233+00	2025-07-12 07:32:06.025233+00
-EMP0040	4	\N	Hadi Setiawan	Staff	t	2025-07-12 07:32:06.0258+00	2025-07-12 07:32:06.0258+00
-EMP0041	4	\N	Oscar Wahyuni	Staff	t	2025-07-12 07:32:06.02636+00	2025-07-12 07:32:06.02636+00
-EMP0042	4	\N	Budi Pratama	Staff	t	2025-07-12 07:32:06.026915+00	2025-07-12 07:32:06.026915+00
-EMP0043	4	\N	Eka Susanto	Staff	t	2025-07-12 07:32:06.027458+00	2025-07-12 07:32:06.027458+00
-EMP0044	4	\N	Wati Pratama	Staff	t	2025-07-12 07:32:06.028256+00	2025-07-12 07:32:06.028256+00
-EMP0045	4	\N	Nadia Hidayat	Staff	t	2025-07-12 07:32:06.029021+00	2025-07-12 07:32:06.029021+00
-EMP0046	4	\N	Nadia Kusumo	Staff	t	2025-07-12 07:32:06.029676+00	2025-07-12 07:32:06.029676+00
-EMP0047	5	\N	Mega Wijaya	Head of Department	t	2025-07-12 07:32:06.03033+00	2025-07-12 07:32:06.03033+00
-EMP0048	5	\N	Nadia Nugroho	Section	t	2025-07-12 07:32:06.030927+00	2025-07-12 07:32:06.030927+00
-EMP0049	5	\N	Fajar Nugroho	Section	t	2025-07-12 07:32:06.031486+00	2025-07-12 07:32:06.031486+00
-EMP0050	5	\N	Fajar Purnama	Staff	t	2025-07-12 07:32:06.032057+00	2025-07-12 07:32:06.032057+00
-EMP0051	5	\N	Nadia Purnama	Staff	t	2025-07-12 07:32:06.032621+00	2025-07-12 07:32:06.032621+00
-EMP0052	5	\N	Hadi Lestari	Staff	t	2025-07-12 07:32:06.03318+00	2025-07-12 07:32:06.03318+00
-EMP0053	5	\N	Gita Setiawan	Staff	t	2025-07-12 07:32:06.033736+00	2025-07-12 07:32:06.033736+00
-EMP0054	5	\N	Sari Hidayat	Staff	t	2025-07-12 07:32:06.034289+00	2025-07-12 07:32:06.034289+00
-EMP0055	6	\N	Joko Kusumo	Head of Department	t	2025-07-12 07:32:06.034901+00	2025-07-12 07:32:06.034901+00
-EMP0056	6	\N	Indra Susanto	Section	t	2025-07-12 07:32:06.035468+00	2025-07-12 07:32:06.035468+00
-EMP0057	6	\N	Fajar Nugroho	Section	t	2025-07-12 07:32:06.036029+00	2025-07-12 07:32:06.036029+00
-EMP0058	6	\N	Joko Setiawan	Staff	t	2025-07-12 07:32:06.036584+00	2025-07-12 07:32:06.036584+00
-EMP0059	6	\N	Deni Wahyuni	Staff	t	2025-07-12 07:32:06.037262+00	2025-07-12 07:32:06.037262+00
-EMP0060	6	\N	Sari Purnama	Staff	t	2025-07-12 07:32:06.037875+00	2025-07-12 07:32:06.037875+00
-EMP0061	6	\N	Fajar Wijaya	Staff	t	2025-07-12 07:32:06.038453+00	2025-07-12 07:32:06.038453+00
-EMP0062	6	\N	Lia Lestari	Staff	t	2025-07-12 07:32:06.039046+00	2025-07-12 07:32:06.039046+00
-EMP0063	6	\N	Sari Hidayat	Staff	t	2025-07-12 07:32:06.039663+00	2025-07-12 07:32:06.039663+00
-EMP0064	7	\N	Gita Wahyuni	Head of Department	t	2025-07-12 07:32:06.040317+00	2025-07-12 07:32:06.040317+00
-EMP0065	7	\N	Budi Lestari	Section	t	2025-07-12 07:32:06.040933+00	2025-07-12 07:32:06.040933+00
-EMP0066	7	\N	Eka Pratama	Section	t	2025-07-12 07:32:06.041535+00	2025-07-12 07:32:06.041535+00
-EMP0067	7	\N	Cahyo Susanto	Staff	t	2025-07-12 07:32:06.042129+00	2025-07-12 07:32:06.042129+00
-EMP0068	7	\N	Budi Setiawan	Staff	t	2025-07-12 07:32:06.042705+00	2025-07-12 07:32:06.042705+00
-EMP0069	7	\N	Adi Susanto	Staff	t	2025-07-12 07:32:06.043282+00	2025-07-12 07:32:06.043282+00
-EMP0070	7	\N	Eka Hidayat	Staff	t	2025-07-12 07:32:06.043912+00	2025-07-12 07:32:06.043912+00
-EMP0071	7	\N	Nadia Lestari	Staff	t	2025-07-12 07:32:06.044527+00	2025-07-12 07:32:06.044527+00
-EMP0072	7	\N	Gita Kusumo	Staff	t	2025-07-12 07:32:06.045181+00	2025-07-12 07:32:06.045181+00
-EMP0073	7	\N	Cahyo Lestari	Staff	t	2025-07-12 07:32:06.045804+00	2025-07-12 07:32:06.045804+00
-EMP0074	8	\N	Sari Purnama	Head of Department	t	2025-07-12 07:32:06.046456+00	2025-07-12 07:32:06.046456+00
-EMP0075	8	\N	Gita Susanto	Section	t	2025-07-12 07:32:06.047062+00	2025-07-12 07:32:06.047062+00
-EMP0076	8	\N	Gita Hidayat	Section	t	2025-07-12 07:32:06.047617+00	2025-07-12 07:32:06.047617+00
-EMP0077	8	\N	Wati Kusumo	Staff	t	2025-07-12 07:32:06.048174+00	2025-07-12 07:32:06.048174+00
-EMP0078	8	\N	Lia Susanto	Staff	t	2025-07-12 07:32:06.048731+00	2025-07-12 07:32:06.048731+00
-EMP0079	8	\N	Gita Hidayat	Staff	t	2025-07-12 07:32:06.049295+00	2025-07-12 07:32:06.049295+00
-EMP0080	8	\N	Deni Pratama	Staff	t	2025-07-12 07:32:06.049854+00	2025-07-12 07:32:06.049854+00
-EMP0081	8	\N	Wati Wijaya	Staff	t	2025-07-12 07:32:06.050419+00	2025-07-12 07:32:06.050419+00
-\.
-
-
---
--- TOC entry 3612 (class 0 OID 16562)
--- Dependencies: 243
--- Data for Name: job; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-COPY public.job (id, ticket_id, pic_job, job_priority, report_file, created_at, updated_at) FROM stdin;
-\.
-
-
---
--- TOC entry 3597 (class 0 OID 16464)
--- Dependencies: 228
--- Data for Name: physical_location; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-COPY public.physical_location (id, name, is_active, created_at, updated_at) FROM stdin;
-1	Forging	t	2025-07-12 07:32:05.988023+00	2025-07-12 07:32:05.988023+00
-2	Production	t	2025-07-12 07:32:05.989243+00	2025-07-12 07:32:05.989243+00
-3	Log	t	2025-07-12 07:32:05.990076+00	2025-07-12 07:32:05.990076+00
-4	Building Office	f	2025-07-12 07:32:05.990723+00	2025-07-12 07:32:05.990723+00
-\.
-
-
---
--- TOC entry 3615 (class 0 OID 16587)
--- Dependencies: 246
--- Data for Name: rejected_ticket; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-COPY public.rejected_ticket (id, ticket_id, rejector, feedback, already_seen, created_at, updated_at) FROM stdin;
-\.
-
-
---
--- TOC entry 3600 (class 0 OID 16479)
--- Dependencies: 231
--- Data for Name: specified_location; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-COPY public.specified_location (id, physical_location_id, name, is_active, created_at, updated_at) FROM stdin;
-1	1	F 1	t	2025-07-12 07:32:05.99192+00	2025-07-12 07:32:05.99192+00
-2	1	F 2	t	2025-07-12 07:32:05.992956+00	2025-07-12 07:32:05.992956+00
-3	1	F 3	t	2025-07-12 07:32:05.993695+00	2025-07-12 07:32:05.993695+00
-4	1	F 4	t	2025-07-12 07:32:05.994364+00	2025-07-12 07:32:05.994364+00
-5	2	Machine Production	t	2025-07-12 07:32:05.99511+00	2025-07-12 07:32:05.99511+00
-6	2	Tool Production	t	2025-07-12 07:32:05.995782+00	2025-07-12 07:32:05.995782+00
-7	2	Support Production	t	2025-07-12 07:32:05.996438+00	2025-07-12 07:32:05.996438+00
-8	3	Input Log	t	2025-07-12 07:32:05.997145+00	2025-07-12 07:32:05.997145+00
-9	3	Output Log	t	2025-07-12 07:32:05.997748+00	2025-07-12 07:32:05.997748+00
-\.
-
-
---
--- TOC entry 3587 (class 0 OID 16390)
--- Dependencies: 218
--- Data for Name: status_ticket; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-COPY public.status_ticket (id, name, sequence, is_active, created_at, updated_at) FROM stdin;
-1	Dibatalkan	-100	t	2025-07-12 07:32:05.963309+00	2025-07-12 07:32:05.963309+00
-2	Approval Section	-2	t	2025-07-12 07:32:05.965858+00	2025-07-12 07:32:05.965858+00
-3	Approval Department	-1	t	2025-07-12 07:32:05.967244+00	2025-07-12 07:32:05.967244+00
-4	Menunggu Job	0	t	2025-07-12 07:32:05.968298+00	2025-07-12 07:32:05.968298+00
-5	Dikerjakan	1	t	2025-07-12 07:32:05.96903+00	2025-07-12 07:32:05.96903+00
-6	Job Selesai	2	t	2025-07-12 07:32:05.969685+00	2025-07-12 07:32:05.969685+00
-7	Tiket selesai	3	t	2025-07-12 07:32:05.970524+00	2025-07-12 07:32:05.970524+00
-\.
-
-
---
--- TOC entry 3605 (class 0 OID 16502)
--- Dependencies: 236
--- Data for Name: ticket; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-COPY public.ticket (id, requestor, department_target_id, physical_location_id, specified_location_id, description, ticket_priority, support_file, created_at, updated_at) FROM stdin;
-\.
-
-
---
--- TOC entry 3609 (class 0 OID 16538)
--- Dependencies: 240
--- Data for Name: track_status_ticket; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-COPY public.track_status_ticket (id, ticket_id, status_ticket_id, start_date, finish_date) FROM stdin;
-\.
-
-
---
--- TOC entry 3641 (class 0 OID 0)
+-- TOC entry 3781 (class 0 OID 0)
 -- Dependencies: 222
 -- Name: area_department_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1178,7 +1404,7 @@ SELECT pg_catalog.setval('public.area_department_id_seq', 1, false);
 
 
 --
--- TOC entry 3642 (class 0 OID 0)
+-- TOC entry 3782 (class 0 OID 0)
 -- Dependencies: 221
 -- Name: area_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1187,7 +1413,7 @@ SELECT pg_catalog.setval('public.area_id_seq', 8, true);
 
 
 --
--- TOC entry 3643 (class 0 OID 0)
+-- TOC entry 3783 (class 0 OID 0)
 -- Dependencies: 219
 -- Name: department_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1196,7 +1422,7 @@ SELECT pg_catalog.setval('public.department_id_seq', 8, true);
 
 
 --
--- TOC entry 3644 (class 0 OID 0)
+-- TOC entry 3784 (class 0 OID 0)
 -- Dependencies: 225
 -- Name: employee_area_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1205,7 +1431,7 @@ SELECT pg_catalog.setval('public.employee_area_id_seq', 1, false);
 
 
 --
--- TOC entry 3645 (class 0 OID 0)
+-- TOC entry 3785 (class 0 OID 0)
 -- Dependencies: 224
 -- Name: employee_department_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1214,16 +1440,25 @@ SELECT pg_catalog.setval('public.employee_department_id_seq', 1, false);
 
 
 --
--- TOC entry 3646 (class 0 OID 0)
+-- TOC entry 3786 (class 0 OID 0)
+-- Dependencies: 253
+-- Name: employee_position_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.employee_position_id_seq', 1, false);
+
+
+--
+-- TOC entry 3787 (class 0 OID 0)
 -- Dependencies: 241
 -- Name: job_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.job_id_seq', 1, false);
+SELECT pg_catalog.setval('public.job_id_seq', 1, true);
 
 
 --
--- TOC entry 3647 (class 0 OID 0)
+-- TOC entry 3788 (class 0 OID 0)
 -- Dependencies: 242
 -- Name: job_ticket_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1232,7 +1467,16 @@ SELECT pg_catalog.setval('public.job_ticket_id_seq', 1, false);
 
 
 --
--- TOC entry 3648 (class 0 OID 0)
+-- TOC entry 3789 (class 0 OID 0)
+-- Dependencies: 264
+-- Name: permission_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.permission_id_seq', 3, true);
+
+
+--
+-- TOC entry 3790 (class 0 OID 0)
 -- Dependencies: 227
 -- Name: physical_location_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1241,7 +1485,61 @@ SELECT pg_catalog.setval('public.physical_location_id_seq', 4, true);
 
 
 --
--- TOC entry 3649 (class 0 OID 0)
+-- TOC entry 3791 (class 0 OID 0)
+-- Dependencies: 251
+-- Name: position_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.position_id_seq', 4, true);
+
+
+--
+-- TOC entry 3792 (class 0 OID 0)
+-- Dependencies: 267
+-- Name: position_permission_permission_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.position_permission_permission_id_seq', 1, false);
+
+
+--
+-- TOC entry 3793 (class 0 OID 0)
+-- Dependencies: 266
+-- Name: position_permission_position_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.position_permission_position_id_seq', 1, false);
+
+
+--
+-- TOC entry 3794 (class 0 OID 0)
+-- Dependencies: 260
+-- Name: position_to_workflow_mapping_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.position_to_workflow_mapping_id_seq', 4, true);
+
+
+--
+-- TOC entry 3795 (class 0 OID 0)
+-- Dependencies: 261
+-- Name: position_to_workflow_mapping_position_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.position_to_workflow_mapping_position_id_seq', 1, false);
+
+
+--
+-- TOC entry 3796 (class 0 OID 0)
+-- Dependencies: 262
+-- Name: position_to_workflow_mapping_workflow_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.position_to_workflow_mapping_workflow_id_seq', 1, false);
+
+
+--
+-- TOC entry 3797 (class 0 OID 0)
 -- Dependencies: 244
 -- Name: rejected_ticket_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1250,7 +1548,7 @@ SELECT pg_catalog.setval('public.rejected_ticket_id_seq', 1, false);
 
 
 --
--- TOC entry 3650 (class 0 OID 0)
+-- TOC entry 3798 (class 0 OID 0)
 -- Dependencies: 245
 -- Name: rejected_ticket_ticket_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1259,7 +1557,16 @@ SELECT pg_catalog.setval('public.rejected_ticket_ticket_id_seq', 1, false);
 
 
 --
--- TOC entry 3651 (class 0 OID 0)
+-- TOC entry 3799 (class 0 OID 0)
+-- Dependencies: 248
+-- Name: section_status_ticket_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.section_status_ticket_id_seq', 3, true);
+
+
+--
+-- TOC entry 3800 (class 0 OID 0)
 -- Dependencies: 229
 -- Name: specified_location_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1268,7 +1575,7 @@ SELECT pg_catalog.setval('public.specified_location_id_seq', 9, true);
 
 
 --
--- TOC entry 3652 (class 0 OID 0)
+-- TOC entry 3801 (class 0 OID 0)
 -- Dependencies: 230
 -- Name: specified_location_physical_location_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1277,7 +1584,7 @@ SELECT pg_catalog.setval('public.specified_location_physical_location_id_seq', 1
 
 
 --
--- TOC entry 3653 (class 0 OID 0)
+-- TOC entry 3802 (class 0 OID 0)
 -- Dependencies: 217
 -- Name: status_ticket_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1286,7 +1593,16 @@ SELECT pg_catalog.setval('public.status_ticket_id_seq', 7, true);
 
 
 --
--- TOC entry 3654 (class 0 OID 0)
+-- TOC entry 3803 (class 0 OID 0)
+-- Dependencies: 250
+-- Name: status_ticket_section_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.status_ticket_section_id_seq', 1, false);
+
+
+--
+-- TOC entry 3804 (class 0 OID 0)
 -- Dependencies: 233
 -- Name: ticket_department_target_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1295,16 +1611,16 @@ SELECT pg_catalog.setval('public.ticket_department_target_id_seq', 1, false);
 
 
 --
--- TOC entry 3655 (class 0 OID 0)
+-- TOC entry 3805 (class 0 OID 0)
 -- Dependencies: 232
 -- Name: ticket_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.ticket_id_seq', 1, false);
+SELECT pg_catalog.setval('public.ticket_id_seq', 1, true);
 
 
 --
--- TOC entry 3656 (class 0 OID 0)
+-- TOC entry 3806 (class 0 OID 0)
 -- Dependencies: 234
 -- Name: ticket_physical_location_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1313,7 +1629,7 @@ SELECT pg_catalog.setval('public.ticket_physical_location_id_seq', 1, false);
 
 
 --
--- TOC entry 3657 (class 0 OID 0)
+-- TOC entry 3807 (class 0 OID 0)
 -- Dependencies: 235
 -- Name: ticket_specified_location_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1322,16 +1638,16 @@ SELECT pg_catalog.setval('public.ticket_specified_location_id_seq', 1, false);
 
 
 --
--- TOC entry 3658 (class 0 OID 0)
+-- TOC entry 3808 (class 0 OID 0)
 -- Dependencies: 237
 -- Name: track_status_ticket_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.track_status_ticket_id_seq', 1, false);
+SELECT pg_catalog.setval('public.track_status_ticket_id_seq', 1, true);
 
 
 --
--- TOC entry 3659 (class 0 OID 0)
+-- TOC entry 3809 (class 0 OID 0)
 -- Dependencies: 239
 -- Name: track_status_ticket_status_ticket_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1340,7 +1656,7 @@ SELECT pg_catalog.setval('public.track_status_ticket_status_ticket_id_seq', 1, f
 
 
 --
--- TOC entry 3660 (class 0 OID 0)
+-- TOC entry 3810 (class 0 OID 0)
 -- Dependencies: 238
 -- Name: track_status_ticket_ticket_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1349,7 +1665,43 @@ SELECT pg_catalog.setval('public.track_status_ticket_ticket_id_seq', 1, false);
 
 
 --
--- TOC entry 3391 (class 2606 OID 16431)
+-- TOC entry 3811 (class 0 OID 0)
+-- Dependencies: 254
+-- Name: workflow_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.workflow_id_seq', 3, true);
+
+
+--
+-- TOC entry 3812 (class 0 OID 0)
+-- Dependencies: 256
+-- Name: workflow_step_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.workflow_step_id_seq', 6, true);
+
+
+--
+-- TOC entry 3813 (class 0 OID 0)
+-- Dependencies: 258
+-- Name: workflow_step_status_ticket_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.workflow_step_status_ticket_id_seq', 1, false);
+
+
+--
+-- TOC entry 3814 (class 0 OID 0)
+-- Dependencies: 257
+-- Name: workflow_step_workflow_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.workflow_step_workflow_id_seq', 1, false);
+
+
+--
+-- TOC entry 3451 (class 2606 OID 16431)
 -- Name: area area_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1358,7 +1710,7 @@ ALTER TABLE ONLY public.area
 
 
 --
--- TOC entry 3393 (class 2606 OID 16433)
+-- TOC entry 3453 (class 2606 OID 16433)
 -- Name: area area_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1367,7 +1719,7 @@ ALTER TABLE ONLY public.area
 
 
 --
--- TOC entry 3387 (class 2606 OID 16415)
+-- TOC entry 3447 (class 2606 OID 16415)
 -- Name: department department_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1376,7 +1728,7 @@ ALTER TABLE ONLY public.department
 
 
 --
--- TOC entry 3389 (class 2606 OID 16417)
+-- TOC entry 3449 (class 2606 OID 16417)
 -- Name: department department_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1385,7 +1737,7 @@ ALTER TABLE ONLY public.department
 
 
 --
--- TOC entry 3395 (class 2606 OID 16452)
+-- TOC entry 3455 (class 2606 OID 16452)
 -- Name: employee employee_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1394,7 +1746,7 @@ ALTER TABLE ONLY public.employee
 
 
 --
--- TOC entry 3411 (class 2606 OID 16572)
+-- TOC entry 3471 (class 2606 OID 16572)
 -- Name: job job_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1403,7 +1755,7 @@ ALTER TABLE ONLY public.job
 
 
 --
--- TOC entry 3413 (class 2606 OID 16574)
+-- TOC entry 3473 (class 2606 OID 16574)
 -- Name: job job_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1412,7 +1764,25 @@ ALTER TABLE ONLY public.job
 
 
 --
--- TOC entry 3397 (class 2606 OID 16474)
+-- TOC entry 3501 (class 2606 OID 20537)
+-- Name: permission permission_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.permission
+    ADD CONSTRAINT permission_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 3503 (class 2606 OID 20539)
+-- Name: permission permission_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.permission
+    ADD CONSTRAINT permission_unique UNIQUE (name);
+
+
+--
+-- TOC entry 3457 (class 2606 OID 16474)
 -- Name: physical_location physical_location_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1421,7 +1791,7 @@ ALTER TABLE ONLY public.physical_location
 
 
 --
--- TOC entry 3399 (class 2606 OID 16476)
+-- TOC entry 3459 (class 2606 OID 16476)
 -- Name: physical_location physical_location_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1430,7 +1800,52 @@ ALTER TABLE ONLY public.physical_location
 
 
 --
--- TOC entry 3415 (class 2606 OID 16598)
+-- TOC entry 3505 (class 2606 OID 20552)
+-- Name: position_permission position_permission_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.position_permission
+    ADD CONSTRAINT position_permission_pkey PRIMARY KEY (position_id, permission_id);
+
+
+--
+-- TOC entry 3483 (class 2606 OID 18258)
+-- Name: position position_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."position"
+    ADD CONSTRAINT position_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 3497 (class 2606 OID 18334)
+-- Name: position_to_workflow_mapping position_to_workflow_mapping_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.position_to_workflow_mapping
+    ADD CONSTRAINT position_to_workflow_mapping_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 3499 (class 2606 OID 18347)
+-- Name: position_to_workflow_mapping position_to_workflow_mapping_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.position_to_workflow_mapping
+    ADD CONSTRAINT position_to_workflow_mapping_unique UNIQUE (position_id);
+
+
+--
+-- TOC entry 3485 (class 2606 OID 18260)
+-- Name: position position_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."position"
+    ADD CONSTRAINT position_unique UNIQUE (name);
+
+
+--
+-- TOC entry 3475 (class 2606 OID 16598)
 -- Name: rejected_ticket rejected_ticket_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1439,7 +1854,34 @@ ALTER TABLE ONLY public.rejected_ticket
 
 
 --
--- TOC entry 3401 (class 2606 OID 16490)
+-- TOC entry 3477 (class 2606 OID 18216)
+-- Name: section_status_ticket section_status_ticket_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.section_status_ticket
+    ADD CONSTRAINT section_status_ticket_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 3479 (class 2606 OID 18220)
+-- Name: section_status_ticket section_status_ticket_unique_name; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.section_status_ticket
+    ADD CONSTRAINT section_status_ticket_unique_name UNIQUE (name);
+
+
+--
+-- TOC entry 3481 (class 2606 OID 18222)
+-- Name: section_status_ticket section_status_ticket_unique_sequence; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.section_status_ticket
+    ADD CONSTRAINT section_status_ticket_unique_sequence UNIQUE (sequence);
+
+
+--
+-- TOC entry 3461 (class 2606 OID 16490)
 -- Name: specified_location specified_location_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1448,7 +1890,7 @@ ALTER TABLE ONLY public.specified_location
 
 
 --
--- TOC entry 3403 (class 2606 OID 16492)
+-- TOC entry 3463 (class 2606 OID 16492)
 -- Name: specified_location specified_location_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1457,7 +1899,7 @@ ALTER TABLE ONLY public.specified_location
 
 
 --
--- TOC entry 3383 (class 2606 OID 16400)
+-- TOC entry 3441 (class 2606 OID 16400)
 -- Name: status_ticket status_ticket_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1466,16 +1908,25 @@ ALTER TABLE ONLY public.status_ticket
 
 
 --
--- TOC entry 3385 (class 2606 OID 16402)
--- Name: status_ticket status_ticket_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- TOC entry 3443 (class 2606 OID 18224)
+-- Name: status_ticket status_ticket_unique_name; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.status_ticket
-    ADD CONSTRAINT status_ticket_unique UNIQUE (name, sequence);
+    ADD CONSTRAINT status_ticket_unique_name UNIQUE (name);
 
 
 --
--- TOC entry 3405 (class 2606 OID 16514)
+-- TOC entry 3445 (class 2606 OID 18226)
+-- Name: status_ticket status_ticket_unique_sequence; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.status_ticket
+    ADD CONSTRAINT status_ticket_unique_sequence UNIQUE (sequence);
+
+
+--
+-- TOC entry 3465 (class 2606 OID 16514)
 -- Name: ticket ticket_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1484,7 +1935,7 @@ ALTER TABLE ONLY public.ticket
 
 
 --
--- TOC entry 3407 (class 2606 OID 16548)
+-- TOC entry 3467 (class 2606 OID 16548)
 -- Name: track_status_ticket track_status_ticket_id; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1493,7 +1944,7 @@ ALTER TABLE ONLY public.track_status_ticket
 
 
 --
--- TOC entry 3409 (class 2606 OID 16546)
+-- TOC entry 3469 (class 2606 OID 16546)
 -- Name: track_status_ticket track_status_ticket_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1502,7 +1953,52 @@ ALTER TABLE ONLY public.track_status_ticket
 
 
 --
--- TOC entry 3432 (class 2620 OID 16610)
+-- TOC entry 3487 (class 2606 OID 18287)
+-- Name: workflow workflow_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.workflow
+    ADD CONSTRAINT workflow_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 3491 (class 2606 OID 18304)
+-- Name: workflow_step workflow_step_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.workflow_step
+    ADD CONSTRAINT workflow_step_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 3493 (class 2606 OID 18306)
+-- Name: workflow_step workflow_step_unique_status_ticket_id; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.workflow_step
+    ADD CONSTRAINT workflow_step_unique_status_ticket_id UNIQUE (workflow_id, status_ticket_id);
+
+
+--
+-- TOC entry 3495 (class 2606 OID 18308)
+-- Name: workflow_step workflow_step_unique_step_sequence; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.workflow_step
+    ADD CONSTRAINT workflow_step_unique_step_sequence UNIQUE (workflow_id, step_sequence);
+
+
+--
+-- TOC entry 3489 (class 2606 OID 18289)
+-- Name: workflow workflow_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.workflow
+    ADD CONSTRAINT workflow_unique UNIQUE (name);
+
+
+--
+-- TOC entry 3530 (class 2620 OID 16610)
 -- Name: area area_set_timestamp; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1510,7 +2006,7 @@ CREATE TRIGGER area_set_timestamp BEFORE UPDATE ON public.area FOR EACH ROW EXEC
 
 
 --
--- TOC entry 3431 (class 2620 OID 16611)
+-- TOC entry 3529 (class 2620 OID 16611)
 -- Name: department department_set_timestamp; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1518,7 +2014,7 @@ CREATE TRIGGER department_set_timestamp BEFORE UPDATE ON public.department FOR E
 
 
 --
--- TOC entry 3433 (class 2620 OID 16612)
+-- TOC entry 3531 (class 2620 OID 16612)
 -- Name: employee employee; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1526,7 +2022,7 @@ CREATE TRIGGER employee BEFORE UPDATE ON public.employee FOR EACH ROW EXECUTE FU
 
 
 --
--- TOC entry 3437 (class 2620 OID 16613)
+-- TOC entry 3535 (class 2620 OID 16613)
 -- Name: job job_set_timestamp; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1534,7 +2030,15 @@ CREATE TRIGGER job_set_timestamp BEFORE UPDATE ON public.job FOR EACH ROW EXECUT
 
 
 --
--- TOC entry 3434 (class 2620 OID 16614)
+-- TOC entry 3542 (class 2620 OID 20540)
+-- Name: permission permission_set_timestamp; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER permission_set_timestamp BEFORE UPDATE ON public.permission FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();
+
+
+--
+-- TOC entry 3532 (class 2620 OID 16614)
 -- Name: physical_location physical_location_set_timestamp; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1542,7 +2046,31 @@ CREATE TRIGGER physical_location_set_timestamp BEFORE UPDATE ON public.physical_
 
 
 --
--- TOC entry 3438 (class 2620 OID 16615)
+-- TOC entry 3543 (class 2620 OID 20563)
+-- Name: position_permission position_permission_set_timestamp; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER position_permission_set_timestamp BEFORE UPDATE ON public.position_permission FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();
+
+
+--
+-- TOC entry 3538 (class 2620 OID 18274)
+-- Name: position position_set_timestamp; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER position_set_timestamp BEFORE UPDATE ON public."position" FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();
+
+
+--
+-- TOC entry 3541 (class 2620 OID 18345)
+-- Name: position_to_workflow_mapping position_to_workflow_mapping_set_timestamp; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER position_to_workflow_mapping_set_timestamp BEFORE UPDATE ON public.position_to_workflow_mapping FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();
+
+
+--
+-- TOC entry 3536 (class 2620 OID 16615)
 -- Name: rejected_ticket rejected_ticket_set_timestamp; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1550,7 +2078,15 @@ CREATE TRIGGER rejected_ticket_set_timestamp BEFORE UPDATE ON public.rejected_ti
 
 
 --
--- TOC entry 3435 (class 2620 OID 16616)
+-- TOC entry 3537 (class 2620 OID 18242)
+-- Name: section_status_ticket section_status_ticket_set_timestamp; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER section_status_ticket_set_timestamp BEFORE UPDATE ON public.section_status_ticket FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();
+
+
+--
+-- TOC entry 3533 (class 2620 OID 16616)
 -- Name: specified_location specified_location_set_timestamp; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1558,7 +2094,7 @@ CREATE TRIGGER specified_location_set_timestamp BEFORE UPDATE ON public.specifie
 
 
 --
--- TOC entry 3430 (class 2620 OID 16617)
+-- TOC entry 3528 (class 2620 OID 16617)
 -- Name: status_ticket status_ticket_set_timestamp; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1566,7 +2102,7 @@ CREATE TRIGGER status_ticket_set_timestamp BEFORE UPDATE ON public.status_ticket
 
 
 --
--- TOC entry 3436 (class 2620 OID 16618)
+-- TOC entry 3534 (class 2620 OID 16618)
 -- Name: ticket ticket_set_timestamp; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1574,134 +2110,221 @@ CREATE TRIGGER ticket_set_timestamp BEFORE UPDATE ON public.ticket FOR EACH ROW 
 
 
 --
--- TOC entry 3417 (class 2606 OID 16458)
+-- TOC entry 3539 (class 2620 OID 18290)
+-- Name: workflow workflow_set_timestamp; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER workflow_set_timestamp BEFORE UPDATE ON public.workflow FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();
+
+
+--
+-- TOC entry 3540 (class 2620 OID 18320)
+-- Name: workflow_step workflow_step_set_timestamp; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER workflow_step_set_timestamp BEFORE UPDATE ON public.workflow_step FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();
+
+
+--
+-- TOC entry 3508 (class 2606 OID 17889)
 -- Name: employee area_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.employee
-    ADD CONSTRAINT area_id FOREIGN KEY (area_id) REFERENCES public.area(id);
+    ADD CONSTRAINT area_id FOREIGN KEY (area_id) REFERENCES public.area(id) ON DELETE CASCADE NOT VALID;
 
 
 --
--- TOC entry 3416 (class 2606 OID 16434)
+-- TOC entry 3507 (class 2606 OID 17884)
 -- Name: area department_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.area
-    ADD CONSTRAINT department_id FOREIGN KEY (department_id) REFERENCES public.department(id);
+    ADD CONSTRAINT department_id FOREIGN KEY (department_id) REFERENCES public.department(id) ON DELETE CASCADE NOT VALID;
 
 
 --
--- TOC entry 3418 (class 2606 OID 16453)
+-- TOC entry 3509 (class 2606 OID 17894)
 -- Name: employee department_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.employee
-    ADD CONSTRAINT department_id FOREIGN KEY (department_id) REFERENCES public.department(id);
+    ADD CONSTRAINT department_id FOREIGN KEY (department_id) REFERENCES public.department(id) ON DELETE CASCADE NOT VALID;
 
 
 --
--- TOC entry 3420 (class 2606 OID 16520)
+-- TOC entry 3512 (class 2606 OID 17924)
 -- Name: ticket department_target_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.ticket
-    ADD CONSTRAINT department_target_id FOREIGN KEY (department_target_id) REFERENCES public.department(id);
+    ADD CONSTRAINT department_target_id FOREIGN KEY (department_target_id) REFERENCES public.department(id) ON DELETE CASCADE NOT VALID;
 
 
 --
--- TOC entry 3419 (class 2606 OID 16493)
+-- TOC entry 3526 (class 2606 OID 20558)
+-- Name: position_permission permission_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.position_permission
+    ADD CONSTRAINT permission_id FOREIGN KEY (permission_id) REFERENCES public.permission(id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 3511 (class 2606 OID 17919)
 -- Name: specified_location physical_location_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.specified_location
-    ADD CONSTRAINT physical_location_id FOREIGN KEY (physical_location_id) REFERENCES public.physical_location(id);
+    ADD CONSTRAINT physical_location_id FOREIGN KEY (physical_location_id) REFERENCES public.physical_location(id) ON DELETE CASCADE NOT VALID;
 
 
 --
--- TOC entry 3421 (class 2606 OID 16525)
+-- TOC entry 3513 (class 2606 OID 17929)
 -- Name: ticket physical_location_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.ticket
-    ADD CONSTRAINT physical_location_id FOREIGN KEY (physical_location_id) REFERENCES public.physical_location(id);
+    ADD CONSTRAINT physical_location_id FOREIGN KEY (physical_location_id) REFERENCES public.physical_location(id) ON DELETE CASCADE NOT VALID;
 
 
 --
--- TOC entry 3426 (class 2606 OID 16580)
+-- TOC entry 3518 (class 2606 OID 17899)
 -- Name: job pic_job; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.job
-    ADD CONSTRAINT pic_job FOREIGN KEY (pic_job) REFERENCES public.employee(npk);
+    ADD CONSTRAINT pic_job FOREIGN KEY (pic_job) REFERENCES public.employee(npk) ON DELETE CASCADE NOT VALID;
 
 
 --
--- TOC entry 3428 (class 2606 OID 16604)
+-- TOC entry 3510 (class 2606 OID 18269)
+-- Name: employee position_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.employee
+    ADD CONSTRAINT position_id FOREIGN KEY (position_id) REFERENCES public."position"(id) ON DELETE CASCADE NOT VALID;
+
+
+--
+-- TOC entry 3524 (class 2606 OID 18335)
+-- Name: position_to_workflow_mapping position_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.position_to_workflow_mapping
+    ADD CONSTRAINT position_id FOREIGN KEY (position_id) REFERENCES public."position"(id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 3527 (class 2606 OID 20553)
+-- Name: position_permission postion_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.position_permission
+    ADD CONSTRAINT postion_id FOREIGN KEY (position_id) REFERENCES public."position"(id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 3520 (class 2606 OID 17909)
 -- Name: rejected_ticket rejector; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rejected_ticket
-    ADD CONSTRAINT rejector FOREIGN KEY (rejector) REFERENCES public.employee(npk);
+    ADD CONSTRAINT rejector FOREIGN KEY (rejector) REFERENCES public.employee(npk) ON DELETE CASCADE NOT VALID;
 
 
 --
--- TOC entry 3422 (class 2606 OID 16515)
+-- TOC entry 3514 (class 2606 OID 17934)
 -- Name: ticket requestor; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.ticket
-    ADD CONSTRAINT requestor FOREIGN KEY (requestor) REFERENCES public.employee(npk);
+    ADD CONSTRAINT requestor FOREIGN KEY (requestor) REFERENCES public.employee(npk) ON DELETE CASCADE NOT VALID;
 
 
 --
--- TOC entry 3423 (class 2606 OID 16530)
+-- TOC entry 3506 (class 2606 OID 18243)
+-- Name: status_ticket section_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.status_ticket
+    ADD CONSTRAINT section_id FOREIGN KEY (section_id) REFERENCES public.section_status_ticket(id) ON DELETE CASCADE NOT VALID;
+
+
+--
+-- TOC entry 3515 (class 2606 OID 17939)
 -- Name: ticket specified_location_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.ticket
-    ADD CONSTRAINT specified_location_id FOREIGN KEY (specified_location_id) REFERENCES public.specified_location(id);
+    ADD CONSTRAINT specified_location_id FOREIGN KEY (specified_location_id) REFERENCES public.specified_location(id) ON DELETE CASCADE NOT VALID;
 
 
 --
--- TOC entry 3424 (class 2606 OID 16554)
+-- TOC entry 3516 (class 2606 OID 17944)
 -- Name: track_status_ticket status_ticket_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.track_status_ticket
-    ADD CONSTRAINT status_ticket_id FOREIGN KEY (status_ticket_id) REFERENCES public.status_ticket(id);
+    ADD CONSTRAINT status_ticket_id FOREIGN KEY (status_ticket_id) REFERENCES public.status_ticket(id) ON DELETE CASCADE NOT VALID;
 
 
 --
--- TOC entry 3425 (class 2606 OID 16549)
--- Name: track_status_ticket ticket_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- TOC entry 3522 (class 2606 OID 18314)
+-- Name: workflow_step status_ticket_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.track_status_ticket
-    ADD CONSTRAINT ticket_id FOREIGN KEY (ticket_id) REFERENCES public.ticket(id);
+ALTER TABLE ONLY public.workflow_step
+    ADD CONSTRAINT status_ticket_id FOREIGN KEY (status_ticket_id) REFERENCES public.status_ticket(id) ON DELETE CASCADE;
 
 
 --
--- TOC entry 3427 (class 2606 OID 16575)
+-- TOC entry 3519 (class 2606 OID 17904)
 -- Name: job ticket_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.job
-    ADD CONSTRAINT ticket_id FOREIGN KEY (ticket_id) REFERENCES public.ticket(id);
+    ADD CONSTRAINT ticket_id FOREIGN KEY (ticket_id) REFERENCES public.ticket(id) ON DELETE CASCADE NOT VALID;
 
 
 --
--- TOC entry 3429 (class 2606 OID 16599)
+-- TOC entry 3521 (class 2606 OID 17914)
 -- Name: rejected_ticket ticket_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.rejected_ticket
-    ADD CONSTRAINT ticket_id FOREIGN KEY (ticket_id) REFERENCES public.ticket(id);
+    ADD CONSTRAINT ticket_id FOREIGN KEY (ticket_id) REFERENCES public.ticket(id) ON DELETE CASCADE NOT VALID;
 
 
--- Completed on 2025-07-12 14:44:35
+--
+-- TOC entry 3517 (class 2606 OID 17949)
+-- Name: track_status_ticket ticket_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.track_status_ticket
+    ADD CONSTRAINT ticket_id FOREIGN KEY (ticket_id) REFERENCES public.ticket(id) ON DELETE CASCADE NOT VALID;
+
+
+--
+-- TOC entry 3523 (class 2606 OID 18309)
+-- Name: workflow_step workflow_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.workflow_step
+    ADD CONSTRAINT workflow_id FOREIGN KEY (workflow_id) REFERENCES public.workflow(id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 3525 (class 2606 OID 18340)
+-- Name: position_to_workflow_mapping workflow_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.position_to_workflow_mapping
+    ADD CONSTRAINT workflow_id FOREIGN KEY (workflow_id) REFERENCES public.workflow(id) ON DELETE CASCADE;
+
+
+-- Completed on 2025-07-16 11:45:52
 
 --
 -- PostgreSQL database dump complete
 --
-
