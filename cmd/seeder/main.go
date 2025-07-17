@@ -35,10 +35,10 @@ func main() {
 	// 1. Master Data Independen
 	seedDepartment(db)
 	seedPhysicalLocation(db)
-	seedPosition(db)
+	seedEmployeePosition(db)
 	seedSectionStatusTickets(db)
 	seedWorkflow(db)
-	seedPermission(db)
+	seedAccessPermission(db)
 
 	// 2. Master Data Dependen
 	seedAreas(db)
@@ -58,20 +58,23 @@ func truncateTables(db *sql.DB) {
 	log.Println("Truncating all tables...")
 
 	tables := []string{
-		"job",
-		"track_status_ticket",
-		"ticket",
-		"workflow_step",
-		"position_to_workflow_mapping",
-		"employee",
-		"status_ticket",
+		"access_permission",
 		"area",
 		"department",
-		"specified_location",
+		"employee",
+		"job_from_ticket",
 		"physical_location",
-		"workflow",
+		"employee_position",
+		"position_permission",
+		"position_to_workflow_mapping",
+		"rejected_ticket",
 		"section_status_ticket",
-		"position",
+		"specified_location",
+		"status_ticket",
+		"ticket",
+		"track_status_ticket",
+		"workflow",
+		"workflow_step",
 	}
 
 	for _, table := range tables {
@@ -140,13 +143,13 @@ func seedPhysicalLocation(db *sql.DB) {
 }
 
 // 1.3.
-func seedPosition(db *sql.DB) {
-	log.Println("Seeding position...")
-	positions := []string{"Head of Department", "Head of Section", "Frontman", "Leader"}
+func seedEmployeePosition(db *sql.DB) {
+	log.Println("Seeding employee position...")
+	positions := []string{"Head of Department", "Head of Section", "Foreman", "Leader"}
 	for _, p := range positions {
-		_, err := db.Exec("INSERT INTO position (name, is_active) VALUES ($1, true) ON CONFLICT(name) DO NOTHING", p)
+		_, err := db.Exec("INSERT INTO employee_position (name, is_active) VALUES ($1, true) ON CONFLICT(name) DO NOTHING", p)
 		if err != nil {
-			log.Fatalf("Failed to seed position: %v", err)
+			log.Fatalf("Failed to seed employee position: %v", err)
 		}
 	}
 }
@@ -185,13 +188,13 @@ func seedWorkflow(db *sql.DB) {
 }
 
 // 1.6.
-func seedPermission(db *sql.DB) {
-	log.Println("Seeding permission...")
+func seedAccessPermission(db *sql.DB) {
+	log.Println("Seeding access permission...")
 	permission := []string{"job_assign_pic", "ticket_change_priority", "job_change_priority"}
 	for _, p := range permission {
-		_, err := db.Exec("INSERT INTO permission (name, is_active) VALUES ($1, true) ON CONFLICT(name) DO NOTHING", p)
+		_, err := db.Exec("INSERT INTO access_permission (name, is_active) VALUES ($1, true) ON CONFLICT(name) DO NOTHING", p)
 		if err != nil {
-			log.Fatalf("Failed to seed permission: %v", err)
+			log.Fatalf("Failed to seed access permission: %v", err)
 		}
 	}
 }
@@ -332,7 +335,7 @@ func seedPositionPermission(db *sql.DB) {
 
 	for _, p := range positionPermission {
 		_, err := db.Exec(
-			"INSERT INTO position_permission (position_id, permission_id, is_active) VALUES ($1, $2, true)", 
+			"INSERT INTO position_permission (position_id, permission_id, is_active) VALUES ($1, $2, true)",
 			p.position_id, p.permission_id)
 		if err != nil {
 			log.Fatalf("Failed to seed position_permission: %v", err)
