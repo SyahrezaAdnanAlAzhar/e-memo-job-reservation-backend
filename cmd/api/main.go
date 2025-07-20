@@ -3,10 +3,10 @@ package main
 import (
 	"log"
 
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/auth"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/handler"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/auth"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/database"
 	redisClient "github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/redis"
 	"github.com/gin-gonic/gin"
@@ -18,11 +18,11 @@ func main() {
 	if err != nil {
 		log.Println("Warning: .env file not found, using environment variables from OS")
 	}
-	
+
 	db := database.Connect()
 	defer db.Close()
 
-	rdb := redisClient.Connect() 
+	rdb := redisClient.Connect()
 	defer rdb.Close()
 
 	// REPOSITORY
@@ -43,9 +43,8 @@ func main() {
 	jobRepo := repository.NewJobRepository(db)
 	workflowRepo := repository.NewWorkflowRepository(db)
 	employeeRepo := repository.NewEmployeeRepository(db)
+	trackStatusTicketRepo := repository.NewTrackStatusTicketRepository(db)
 
-
-	
 	// SERVICE
 
 	authService := service.NewAuthService(authRepo, employeeRepo)
@@ -56,17 +55,16 @@ func main() {
 
 	// MASTER DATA DEPENDENT
 	areaService := service.NewAreaService(areaRepo)
-	statusTicketService := service.NewStatusTicketService(statusTicketRepo) 
+	statusTicketService := service.NewStatusTicketService(statusTicketRepo)
 
 	// MAIN DATA
 	ticketService := service.NewTicketService(&service.TicketServiceConfig{
-		TicketRepo:   ticketRepo,
-		JobRepo:      jobRepo,
-		WorkflowRepo: workflowRepo,
-		DB:           db, 
+		TicketRepo:            ticketRepo,
+		JobRepo:               jobRepo,
+		WorkflowRepo:          workflowRepo,
+		TrackStatusTicketRepo: trackStatusTicketRepo,
+		DB:                    db,
 	})
-
-
 
 	// HANDLER
 
@@ -86,11 +84,9 @@ func main() {
 
 	// AUTHENTICATION
 
-
 	authMiddleware := auth.NewAuthMiddleware(authRepo)
 	// SETUP
 	router := gin.Default()
-
 
 	// PUBLIC API
 	public := router.Group("/api/e-memo-job-reservation")
@@ -99,10 +95,9 @@ func main() {
 		public.POST("/refresh", authHandler.RefreshToken)
 	}
 
-
 	// PRIVATE API
 	private := router.Group("/api/e-memo-job-reservation")
-	private.Use(authMiddleware.JWTMiddleware()) 
+	private.Use(authMiddleware.JWTMiddleware())
 	{
 		private.POST("/logout", authHandler.Logout)
 		// MASTER DATA INDEPENDENT
@@ -149,10 +144,14 @@ func main() {
 		ticketRoutes := private.Group("/ticket")
 		{
 			ticketRoutes.POST("", ticketHandler.CreateTicket)
+			ticketRoutes.GET("", ticketHandler.GetAllTickets)
+			ticketRoutes.GET("/:id", ticketHandler.GetTicketByID)
+			ticketRoutes.PUT("/:id", ticketHandler.UpdateTicket)
+			ticketRoutes.PUT("/:id/status", ticketHandler.UpdateTicketStatus)
+			ticketRoutes.PUT("/reorder", ticketHandler.ReorderTickets)
 		}
 	}
 
-	
 	log.Println("Starting server on :8080...")
 	router.Run(":8080")
 }
