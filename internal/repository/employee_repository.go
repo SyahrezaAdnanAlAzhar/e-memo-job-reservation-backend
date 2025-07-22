@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 )
@@ -53,4 +54,11 @@ func (r *EmployeeRepository) FindByNPK(npk string) (*Employee, error) {
 		return nil, errors.New("user is not active")
 	}
 	return &e, nil
+}
+
+func (r *EmployeeRepository) GetEmployeePositionID(ctx context.Context, npk string) (int, error) {
+	var positionID int
+	query := "SELECT position_id FROM employee WHERE npk = $1"
+	err := r.DB.QueryRowContext(ctx, query, npk).Scan(&positionID)
+	return positionID, err
 }

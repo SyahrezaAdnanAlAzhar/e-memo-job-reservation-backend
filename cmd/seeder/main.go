@@ -269,16 +269,17 @@ func seedStatusTicket(db *sql.DB) {
 	}{
 		// DELETE SECTION
 		{"Dibatalkan", 1, 0},
+		{"Ditolak", 1, 1},
 
 		// APPROVAL SECTION
-		{"Approval Section", 2, 1},
-		{"Approval Department", 2, 2},
+		{"Approval Section", 2, 2},
+		{"Approval Department", 2, 3},
 
 		// ACTUAL SECTION
-		{"Menunggu Job", 3, 3},
-		{"Dikerjakan", 3, 4},
-		{"Job Selesai", 3, 5},
-		{"Tiket selesai", 3, 6},
+		{"Menunggu Job", 3, 4},
+		{"Dikerjakan", 3, 5},
+		{"Job Selesai", 3, 6},
+		{"Tiket selesai", 3, 7},
 	}
 
 	for _, s := range statuses {

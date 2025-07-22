@@ -31,12 +31,3 @@ func (r *WorkflowRepository) GetInitialStatusByPosition(ctx context.Context, pos
 	}
 	return statusID, nil
 }
-
-
-// GET EMPLOYEE DATA
-func (r *WorkflowRepository) GetEmployeeData(ctx context.Context, npk string) (int, error) {
-    var positionID int
-    query := "SELECT position_id FROM employee WHERE npk = $1"
-    err := r.DB.QueryRowContext(ctx, query, npk).Scan(&positionID)
-    return positionID, err
-}

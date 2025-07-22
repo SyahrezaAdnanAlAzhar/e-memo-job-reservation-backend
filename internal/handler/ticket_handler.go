@@ -93,13 +93,23 @@ func (h *TicketHandler) UpdateTicket(c *gin.Context) {
 		return
 	}
 
-	requestorNPK := c.GetString("user_npk")
-	err := h.service.UpdateTicket(c.Request.Context(), id, req, requestorNPK)
+	userNPK := c.GetString("user_npk")
+	err := h.service.UpdateTicket(c.Request.Context(), id, req, userNPK)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update ticket"})
+		switch err.Error() {
+		case "ticket not found":
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case "user is not authorized to edit this ticket":
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		case "ticket cannot be edited in its current state":
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update ticket", "details": err.Error()})
+		}
 		return
 	}
-	c.Status(http.StatusNoContent)
+
+	c.JSON(http.StatusOK, gin.H{"message": "Ticket updated and resubmitted for approval"})
 }
 
 // REORDER

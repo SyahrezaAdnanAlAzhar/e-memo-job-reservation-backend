@@ -14,6 +14,7 @@ type TicketService struct {
 	workflowRepo          *repository.WorkflowRepository
 	db                    *sql.DB
 	trackStatusTicketRepo *repository.TrackStatusTicketRepository
+	employeeRepo          *repository.EmployeeRepository
 }
 
 type TicketServiceConfig struct {
@@ -40,7 +41,7 @@ type UpdateTicketStatusRequest struct {
 // CREATE TICKET
 func (s *TicketService) CreateTicket(ctx context.Context, req repository.CreateTicketRequest, requestor string) (*repository.Ticket, error) {
 	// GET EMPLOYEE DATA (TO GET THE POSITION)
-	positionID, err := s.workflowRepo.GetEmployeeData(ctx, requestor)
+	positionID, err := s.employeeRepo.GetEmployeePositionID(ctx, requestor)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.New("requestor not found")
@@ -125,14 +126,70 @@ func (s *TicketService) GetTicketByID(id int) (map[string]interface{}, error) {
 }
 
 // UPDATE TICKET
-func (s *TicketService) UpdateTicket(ctx context.Context, id int, req repository.UpdateTicketRequest, requestorNPK string) error {
+func (s *TicketService) UpdateTicket(ctx context.Context, ticketID int, req repository.UpdateTicketRequest, userNPK string) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	if err := s.ticketRepo.Update(ctx, tx, id, req); err != nil {
+	// GET TICKET
+	originalTicket, err := s.ticketRepo.FindByIDAsStruct(ctx, ticketID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.New("ticket not found")
+		}
+		return err
+	}
+
+	// VALIDATE: ONLY THIS TICKET REQUESTOR THAT CAN EDIT
+	if originalTicket.Requestor != userNPK {
+		return errors.New("user is not authorized to edit this ticket")
+	}
+
+	// GET CURRENT STATUS
+	_, currentStatusName, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
+	if err != nil {
+		return errors.New("could not retrieve current ticket status")
+	}
+
+	// CHECK THE TICKET ABLE TO EDIT OR NOT
+	canEdit := false
+	if currentStatusName == "Ditolak" {
+		canEdit = true
+	} else if currentStatusName == "Menunggu Job" {
+		isAssigned, err := s.jobRepo.IsJobAssigned(ctx, ticketID)
+		if err != nil {
+			return errors.New("could not verify job assignment status")
+		}
+		if !isAssigned {
+			canEdit = true
+		}
+	}
+
+	if !canEdit {
+		return errors.New("ticket cannot be edited in its current state")
+	}
+
+	// EXECUTE UPDATE
+	if err := s.ticketRepo.Update(ctx, tx, ticketID, req); err != nil {
+		return err
+	}
+
+	// GET USER POSITION
+	positionID, err := s.employeeRepo.GetEmployeePositionID(ctx, userNPK)
+	if err != nil {
+		return err
+	}
+
+	// GET INITAL STATUS
+	initialStatusID, err := s.workflowRepo.GetInitialStatusByPosition(ctx, positionID)
+	if err != nil {
+		return err
+	}
+
+	// CHANGE TICKET STATUS
+	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, initialStatusID); err != nil {
 		return err
 	}
 

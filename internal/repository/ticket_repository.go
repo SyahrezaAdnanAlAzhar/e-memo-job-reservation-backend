@@ -179,6 +179,20 @@ func (r *TicketRepository) FindByID(id int) (map[string]interface{}, error) {
 }
 
 
+// GET BY ID AS STRUCT
+func (r *TicketRepository) FindByIDAsStruct(ctx context.Context, id int) (*Ticket, error) {
+	query := "SELECT id, requestor_npk, department_target_id, physical_location_id, specified_location_id, description, ticket_priority FROM ticket WHERE id = $1"
+	row := r.DB.QueryRowContext(ctx, query, id)
+
+	var t Ticket
+	err := row.Scan(&t.ID, &t.Requestor, &t.DepartmentTargetID, &t.PhysicalLocationID, &t.SpecifiedLocationID, &t.Description, &t.TicketPriority)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+
 // UPDATE TICKET
 func (r *TicketRepository) Update(ctx context.Context, tx *sql.Tx, id int, req UpdateTicketRequest) error {
 	query := `
