@@ -25,6 +25,10 @@ type AccessPermissionRepository struct {
 	DB *sql.DB
 }
 
+type UpdateAccessPermissionStatusRequest struct {
+	IsActive bool `json:"is_active"`
+}
+
 func NewAccessPermissionRepository(db *sql.DB) *AccessPermissionRepository {
 	return &AccessPermissionRepository{DB: db}
 }
