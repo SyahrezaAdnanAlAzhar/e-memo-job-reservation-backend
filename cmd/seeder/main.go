@@ -327,17 +327,17 @@ func seedPositionPermission(db *sql.DB) {
 	log.Println("Seeding position_permission...")
 
 	positionPermission := []struct {
-		position_id   int
-		permission_id int
+		employee_position_id   int
+		access_permission_id int
 	}{
-		{1, 1}, {1, 2}, {1, 3},
-		{2, 1}, {2, 2}, {2, 3},
+		{1, 1}, {1, 2}, {1, 3}, // Head of Department ("job_assign_pic", "ticket_change_priority", "job_change_priority")
+		{2, 1}, {2, 2}, {2, 3}, // Head of Section ("job_assign_pic", "ticket_change_priority", "job_change_priority")
 	}
 
 	for _, p := range positionPermission {
 		_, err := db.Exec(
-			"INSERT INTO position_permission (position_id, permission_id, is_active) VALUES ($1, $2, true)",
-			p.position_id, p.permission_id)
+			"INSERT INTO position_permission (employee_position_id, access_permission_id, is_active) VALUES ($1, $2, true)",
+			p.employee_position_id, p.access_permission_id)
 		if err != nil {
 			log.Fatalf("Failed to seed position_permission: %v", err)
 		}
