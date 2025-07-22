@@ -155,9 +155,10 @@ func (s *TicketService) UpdateTicket(ctx context.Context, ticketID int, req repo
 
 	// CHECK THE TICKET ABLE TO EDIT OR NOT
 	canEdit := false
-	if currentStatusName == "Ditolak" {
+	switch currentStatusName {
+	case "Ditolak":
 		canEdit = true
-	} else if currentStatusName == "Menunggu Job" {
+	case "Menunggu Job":
 		isAssigned, err := s.jobRepo.IsJobAssigned(ctx, ticketID)
 		if err != nil {
 			return errors.New("could not verify job assignment status")

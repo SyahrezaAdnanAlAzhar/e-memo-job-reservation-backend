@@ -1,11 +1,11 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"strconv"
 	"strings"
 	"time"
-	"context"
 )
 
 type StatusTicket struct {
@@ -40,8 +40,6 @@ func NewStatusTicketRepository(db *sql.DB) *StatusTicketRepository {
 	return &StatusTicketRepository{DB: db}
 }
 
-
-
 // MAIN
 
 // CREATE
@@ -50,7 +48,7 @@ func (r *StatusTicketRepository) Create(req CreateStatusTicketRequest) (*StatusT
         INSERT INTO status_ticket (name, sequence, is_active)
         VALUES ($1, $2, false)
         RETURNING id, name, sequence, is_active, created_at, updated_at`
-	
+
 	row := r.DB.QueryRow(query, req.Name, req.Sequence)
 
 	var newStatus StatusTicket
@@ -63,7 +61,6 @@ func (r *StatusTicketRepository) Create(req CreateStatusTicketRequest) (*StatusT
 	}
 	return &newStatus, nil
 }
-
 
 // GET ALL
 func (r *StatusTicketRepository) FindAll(filters map[string]string) ([]StatusTicket, error) {
@@ -102,7 +99,6 @@ func (r *StatusTicketRepository) FindAll(filters map[string]string) ([]StatusTic
 	return statuses, nil
 }
 
-
 // GET BY ID
 func (r *StatusTicketRepository) FindByID(id int) (*StatusTicket, error) {
 	query := "SELECT id, name, sequence, is_active, created_at, updated_at FROM status_ticket WHERE id = $1"
@@ -115,7 +111,6 @@ func (r *StatusTicketRepository) FindByID(id int) (*StatusTicket, error) {
 	}
 	return &s, nil
 }
-
 
 // DELETE
 func (r *StatusTicketRepository) Delete(id int) error {
@@ -131,7 +126,6 @@ func (r *StatusTicketRepository) Delete(id int) error {
 	return nil
 }
 
-
 // CHANGE ACTIVE STATUS
 func (r *StatusTicketRepository) UpdateActiveStatus(id int, isActive bool) error {
 	query := "UPDATE status_ticket SET is_active = $1, updated_at = NOW() WHERE id = $2"
@@ -146,10 +140,32 @@ func (r *StatusTicketRepository) UpdateActiveStatus(id int, isActive bool) error
 	return nil
 }
 
-
 // REORDER
 func (r *StatusTicketRepository) Reorder(ctx context.Context, tx *sql.Tx, id int, newSequence int) error {
 	query := "UPDATE status_ticket SET sequence = $1, updated_at = NOW() WHERE id = $2"
 	_, err := tx.ExecContext(ctx, query, newSequence, id)
 	return err
+}
+
+// GET NEXT STATUS BASED ON SEQUENCE
+func (r *StatusTicketRepository) GetNextStatusInSection(currentStatusID int) (*StatusTicket, error) {
+	query := `
+        WITH current_status AS (
+            SELECT section_id, sequence
+            FROM status_ticket
+            WHERE id = $1
+        )
+        SELECT id, name, sequence, is_active
+        FROM status_ticket
+        WHERE section_id = (SELECT section_id FROM current_status)
+          AND sequence > (SELECT sequence FROM current_status)
+        ORDER BY sequence ASC
+        LIMIT 1`
+
+	var nextStatus StatusTicket
+	err := r.DB.QueryRow(query, currentStatusID).Scan(&nextStatus.ID, &nextStatus.Name, &nextStatus.Sequence, &nextStatus.IsActive)
+	if err != nil {
+		return nil, err
+	}
+	return &nextStatus, nil
 }
