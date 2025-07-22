@@ -169,3 +169,19 @@ func (r *StatusTicketRepository) GetNextStatusInSection(currentStatusID int) (*S
 	}
 	return &nextStatus, nil
 }
+
+// GET SECTION FROM A STATUS
+func (r *StatusTicketRepository) GetSectionID(statusID int) (int, error) {
+	var sectionID int
+	query := "SELECT section_id FROM status_ticket WHERE id = $1"
+	err := r.DB.QueryRow(query, statusID).Scan(sectionID)
+	return sectionID, err
+}
+
+// GET SECTION BY NAME
+func (r *StatusTicketRepository) GetSectionIDByName(sectionName string) (int, error) {
+    var sectionID int
+    query := "SELECT id FROM section_status_ticket WHERE name = $1"
+    err := r.DB.QueryRow(query, sectionName).Scan(sectionID)
+    return sectionID, err
+}

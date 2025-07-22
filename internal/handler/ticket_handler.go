@@ -128,22 +128,22 @@ func (h *TicketHandler) ReorderTickets(c *gin.Context) {
 }
 
 // PUT UPDATE STATUS
-func (h *TicketHandler) UpdateTicketStatus(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
-	var req service.UpdateTicketStatusRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	err := h.service.UpdateTicketStatus(c.Request.Context(), id, req)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update ticket status"})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"message": "Ticket status updated successfully"})
-}
+// func (h *TicketHandler) UpdateTicketStatus(c *gin.Context) {
+// 	id, _ := strconv.Atoi(c.Param("id"))
+// 	var req service.UpdateTicketStatusRequest
+// 	if err := c.ShouldBindJSON(&req); err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+// 		return
+// 	}
+// 	err := h.service.UpdateTicketStatus(c.Request.Context(), id, req)
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update ticket status"})
+// 		return
+// 	}
+// 	c.JSON(http.StatusOK, gin.H{"message": "Ticket status updated successfully"})
+// }
 
-// PUT/ PROGRESS TO NEXT STATUS
+// POST/ PROGRESS TO NEXT STATUS
 func (h *TicketHandler) ProgressTicketStatus(c *gin.Context) {
     id, _ := strconv.Atoi(c.Param("id"))
     
@@ -157,4 +157,25 @@ func (h *TicketHandler) ProgressTicketStatus(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Ticket status progressed successfully"})
+}
+
+// PUT/ CHANGE STATUS FOR DELETE SECTION STATUS
+func (h *TicketHandler) ChangeTicketStatus(c *gin.Context) {
+    id, _ := strconv.Atoi(c.Param("id"))
+	var req service.ChangeTicketStatusRequest 
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+    err := h.service.ChangeTicketStatus(c.Request.Context(), id, req)
+	if err != nil {
+        if err.Error() == "invalid target status for this action: must be a 'delete' or 'reject' status" {
+            c.JSON(http.StatusForbidden, gin.H{"error": err.Error()}) 
+            return
+        }
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to change ticket status", "details": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Ticket status changed successfully"})
 }

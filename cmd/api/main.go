@@ -147,9 +147,10 @@ func main() {
 			ticketRoutes.GET("", ticketHandler.GetAllTickets)
 			ticketRoutes.GET("/:id", ticketHandler.GetTicketByID)
 			ticketRoutes.PUT("/:id", ticketHandler.UpdateTicket)
-			ticketRoutes.PUT("/:id/status", ticketHandler.UpdateTicketStatus)
+			// ticketRoutes.PUT("/:id/status", ticketHandler.UpdateTicketStatus)
 			ticketRoutes.PUT("/reorder", ticketHandler.ReorderTickets)
-			ticketRoutes.POST("/:id/progress", ticketHandler.ProgressTicketStatus) 
+			ticketRoutes.POST("/:id/progress", ticketHandler.ProgressTicketStatus)
+			ticketRoutes.PUT("/:id/change-status", ticketHandler.ChangeTicketStatus)
 		}
 	}
 

@@ -36,8 +36,12 @@ func NewTicketService(cfg *TicketServiceConfig) *TicketService {
 	}
 }
 
-type UpdateTicketStatusRequest struct {
-	NewStatusID int `json:"new_status_id" binding:"required"`
+// type UpdateTicketStatusRequest struct {
+// 	NewStatusID int `json:"new_status_id" binding:"required"`
+// }
+
+type ChangeTicketStatusRequest struct {
+	TargetStatusID int `json:"target_status_id" binding:"required"`
 }
 
 // CREATE TICKET
@@ -217,24 +221,26 @@ func (s *TicketService) ReorderTickets(ctx context.Context, req repository.Reord
 }
 
 // UPDATE STATUS
-func (s *TicketService) UpdateTicketStatus(ctx context.Context, ticketID int, req UpdateTicketStatusRequest) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
+// func (s *TicketService) UpdateTicketStatus(ctx context.Context, ticketID int, req UpdateTicketStatusRequest) error {
+// 	tx, err := s.db.BeginTx(ctx, nil)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer tx.Rollback()
 
-	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, req.NewStatusID); err != nil {
-		return err
-	}
+// 	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, req.NewStatusID); err != nil {
+// 		return err
+// 	}
 
-	return tx.Commit()
-}
+// 	return tx.Commit()
+// }
 
 // UPDATE TO THE NEXT STATUS
 func (s *TicketService) ProgressTicketStatus(ctx context.Context, ticketID int) error {
 	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	defer tx.Rollback()
 
 	currentStatusID, _, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
@@ -251,6 +257,35 @@ func (s *TicketService) ProgressTicketStatus(ctx context.Context, ticketID int) 
 	}
 
 	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, nextStatus.ID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// CHANGE TICKET STATUS TO HANDLE DELETE SECTION STATUS
+func (s *TicketService) ChangeTicketStatus(ctx context.Context, ticketID int, req ChangeTicketStatusRequest) error {
+	deleteSectionID, err := s.statusTicketRepo.GetSectionIDByName("Delete Section")
+	if err != nil {
+		return errors.New("critical configuration error: delete section not found")
+	}
+
+	targetSectionID, err := s.statusTicketRepo.GetSectionID(req.TargetStatusID)
+	if err != nil {
+		return errors.New("invalid target status id")
+	}
+
+	if targetSectionID != deleteSectionID {
+		return errors.New("invalid target status for this action: must be a 'delete' or 'reject' status")
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, req.TargetStatusID); err != nil {
 		return err
 	}
 
