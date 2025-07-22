@@ -33,6 +33,7 @@ func main() {
 	// MASTER DATA INDEPENDENT
 	physicalLocationRepo := repository.NewPhysicalLocationRepository(db)
 	departmentRepo := repository.NewDepartmentRepository(db)
+	accessPermissionRepo := repository.NewAccessPermissionRepository(db)
 
 	// MASTER DATA DEPENDENT
 	areaRepo := repository.NewAreaRepository(db)
@@ -52,6 +53,7 @@ func main() {
 	// MASTER DATA INDEPENDENT
 	departmentService := service.NewDepartmentService(departmentRepo)
 	physicalLocationService := service.NewPhysicalLocationService(physicalLocationRepo)
+	accessPermissionService := service.NewAccessPermissionService(accessPermissionRepo)
 
 	// MASTER DATA DEPENDENT
 	areaService := service.NewAreaService(areaRepo)
@@ -74,6 +76,7 @@ func main() {
 	// MASTER DATA INDEPENDENT
 	departmentHandler := handler.NewDepartmentHandler(departmentService)
 	physicalLocationHandler := handler.NewPhysicalLocationHandler(physicalLocationService)
+	accessPermissionHandler := handler.NewAccessPermissionHandler(accessPermissionService)
 
 	// MASTER DATA DEPENDENT
 	areaHandler := handler.NewAreaHandler(areaService)
@@ -118,6 +121,12 @@ func main() {
 			physicalLocationRoutes.PUT("/:id", physicalLocationHandler.UpdatePhysicalLocation)
 			physicalLocationRoutes.DELETE("/:id", physicalLocationHandler.DeletePhysicalLocation)
 			physicalLocationRoutes.PATCH("/:id/status", physicalLocationHandler.UpdatePhysicalLocationActiveStatus)
+		}
+		accessPermissionRoutes := private.Group("/access-permissions")
+		{
+			accessPermissionRoutes.POST("", accessPermissionHandler.CreateAccessPermission)
+			accessPermissionRoutes.GET("", accessPermissionHandler.GetAllAccessPermissions)
+			accessPermissionRoutes.GET("/:id", accessPermissionHandler.GetAccessPermissionByID)
 		}
 
 		// MASTER DATA DEPENDENT
