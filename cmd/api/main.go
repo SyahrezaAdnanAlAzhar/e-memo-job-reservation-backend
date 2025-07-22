@@ -127,6 +127,9 @@ func main() {
 			accessPermissionRoutes.POST("", accessPermissionHandler.CreateAccessPermission)
 			accessPermissionRoutes.GET("", accessPermissionHandler.GetAllAccessPermissions)
 			accessPermissionRoutes.GET("/:id", accessPermissionHandler.GetAccessPermissionByID)
+			accessPermissionRoutes.PUT("/:id", accessPermissionHandler.UpdateAccessPermission)
+			accessPermissionRoutes.DELETE("/:id", accessPermissionHandler.DeleteAccessPermission)
+			accessPermissionRoutes.PATCH("/:id/status", accessPermissionHandler.UpdateAccessPermissionActiveStatus)
 		}
 
 		// MASTER DATA DEPENDENT
