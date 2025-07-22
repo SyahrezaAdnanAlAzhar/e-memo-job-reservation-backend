@@ -8,13 +8,14 @@ import (
 )
 
 type AllHandlers struct {
-	AuthHandler             *handler.AuthHandler
-	DepartmentHandler       *handler.DepartmentHandler
-	AreaHandler             *handler.AreaHandler
-	PhysicalLocationHandler *handler.PhysicalLocationHandler
-	AccessPermissionHandler *handler.AccessPermissionHandler
-	StatusTicketHandler     *handler.StatusTicketHandler
-	TicketHandler           *handler.TicketHandler
+	AuthHandler               *handler.AuthHandler
+	DepartmentHandler         *handler.DepartmentHandler
+	AreaHandler               *handler.AreaHandler
+	PhysicalLocationHandler   *handler.PhysicalLocationHandler
+	AccessPermissionHandler   *handler.AccessPermissionHandler
+	StatusTicketHandler       *handler.StatusTicketHandler
+	TicketHandler             *handler.TicketHandler
+	PositionPermissionHandler *handler.PositionPermissionHandler
 }
 
 func SetupRouter(h *AllHandlers, authMiddleware *auth.AuthMiddleware) *gin.Engine {
@@ -89,6 +90,13 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers) {
 		statusTicketRoutes.DELETE("/:id", h.StatusTicketHandler.DeleteStatusTicket)
 		statusTicketRoutes.PATCH("/:id/status", h.StatusTicketHandler.UpdateStatusTicketActiveStatus)
 		statusTicketRoutes.PUT("/reorder", h.StatusTicketHandler.ReorderStatusTickets)
+	}
+	posPermRoutes := group.Group("/position-permissions")
+	{
+		posPermRoutes.POST("", h.PositionPermissionHandler.CreatePositionPermission)
+		posPermRoutes.GET("", h.PositionPermissionHandler.GetAllPositionPermissions)
+		posPermRoutes.PATCH("/positions/:posId/permissions/:permId/status", h.PositionPermissionHandler.UpdatePositionPermissionActiveStatus)
+		posPermRoutes.DELETE("/positions/:posId/permissions/:permId", h.PositionPermissionHandler.DeletePositionPermission)
 	}
 }
 
