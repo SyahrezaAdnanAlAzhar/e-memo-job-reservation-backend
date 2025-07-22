@@ -2,6 +2,8 @@ package service
 
 import (	
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"errors"
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -15,7 +17,7 @@ func NewAreaService(repo *repository.AreaRepository) *AreaService {
 }
 
 // CREATE
-func (s *AreaService) CreateArea(req repository.CreateAreaRequest) (*repository.Area, error) {
+func (s *AreaService) CreateArea(req dto.CreateAreaRequest) (*model.Area, error) {
 	if req.Name == "" {
 		return nil, errors.New("area name is required")
 	}
@@ -37,13 +39,13 @@ func (s *AreaService) CreateArea(req repository.CreateAreaRequest) (*repository.
 
 
 // GET ALL
-func (s *AreaService) GetAllAreas(filters map[string]string) ([]repository.Area, error) {
+func (s *AreaService) GetAllAreas(filters map[string]string) ([]model.Area, error) {
 	return s.repo.FindAll(filters)
 }
 
 
 // GET BY ID 
-func (s *AreaService) GetAreaByID(id int) (*repository.Area, error) {
+func (s *AreaService) GetAreaByID(id int) (*model.Area, error) {
 	return s.repo.FindByID(id)
 }
 
@@ -54,7 +56,7 @@ func (s *AreaService) DeleteArea(id int) error {
 }
 
 // UPDATE
-func (s *AreaService) UpdateArea(id int, req repository.UpdateAreaRequest) (*repository.Area, error) {
+func (s *AreaService) UpdateArea(id int, req dto.UpdateAreaRequest) (*model.Area, error) {
 	isTaken, err := s.repo.IsNameTakenInDepartment(req.Name, req.DepartmentID, id)
 	if err != nil {
 		return nil, err

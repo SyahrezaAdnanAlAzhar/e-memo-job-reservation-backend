@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 )
 
 type ticketWithScore struct {
@@ -130,7 +131,7 @@ func (j *TicketReorderJob) getActiveTargetDepartments(ctx context.Context) ([]in
 }
 
 // GET ALL TICKET ACTIVE FROM SELECTED TARGET DEPARTMENT
-func (j *TicketReorderJob) getActiveTicketsByDepartment(ctx context.Context, tx *sql.Tx, departmentID int) ([]repository.Ticket, error) {
+func (j *TicketReorderJob) getActiveTicketsByDepartment(ctx context.Context, tx *sql.Tx, departmentID int) ([]model.Ticket, error) {
 	query := `
         SELECT t.id, t.created_at, t.ticket_priority 
         FROM ticket t
@@ -146,9 +147,9 @@ func (j *TicketReorderJob) getActiveTicketsByDepartment(ctx context.Context, tx 
 	}
 	defer rows.Close()
 
-	var tickets []repository.Ticket
+	var tickets []model.Ticket
 	for rows.Next() {
-		var t repository.Ticket
+		var t model.Ticket
 		if err := rows.Scan(&t.ID, &t.CreatedAt, &t.TicketPriority); err != nil {
 			return nil, err
 		}

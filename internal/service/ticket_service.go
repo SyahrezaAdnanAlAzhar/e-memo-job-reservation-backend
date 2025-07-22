@@ -6,6 +6,8 @@ import (
 	"errors"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 )
 
 type TicketService struct {
@@ -45,7 +47,7 @@ type ChangeTicketStatusRequest struct {
 }
 
 // CREATE TICKET
-func (s *TicketService) CreateTicket(ctx context.Context, req repository.CreateTicketRequest, requestor string) (*repository.Ticket, error) {
+func (s *TicketService) CreateTicket(ctx context.Context, req dto.CreateTicketRequest, requestor string) (*model.Ticket, error) {
 	// GET EMPLOYEE DATA (TO GET THE POSITION)
 	positionID, err := s.employeeRepo.GetEmployeePositionID(ctx, requestor)
 	if err != nil {
@@ -76,7 +78,7 @@ func (s *TicketService) CreateTicket(ctx context.Context, req repository.CreateT
 		return nil, err
 	}
 
-	ticketData := repository.Ticket{
+	ticketData := model.Ticket{
 		Requestor:           requestor,
 		DepartmentTargetID:  req.DepartmentTargetID,
 		PhysicalLocationID:  toNullInt64(req.PhysicalLocationID),
@@ -132,7 +134,7 @@ func (s *TicketService) GetTicketByID(id int) (map[string]interface{}, error) {
 }
 
 // UPDATE TICKET
-func (s *TicketService) UpdateTicket(ctx context.Context, ticketID int, req repository.UpdateTicketRequest, userNPK string) error {
+func (s *TicketService) UpdateTicket(ctx context.Context, ticketID int, req dto.UpdateTicketRequest, userNPK string) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -204,7 +206,7 @@ func (s *TicketService) UpdateTicket(ctx context.Context, ticketID int, req repo
 }
 
 // RE ORDER
-func (s *TicketService) ReorderTickets(ctx context.Context, req repository.ReorderTicketsRequest) error {
+func (s *TicketService) ReorderTickets(ctx context.Context, req dto.ReorderTicketsRequest) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err

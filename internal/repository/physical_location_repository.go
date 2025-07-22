@@ -4,29 +4,10 @@ import (
 	"database/sql"
 	"strconv"
 	"strings"
-	"time"
 	"errors"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 )
-
-type PhysicalLocation struct {
-	ID        int       `json:"id"`
-	Name      string    `json:"name"`
-	IsActive  bool      `json:"is_active"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
-type CreatePhysicalLocationRequest struct {
-	Name string `json:"name" binding:"required"`
-}
-
-type UpdatePhysicalLocationRequest struct {
-	Name string `json:"name" binding:"required"`
-}
-
-type UpdatePhysicalLocationStatusRequest struct {
-	IsActive bool `json:"is_active"`
-}
 
 type PhysicalLocationRepository struct {
 	DB *sql.DB
@@ -49,12 +30,10 @@ func (r *PhysicalLocationRepository) IsNameTaken(name string, currentID int) (bo
 	return exists, nil
 }
 
-
-
 // MAIN
 
 // CREATE
-func (r *PhysicalLocationRepository) Create(req CreatePhysicalLocationRequest) (*PhysicalLocation, error) {
+func (r *PhysicalLocationRepository) Create(req dto.CreatePhysicalLocationRequest) (*model.PhysicalLocation, error) {
 	query := `
         INSERT INTO physical_location (name, is_active) 
         VALUES ($1, false)
@@ -62,7 +41,7 @@ func (r *PhysicalLocationRepository) Create(req CreatePhysicalLocationRequest) (
 
 	row := r.DB.QueryRow(query, req.Name)
 
-	var newLoc PhysicalLocation
+	var newLoc model.PhysicalLocation
 	err := row.Scan(&newLoc.ID, &newLoc.Name, &newLoc.IsActive, &newLoc.CreatedAt, &newLoc.UpdatedAt)
 	if err != nil {
 		return nil, err
@@ -72,7 +51,7 @@ func (r *PhysicalLocationRepository) Create(req CreatePhysicalLocationRequest) (
 
 
 // GET ALL
-func (r *PhysicalLocationRepository) FindAll(filters map[string]string) ([]PhysicalLocation, error) {
+func (r *PhysicalLocationRepository) FindAll(filters map[string]string) ([]model.PhysicalLocation, error) {
 	baseQuery := "SELECT id, name, is_active, created_at, updated_at FROM physical_location"
 	var conditions []string
 	var args []interface{}
@@ -95,9 +74,9 @@ func (r *PhysicalLocationRepository) FindAll(filters map[string]string) ([]Physi
 	}
 	defer rows.Close()
 
-	var locations []PhysicalLocation
+	var locations []model.PhysicalLocation
 	for rows.Next() {
-		var loc PhysicalLocation
+		var loc model.PhysicalLocation
 		err := rows.Scan(&loc.ID, &loc.Name, &loc.IsActive, &loc.CreatedAt, &loc.UpdatedAt)
 		if err != nil {
 			return nil, err
@@ -109,11 +88,11 @@ func (r *PhysicalLocationRepository) FindAll(filters map[string]string) ([]Physi
 
 
 // GET BY ID
-func (r *PhysicalLocationRepository) FindByID(id int) (*PhysicalLocation, error) {
+func (r *PhysicalLocationRepository) FindByID(id int) (*model.PhysicalLocation, error) {
 	query := "SELECT id, name, is_active, created_at, updated_at FROM physical_location WHERE id = $1"
 	row := r.DB.QueryRow(query, id)
 
-	var loc PhysicalLocation
+	var loc model.PhysicalLocation
 	err := row.Scan(&loc.ID, &loc.Name, &loc.IsActive, &loc.CreatedAt, &loc.UpdatedAt)
 	if err != nil {
 		return nil, err
@@ -123,7 +102,7 @@ func (r *PhysicalLocationRepository) FindByID(id int) (*PhysicalLocation, error)
 
 
 // UPDATE
-func (r *PhysicalLocationRepository) Update(id int, req UpdatePhysicalLocationRequest) (*PhysicalLocation, error) {
+func (r *PhysicalLocationRepository) Update(id int, req dto.UpdatePhysicalLocationRequest) (*model.PhysicalLocation, error) {
 	query := `
         UPDATE physical_location 
         SET name = $1, updated_at = NOW()
@@ -132,7 +111,7 @@ func (r *PhysicalLocationRepository) Update(id int, req UpdatePhysicalLocationRe
 
 	row := r.DB.QueryRow(query, req.Name, id)
 
-	var updatedLoc PhysicalLocation
+	var updatedLoc model.PhysicalLocation
 	err := row.Scan(&updatedLoc.ID, &updatedLoc.Name, &updatedLoc.IsActive, &updatedLoc.CreatedAt, &updatedLoc.UpdatedAt)
 	if err != nil {
 		return nil, err

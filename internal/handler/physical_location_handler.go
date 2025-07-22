@@ -2,8 +2,9 @@ package handler
 
 import (
 	"database/sql"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"net/http"
 	"strconv"
 
@@ -21,7 +22,7 @@ func NewPhysicalLocationHandler(service *service.PhysicalLocationService) *Physi
 
 // POST /physical-location
 func (h *PhysicalLocationHandler) CreatePhysicalLocation(c *gin.Context) {
-	var req repository.CreatePhysicalLocationRequest
+	var req dto.CreatePhysicalLocationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -55,7 +56,7 @@ func (h *PhysicalLocationHandler) GetAllPhysicalLocations(c *gin.Context) {
 	}
 
 	if locations == nil {
-		c.JSON(http.StatusOK, []repository.PhysicalLocation{})
+		c.JSON(http.StatusOK, []model.PhysicalLocation{})
 		return
 	}
 	c.JSON(http.StatusOK, locations)
@@ -91,7 +92,7 @@ func (h *PhysicalLocationHandler) UpdatePhysicalLocation(c *gin.Context) {
 		return
 	}
 
-	var req repository.UpdatePhysicalLocationRequest
+	var req dto.UpdatePhysicalLocationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -142,7 +143,7 @@ func (h *PhysicalLocationHandler) UpdatePhysicalLocationActiveStatus(c *gin.Cont
 		return
 	}
 
-	var req repository.UpdatePhysicalLocationStatusRequest
+	var req dto.UpdatePhysicalLocationStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

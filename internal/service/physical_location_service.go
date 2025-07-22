@@ -3,6 +3,8 @@ package service
 import (
 	"errors"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -17,7 +19,7 @@ func NewPhysicalLocationService(repo *repository.PhysicalLocationRepository) *Ph
 
 
 // CREATE
-func (s *PhysicalLocationService) CreatePhysicalLocation(req repository.CreatePhysicalLocationRequest) (*repository.PhysicalLocation, error) {
+func (s *PhysicalLocationService) CreatePhysicalLocation(req dto.CreatePhysicalLocationRequest) (*model.PhysicalLocation, error) {
 	newLoc, err := s.repo.Create(req)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -31,19 +33,19 @@ func (s *PhysicalLocationService) CreatePhysicalLocation(req repository.CreatePh
 
 
 // GET ALL
-func (s *PhysicalLocationService) GetAllPhysicalLocations(filters map[string]string) ([]repository.PhysicalLocation, error) {
+func (s *PhysicalLocationService) GetAllPhysicalLocations(filters map[string]string) ([]model.PhysicalLocation, error) {
 	return s.repo.FindAll(filters)
 }
 
 
 // GET BY ID
-func (s *PhysicalLocationService) GetPhysicalLocationByID(id int) (*repository.PhysicalLocation, error) {
+func (s *PhysicalLocationService) GetPhysicalLocationByID(id int) (*model.PhysicalLocation, error) {
 	return s.repo.FindByID(id)
 }
 
 
 // UPDATE
-func (s *PhysicalLocationService) UpdatePhysicalLocation(id int, req repository.UpdatePhysicalLocationRequest) (*repository.PhysicalLocation, error) {
+func (s *PhysicalLocationService) UpdatePhysicalLocation(id int, req dto.UpdatePhysicalLocationRequest) (*model.PhysicalLocation, error) {
 	isTaken, err := s.repo.IsNameTaken(req.Name, id)
 	if err != nil {
 		return nil, err // Teruskan error database
@@ -61,6 +63,6 @@ func (s *PhysicalLocationService) DeletePhysicalLocation(id int) error {
 }
 
 // CHANGE STATUS
-func (s *PhysicalLocationService) UpdatePhysicalLocationActiveStatus(id int, req repository.UpdatePhysicalLocationStatusRequest) error {
+func (s *PhysicalLocationService) UpdatePhysicalLocationActiveStatus(id int, req dto.UpdatePhysicalLocationStatusRequest) error {
 	return s.repo.UpdateActiveStatus(id, req.IsActive)
 }

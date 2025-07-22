@@ -5,32 +5,9 @@ import (
 	"database/sql"
 	"strconv"
 	"strings"
-	"time"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 )
-
-type StatusTicket struct {
-	ID        int       `json:"id"`
-	Name      string    `json:"name"`
-	Sequence  int       `json:"sequence"`
-	IsActive  bool      `json:"is_active"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
-type CreateStatusTicketRequest struct {
-	Name     string `json:"name" binding:"required"`
-	Sequence int    `json:"sequence"`
-}
-
-type UpdateStatusTicketStatusRequest struct {
-	IsActive bool `json:"is_active"`
-}
-
-type ReorderStatusTicketsRequest struct {
-	DeleteSectionOrder   []int `json:"delete_section_order"`
-	ApprovalSectionOrder []int `json:"approval_section_order"`
-	ActualSectionOrder   []int `json:"actual_section_order"`
-}
 
 type StatusTicketRepository struct {
 	DB *sql.DB
@@ -43,7 +20,7 @@ func NewStatusTicketRepository(db *sql.DB) *StatusTicketRepository {
 // MAIN
 
 // CREATE
-func (r *StatusTicketRepository) Create(req CreateStatusTicketRequest) (*StatusTicket, error) {
+func (r *StatusTicketRepository) Create(req dto.CreateStatusTicketRequest) (*model.StatusTicket, error) {
 	query := `
         INSERT INTO status_ticket (name, sequence, is_active)
         VALUES ($1, $2, false)
@@ -51,7 +28,7 @@ func (r *StatusTicketRepository) Create(req CreateStatusTicketRequest) (*StatusT
 
 	row := r.DB.QueryRow(query, req.Name, req.Sequence)
 
-	var newStatus StatusTicket
+	var newStatus model.StatusTicket
 	err := row.Scan(
 		&newStatus.ID, &newStatus.Name, &newStatus.Sequence,
 		&newStatus.IsActive, &newStatus.CreatedAt, &newStatus.UpdatedAt,
@@ -63,7 +40,7 @@ func (r *StatusTicketRepository) Create(req CreateStatusTicketRequest) (*StatusT
 }
 
 // GET ALL
-func (r *StatusTicketRepository) FindAll(filters map[string]string) ([]StatusTicket, error) {
+func (r *StatusTicketRepository) FindAll(filters map[string]string) ([]model.StatusTicket, error) {
 	baseQuery := "SELECT id, name, sequence, is_active, created_at, updated_at FROM status_ticket"
 	var conditions []string
 	var args []interface{}
@@ -87,9 +64,9 @@ func (r *StatusTicketRepository) FindAll(filters map[string]string) ([]StatusTic
 	}
 	defer rows.Close()
 
-	var statuses []StatusTicket
+	var statuses []model.StatusTicket
 	for rows.Next() {
-		var s StatusTicket
+		var s model.StatusTicket
 		err := rows.Scan(&s.ID, &s.Name, &s.Sequence, &s.IsActive, &s.CreatedAt, &s.UpdatedAt)
 		if err != nil {
 			return nil, err
@@ -100,11 +77,11 @@ func (r *StatusTicketRepository) FindAll(filters map[string]string) ([]StatusTic
 }
 
 // GET BY ID
-func (r *StatusTicketRepository) FindByID(id int) (*StatusTicket, error) {
+func (r *StatusTicketRepository) FindByID(id int) (*model.StatusTicket, error) {
 	query := "SELECT id, name, sequence, is_active, created_at, updated_at FROM status_ticket WHERE id = $1"
 	row := r.DB.QueryRow(query, id)
 
-	var s StatusTicket
+	var s model.StatusTicket
 	err := row.Scan(&s.ID, &s.Name, &s.Sequence, &s.IsActive, &s.CreatedAt, &s.UpdatedAt)
 	if err != nil {
 		return nil, err
@@ -148,7 +125,7 @@ func (r *StatusTicketRepository) Reorder(ctx context.Context, tx *sql.Tx, id int
 }
 
 // GET NEXT STATUS BASED ON SEQUENCE
-func (r *StatusTicketRepository) GetNextStatusInSection(currentStatusID int) (*StatusTicket, error) {
+func (r *StatusTicketRepository) GetNextStatusInSection(currentStatusID int) (*model.StatusTicket, error) {
 	query := `
         WITH current_status AS (
             SELECT section_id, sequence
@@ -162,7 +139,7 @@ func (r *StatusTicketRepository) GetNextStatusInSection(currentStatusID int) (*S
         ORDER BY sequence ASC
         LIMIT 1`
 
-	var nextStatus StatusTicket
+	var nextStatus model.StatusTicket
 	err := r.DB.QueryRow(query, currentStatusID).Scan(&nextStatus.ID, &nextStatus.Name, &nextStatus.Sequence, &nextStatus.IsActive)
 	if err != nil {
 		return nil, err

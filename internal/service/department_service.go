@@ -2,6 +2,8 @@ package service
 
 import (
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"errors"
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -15,7 +17,7 @@ func NewDepartmentService(repo *repository.DepartmentRepository) *DepartmentServ
 }
 
 // CREATE
-func (s *DepartmentService) CreateDepartment(req repository.CreateDepartmentRequest) (*repository.Department, error) {
+func (s *DepartmentService) CreateDepartment(req dto.CreateDepartmentRequest) (*model.Department, error) {
 	if req.Name == "" {
 		return nil, errors.New("department name is required")
 	}
@@ -34,13 +36,13 @@ func (s *DepartmentService) CreateDepartment(req repository.CreateDepartmentRequ
 
 
 // GET ALL
-func (s *DepartmentService) GetAllDepartments(filters map[string]string) ([]repository.Department, error) {
+func (s *DepartmentService) GetAllDepartments(filters map[string]string) ([]model.Department, error) {
 	return s.repo.FindAll(filters)
 }
 
 
 // GET BY ID
-func (s *DepartmentService) GetDepartmentByID(id int) (*repository.Department, error) {
+func (s *DepartmentService) GetDepartmentByID(id int) (*model.Department, error) {
 	return s.repo.FindByID(id)
 }
 
@@ -52,7 +54,7 @@ func (s *DepartmentService) DeleteDepartment(id int) error {
 
 
 // UPDATE
-func (s *DepartmentService) UpdateDepartment(id int, req repository.UpdateDepartmentRequest) (*repository.Department, error) {
+func (s *DepartmentService) UpdateDepartment(id int, req dto.UpdateDepartmentRequest) (*model.Department, error) {
 	isTaken, err := s.repo.IsNameTaken(req.Name, id)
 	if err != nil {
 		
@@ -67,6 +69,6 @@ func (s *DepartmentService) UpdateDepartment(id int, req repository.UpdateDepart
 
 
 // CHANGE ACTIVE STATUS
-func (s *DepartmentService) UpdateDepartmentActiveStatus(id int, req repository.UpdateStatusRequest) error {
+func (s *DepartmentService) UpdateDepartmentActiveStatus(id int, req dto.UpdateStatusRequest) error {
 	return s.repo.UpdateActiveStatus(id, req.IsActive)
 }

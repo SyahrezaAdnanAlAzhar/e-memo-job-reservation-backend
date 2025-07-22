@@ -2,35 +2,12 @@ package repository
 
 import (
 	"database/sql"
-	"time"
 	"errors"
 	"strconv"
     "strings"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 )
-
-type Department struct {
-	ID         int       `json:"id"`
-	Name       string    `json:"name"`
-	ReceiveJob bool      `json:"receive_job"`
-	IsActive   bool      `json:"is_active"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
-}
-
-type UpdateDepartmentRequest struct {
-	Name       string `json:"name" binding:"required"`
-	ReceiveJob bool   `json:"receive_job"`
-	IsActive   bool   `json:"is_active"`
-}
-
-type CreateDepartmentRequest struct {
-	Name       string `json:"name" binding:"required"`
-	ReceiveJob bool   `json:"receive_job"`
-}
-
-type UpdateStatusRequest struct {
-	IsActive bool `json:"is_active"`
-}
 
 type DepartmentRepository struct {
 	DB *sql.DB
@@ -63,7 +40,7 @@ func (r *DepartmentRepository) IsNameTaken(name string, currentID int) (bool, er
 // MAIN
 
 // CREATE
-func (r *DepartmentRepository) Create(req CreateDepartmentRequest) (*Department, error) {
+func (r *DepartmentRepository) Create(req dto.CreateDepartmentRequest) (*model.Department, error) {
 	query := `
         INSERT INTO department (name, receive_job, is_active)
         VALUES ($1, $2, false)
@@ -71,7 +48,7 @@ func (r *DepartmentRepository) Create(req CreateDepartmentRequest) (*Department,
 
 	row := r.DB.QueryRow(query, req.Name, req.ReceiveJob)
 	
-	var newDept Department
+	var newDept model.Department
 	err := row.Scan(
 		&newDept.ID, &newDept.Name, &newDept.ReceiveJob, 
 		&newDept.IsActive, &newDept.CreatedAt, &newDept.UpdatedAt,
@@ -84,7 +61,7 @@ func (r *DepartmentRepository) Create(req CreateDepartmentRequest) (*Department,
 
 
 // GET ALL
-func (r *DepartmentRepository) FindAll(filters map[string]string) ([]Department, error) {
+func (r *DepartmentRepository) FindAll(filters map[string]string) ([]model.Department, error) {
 	query := "SELECT id, name, receive_job, is_active, created_at, updated_at FROM department"
 	
 	var conditions []string
@@ -114,9 +91,9 @@ func (r *DepartmentRepository) FindAll(filters map[string]string) ([]Department,
 	}
 	defer rows.Close()
 
-	var departments []Department
+	var departments []model.Department
 	for rows.Next() {
-		var d Department
+		var d model.Department
 		err := rows.Scan(&d.ID, &d.Name, &d.ReceiveJob, &d.IsActive, &d.CreatedAt, &d.UpdatedAt)
 		if err != nil {
 			return nil, err
@@ -128,11 +105,11 @@ func (r *DepartmentRepository) FindAll(filters map[string]string) ([]Department,
 
 
 // GET BY ID
-func (r *DepartmentRepository) FindByID(id int) (*Department, error) {
+func (r *DepartmentRepository) FindByID(id int) (*model.Department, error) {
 	query := "SELECT id, name, receive_job, is_active, created_at, updated_at FROM department WHERE id = $1"
 	row := r.DB.QueryRow(query, id)
 
-	var d Department
+	var d model.Department
 	err := row.Scan(&d.ID, &d.Name, &d.ReceiveJob, &d.IsActive, &d.CreatedAt, &d.UpdatedAt)
 	if err != nil {
 		return nil, err
@@ -163,7 +140,7 @@ func (r *DepartmentRepository) Delete(id int) error {
 
 
 // UPDATE
-func (r *DepartmentRepository) Update(id int, req UpdateDepartmentRequest) (*Department, error) {
+func (r *DepartmentRepository) Update(id int, req dto.UpdateDepartmentRequest) (*model.Department, error) {
 	query := `
 		UPDATE department 
         SET name = $1, receive_job = $2, is_active = $3, updated_at = NOW() 
@@ -172,7 +149,7 @@ func (r *DepartmentRepository) Update(id int, req UpdateDepartmentRequest) (*Dep
 
 	row := r.DB.QueryRow(query, req.Name, req.ReceiveJob, req.IsActive, id)
 
-	var updatedDept Department
+	var updatedDept model.Department
 	err := row.Scan(
 		&updatedDept.ID, &updatedDept.Name,
 		&updatedDept.ReceiveJob, &updatedDept.IsActive,

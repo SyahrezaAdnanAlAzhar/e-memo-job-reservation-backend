@@ -3,6 +3,8 @@ package service
 import (
 	"errors"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -16,7 +18,7 @@ func NewAccessPermissionService(repo *repository.AccessPermissionRepository) *Ac
 }
 
 // CREATE
-func (s *AccessPermissionService) CreateAccessPermission(req repository.CreateAccessPermissionRequest) (*repository.AccessPermission, error) {
+func (s *AccessPermissionService) CreateAccessPermission(req dto.CreateAccessPermissionRequest) (*model.AccessPermission, error) {
 	newPermission, err := s.repo.Create(req)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -29,17 +31,17 @@ func (s *AccessPermissionService) CreateAccessPermission(req repository.CreateAc
 }
 
 // GET ALL
-func (s *AccessPermissionService) GetAllAccessPermissions() ([]repository.AccessPermission, error) {
+func (s *AccessPermissionService) GetAllAccessPermissions() ([]model.AccessPermission, error) {
 	return s.repo.FindAll()
 }
 
 // GET BY ID
-func (s *AccessPermissionService) GetAccessPermissionByID(id int) (*repository.AccessPermission, error) {
+func (s *AccessPermissionService) GetAccessPermissionByID(id int) (*model.AccessPermission, error) {
 	return s.repo.FindByID(id)
 }
 
 // UPDATE
-func (s *AccessPermissionService) UpdateAccessPermission(id int, req repository.UpdateAccessPermissionRequest) (*repository.AccessPermission, error) {
+func (s *AccessPermissionService) UpdateAccessPermission(id int, req dto.UpdateAccessPermissionRequest) (*model.AccessPermission, error) {
 	isTaken, err := s.repo.IsNameTaken(req.Name, id)
 	if err != nil {
 		return nil, err

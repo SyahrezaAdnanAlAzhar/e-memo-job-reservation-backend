@@ -2,8 +2,9 @@ package handler
 
 import (
 	"database/sql"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"net/http"
 	"strconv"
 
@@ -21,7 +22,7 @@ func NewStatusTicketHandler(service *service.StatusTicketService) *StatusTicketH
 
 // POST /status-ticket
 func (h *StatusTicketHandler) CreateStatusTicket(c *gin.Context) {
-	var req repository.CreateStatusTicketRequest
+	var req dto.CreateStatusTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -54,7 +55,7 @@ func (h *StatusTicketHandler) GetAllStatusTickets(c *gin.Context) {
 	}
 
 	if statuses == nil {
-		c.JSON(http.StatusOK, []repository.StatusTicket{})
+		c.JSON(http.StatusOK, []model.StatusTicket{})
 		return
 	}
 	c.JSON(http.StatusOK, statuses)
@@ -107,7 +108,7 @@ func (h *StatusTicketHandler) UpdateStatusTicketActiveStatus(c *gin.Context) {
 		return
 	}
 
-	var req repository.UpdateStatusTicketStatusRequest
+	var req dto.UpdateStatusTicketStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -126,7 +127,7 @@ func (h *StatusTicketHandler) UpdateStatusTicketActiveStatus(c *gin.Context) {
 
 // 
 func (h *StatusTicketHandler) ReorderStatusTickets(c *gin.Context) {
-	var req repository.ReorderStatusTicketsRequest
+	var req dto.ReorderStatusTicketsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

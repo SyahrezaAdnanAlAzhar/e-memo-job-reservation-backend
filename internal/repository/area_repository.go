@@ -4,28 +4,9 @@ import (
 	"database/sql"
 	"strconv"
 	"strings"
-	"time"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 )
-
-type Area struct {
-	ID           int       `json:"id"`
-	DepartmentID int       `json:"department_id"`
-	Name         string    `json:"name"`
-	IsActive     bool      `json:"is_active"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
-}
-
-type CreateAreaRequest struct {
-	DepartmentID int    `json:"department_id" binding:"required"`
-	Name         string `json:"name" binding:"required"`
-}
-
-type UpdateAreaRequest struct {
-	DepartmentID int    `json:"department_id" binding:"required,gt=0"`
-	Name         string `json:"name" binding:"required"`
-	IsActive     bool   `json:"is_active"`
-}
 
 type UpdateAreaStatusRequest struct {
 	IsActive bool `json:"is_active"`
@@ -64,7 +45,7 @@ func (r *AreaRepository) IsNameTakenInDepartment(name string, departmentID int, 
 // MAIN
 
 // CREATE
-func (r *AreaRepository) Create(req CreateAreaRequest) (*Area, error) {
+func (r *AreaRepository) Create(req dto.CreateAreaRequest) (*model.Area, error) {
 	query := `
         INSERT INTO area (department_id, name, is_active) 
         VALUES ($1, $2, false)
@@ -72,7 +53,7 @@ func (r *AreaRepository) Create(req CreateAreaRequest) (*Area, error) {
 
 	row := r.DB.QueryRow(query, req.DepartmentID, req.Name)
 
-	var newArea Area
+	var newArea model.Area
 	err := row.Scan(
 		&newArea.ID, &newArea.DepartmentID, &newArea.Name,
 		&newArea.IsActive, &newArea.CreatedAt, &newArea.UpdatedAt,
@@ -86,7 +67,7 @@ func (r *AreaRepository) Create(req CreateAreaRequest) (*Area, error) {
 
 
 // GET ALL
-func (r *AreaRepository) FindAll(filters map[string]string) ([]Area, error) {
+func (r *AreaRepository) FindAll(filters map[string]string) ([]model.Area, error) {
 	baseQuery := "SELECT id, department_id, name, is_active, created_at, updated_at FROM area"
 	var conditions []string
 	var args []interface{}
@@ -115,9 +96,9 @@ func (r *AreaRepository) FindAll(filters map[string]string) ([]Area, error) {
 	}
 	defer rows.Close()
 
-	var areas []Area
+	var areas []model.Area
 	for rows.Next() {
-		var a Area
+		var a model.Area
 		err := rows.Scan(&a.ID, &a.DepartmentID, &a.Name, &a.IsActive, &a.CreatedAt, &a.UpdatedAt)
 		if err != nil {
 			return nil, err
@@ -129,11 +110,11 @@ func (r *AreaRepository) FindAll(filters map[string]string) ([]Area, error) {
 
 
 // GET BY ID
-func (r *AreaRepository) FindByID(id int) (*Area, error) {
+func (r *AreaRepository) FindByID(id int) (*model.Area, error) {
 	query := "SELECT id, department_id, name, is_active, created_at, updated_at FROM area WHERE id = $1"
 	row := r.DB.QueryRow(query, id)
 
-	var a Area
+	var a model.Area
 	err := row.Scan(&a.ID, &a.DepartmentID, &a.Name, &a.IsActive, &a.CreatedAt, &a.UpdatedAt)
 	if err != nil {
 		return nil, err
@@ -165,7 +146,7 @@ func (r *AreaRepository) Delete(id int) error {
 
 
 // UPDATE
-func (r *AreaRepository) Update(id int, req UpdateAreaRequest) (*Area, error) {
+func (r *AreaRepository) Update(id int, req dto.UpdateAreaRequest) (*model.Area, error) {
 	query := `
         UPDATE area 
         SET department_id = $1, name = $2, is_active = $3, updated_at = NOW()
@@ -174,7 +155,7 @@ func (r *AreaRepository) Update(id int, req UpdateAreaRequest) (*Area, error) {
 
 	row := r.DB.QueryRow(query, req.DepartmentID, req.Name, req.IsActive, id)
 
-	var updatedArea Area
+	var updatedArea model.Area
 	err := row.Scan(
 		&updatedArea.ID, &updatedArea.DepartmentID, &updatedArea.Name,
 		&updatedArea.IsActive, &updatedArea.CreatedAt, &updatedArea.UpdatedAt,

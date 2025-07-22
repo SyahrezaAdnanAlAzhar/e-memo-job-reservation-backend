@@ -2,7 +2,8 @@ package handler
 
 import (
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"net/http"
 	"database/sql"
 	"strconv"
@@ -19,7 +20,7 @@ func NewDepartmentHandler(service *service.DepartmentService) *DepartmentHandler
 
 // POST /department
 func (h *DepartmentHandler) CreateDepartment(c *gin.Context) {
-	var req repository.CreateDepartmentRequest
+	var req dto.CreateDepartmentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -56,7 +57,7 @@ func (h *DepartmentHandler) GetAllDepartments(c *gin.Context) {
 	}
 	
 	if departments == nil {
-		c.JSON(http.StatusOK, []repository.Department{})
+		c.JSON(http.StatusOK, []model.Department{})
         return
 	}
 
@@ -113,7 +114,7 @@ func (h *DepartmentHandler) UpdateDepartment(c *gin.Context) {
 		return
 	}
 
-	var req repository.UpdateDepartmentRequest
+	var req dto.UpdateDepartmentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -145,7 +146,7 @@ func (h *DepartmentHandler) UpdateDepartmentActiveStatus(c *gin.Context) {
 		return
 	}
 
-	var req repository.UpdateStatusRequest
+	var req dto.UpdateStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"net/http"
 	"strconv"
 
@@ -20,7 +22,7 @@ func NewAccessPermissionHandler(service *service.AccessPermissionService) *Acces
 
 // POST /access-permissions
 func (h *AccessPermissionHandler) CreateAccessPermission(c *gin.Context) {
-	var req repository.CreateAccessPermissionRequest
+	var req dto.CreateAccessPermissionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -46,7 +48,7 @@ func (h *AccessPermissionHandler) GetAllAccessPermissions(c *gin.Context) {
 		return
 	}
 	if permissions == nil {
-		c.JSON(http.StatusOK, []repository.AccessPermission{})
+		c.JSON(http.StatusOK, []model.AccessPermission{})
 		return
 	}
 	c.JSON(http.StatusOK, permissions)
@@ -80,7 +82,7 @@ func (h *AccessPermissionHandler) UpdateAccessPermission(c *gin.Context) {
 		return
 	}
 
-	var req repository.UpdateAccessPermissionRequest
+	var req dto.UpdateAccessPermissionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

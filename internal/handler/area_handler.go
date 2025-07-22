@@ -7,6 +7,8 @@ import (
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/gin-gonic/gin"
 )
 
@@ -20,7 +22,7 @@ func NewAreaHandler(service *service.AreaService) *AreaHandler {
 
 // POST /area
 func (h *AreaHandler) CreateArea(c *gin.Context) {
-	var req repository.CreateAreaRequest
+	var req dto.CreateAreaRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -60,7 +62,7 @@ func (h *AreaHandler) GetAllAreas(c *gin.Context) {
 	}
 
 	if areas == nil {
-		c.JSON(http.StatusOK, []repository.Area{})
+		c.JSON(http.StatusOK, []model.Area{})
 		return
 	}
 
@@ -118,7 +120,7 @@ func (h *AreaHandler) UpdateArea(c *gin.Context) {
 		return
 	}
 
-	var req repository.UpdateAreaRequest
+	var req dto.UpdateAreaRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

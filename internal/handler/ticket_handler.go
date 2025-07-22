@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,7 +21,7 @@ func NewTicketHandler(service *service.TicketService) *TicketHandler {
 
 // POST /ticket
 func (h *TicketHandler) CreateTicket(c *gin.Context) {
-	var req repository.CreateTicketRequest
+	var req dto.CreateTicketRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
@@ -87,7 +87,7 @@ func (h *TicketHandler) GetTicketByID(c *gin.Context) {
 // PUT UPDATE
 func (h *TicketHandler) UpdateTicket(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	var req repository.UpdateTicketRequest
+	var req dto.UpdateTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -114,7 +114,7 @@ func (h *TicketHandler) UpdateTicket(c *gin.Context) {
 
 // PUT REORDER
 func (h *TicketHandler) ReorderTickets(c *gin.Context) {
-	var req repository.ReorderTicketsRequest
+	var req dto.ReorderTicketsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

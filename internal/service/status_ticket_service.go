@@ -4,6 +4,8 @@ import (
 	"errors"
 	"context"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository" 
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -17,7 +19,7 @@ func NewStatusTicketService(repo *repository.StatusTicketRepository) *StatusTick
 }
 
 // CREATE
-func (s *StatusTicketService) CreateStatusTicket(req repository.CreateStatusTicketRequest) (*repository.StatusTicket, error) {
+func (s *StatusTicketService) CreateStatusTicket(req dto.CreateStatusTicketRequest) (*model.StatusTicket, error) {
 	newStatus, err := s.repo.Create(req)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -30,12 +32,12 @@ func (s *StatusTicketService) CreateStatusTicket(req repository.CreateStatusTick
 }
 
 // GET ALL
-func (s *StatusTicketService) GetAllStatusTickets(filters map[string]string) ([]repository.StatusTicket, error) {
+func (s *StatusTicketService) GetAllStatusTickets(filters map[string]string) ([]model.StatusTicket, error) {
 	return s.repo.FindAll(filters)
 }
 
 // GET BY ID
-func (s *StatusTicketService) GetStatusTicketByID(id int) (*repository.StatusTicket, error) {
+func (s *StatusTicketService) GetStatusTicketByID(id int) (*model.StatusTicket, error) {
 	return s.repo.FindByID(id)
 }
 
@@ -45,12 +47,12 @@ func (s *StatusTicketService) DeleteStatusTicket(id int) error {
 }
 
 // CHANGE STATUS
-func (s *StatusTicketService) UpdateStatusTicketActiveStatus(id int, req repository.UpdateStatusTicketStatusRequest) error {
+func (s *StatusTicketService) UpdateStatusTicketActiveStatus(id int, req dto.UpdateStatusTicketStatusRequest) error {
 	return s.repo.UpdateActiveStatus(id, req.IsActive)
 }
 
 // REORDER
-func (s *StatusTicketService) ReorderStatusTickets(req repository.ReorderStatusTicketsRequest) error {
+func (s *StatusTicketService) ReorderStatusTickets(req dto.ReorderStatusTicketsRequest) error {
 	ctx := context.Background()
 	tx, err := s.repo.DB.BeginTx(ctx, nil)
 	if err != nil {

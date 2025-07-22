@@ -5,40 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
-	"time"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 )
-
-type Ticket struct {
-	ID                  int           `json:"id"`
-	Requestor           string        `json:"requestor"`
-	DepartmentTargetID  int           `json:"department_target_id"`
-	PhysicalLocationID  sql.NullInt64 `json:"physical_location_id"`
-	SpecifiedLocationID sql.NullInt64 `json:"specified_location_id"`
-	Description         string        `json:"description"`
-	TicketPriority      int           `json:"ticket_priority"`
-	SupportFile         []string      `json:"support_file"`
-	CreatedAt           time.Time     `json:"created_at"`
-	UpdatedAt           time.Time     `json:"updated_at"`
-}
-
-type CreateTicketRequest struct {
-	DepartmentTargetID  int    `json:"department_target_id" binding:"required,gt=0"`
-	PhysicalLocationID  *int   `json:"physical_location_id"`
-	SpecifiedLocationID *int   `json:"specified_location_id"`
-	Description         string `json:"description" binding:"required"`
-}
-
-type UpdateTicketRequest struct {
-	DepartmentTargetID  int    `json:"department_target_id" binding:"required"`
-	Description         string `json:"description" binding:"required"`
-	PhysicalLocationID  *int   `json:"physical_location_id"`
-	SpecifiedLocationID *int   `json:"specified_location_id"`
-}
-
-type ReorderTicketsRequest struct {
-	DepartmentTargetID int   `json:"department_target_id" binding:"required"`
-	OrderedTicketIDs   []int `json:"ordered_ticket_ids" binding:"required"`
-}
 
 type TicketRepository struct {
 	DB *sql.DB
@@ -109,7 +78,7 @@ func toNullInt64(val *int) sql.NullInt64 {
 // MAIN
 
 // CREATE TICKET
-func (r *TicketRepository) Create(ctx context.Context, tx *sql.Tx, ticket Ticket) (*Ticket, error) {
+func (r *TicketRepository) Create(ctx context.Context, tx *sql.Tx, ticket model.Ticket) (*model.Ticket, error) {
 	query := `
         INSERT INTO ticket (requestor, department_target_id, physical_location_id, specified_location_id, description, ticket_priority)
         VALUES ($1, $2, $3, $4, $5, $6)
@@ -124,7 +93,7 @@ func (r *TicketRepository) Create(ctx context.Context, tx *sql.Tx, ticket Ticket
 		ticket.TicketPriority,
 	)
 
-	var newTicket Ticket = ticket
+	var newTicket model.Ticket = ticket
 	err := row.Scan(&newTicket.ID, &newTicket.CreatedAt, &newTicket.UpdatedAt)
 	if err != nil {
 		return nil, err
@@ -180,11 +149,11 @@ func (r *TicketRepository) FindByID(id int) (map[string]interface{}, error) {
 
 
 // GET BY ID AS STRUCT
-func (r *TicketRepository) FindByIDAsStruct(ctx context.Context, id int) (*Ticket, error) {
+func (r *TicketRepository) FindByIDAsStruct(ctx context.Context, id int) (*model.Ticket, error) {
 	query := "SELECT id, requestor_npk, department_target_id, physical_location_id, specified_location_id, description, ticket_priority FROM ticket WHERE id = $1"
 	row := r.DB.QueryRowContext(ctx, query, id)
 
-	var t Ticket
+	var t model.Ticket
 	err := row.Scan(&t.ID, &t.Requestor, &t.DepartmentTargetID, &t.PhysicalLocationID, &t.SpecifiedLocationID, &t.Description, &t.TicketPriority)
 	if err != nil {
 		return nil, err
@@ -194,7 +163,7 @@ func (r *TicketRepository) FindByIDAsStruct(ctx context.Context, id int) (*Ticke
 
 
 // UPDATE TICKET
-func (r *TicketRepository) Update(ctx context.Context, tx *sql.Tx, id int, req UpdateTicketRequest) error {
+func (r *TicketRepository) Update(ctx context.Context, tx *sql.Tx, id int, req dto.UpdateTicketRequest) error {
 	query := `
         UPDATE ticket 
         SET department_target_id = $1, description = $2, physical_location_id = $3, specified_location_id = $4, updated_at = NOW()
