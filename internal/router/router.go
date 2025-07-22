@@ -1,0 +1,107 @@
+package router
+
+import (
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/auth"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/handler"
+
+	"github.com/gin-gonic/gin"
+)
+
+type AllHandlers struct {
+	AuthHandler             *handler.AuthHandler
+	DepartmentHandler       *handler.DepartmentHandler
+	AreaHandler             *handler.AreaHandler
+	PhysicalLocationHandler *handler.PhysicalLocationHandler
+	AccessPermissionHandler *handler.AccessPermissionHandler
+	StatusTicketHandler     *handler.StatusTicketHandler
+	TicketHandler           *handler.TicketHandler
+}
+
+func SetupRouter(h *AllHandlers, authMiddleware *auth.AuthMiddleware) *gin.Engine {
+	router := gin.Default()
+
+	api := router.Group("/api/e-memo-job-reservation")
+
+	public := api.Group("")
+	{
+		public.POST("/login", h.AuthHandler.Login)
+		public.POST("/refresh", h.AuthHandler.RefreshToken)
+	}
+
+	private := api.Group("")
+	private.Use(authMiddleware.JWTMiddleware())
+	{
+		private.POST("/logout", h.AuthHandler.Logout)
+
+		setupMasterDataRoutes(private, h)
+
+		setupMainDataRoutes(private, h)
+	}
+
+	return router
+}
+
+func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers) {
+	deptRoutes := group.Group("/department")
+	{
+		deptRoutes.POST("", h.DepartmentHandler.CreateDepartment)
+		deptRoutes.GET("", h.DepartmentHandler.GetAllDepartments)
+		deptRoutes.GET("/:id", h.DepartmentHandler.GetDepartmentByID)
+		deptRoutes.DELETE("/:id", h.DepartmentHandler.DeleteDepartment)
+		deptRoutes.PUT("/:id", h.DepartmentHandler.UpdateDepartment)
+		deptRoutes.PATCH("/:id/status", h.DepartmentHandler.UpdateDepartmentActiveStatus)
+	}
+
+	physicalLocationRoutes := group.Group("/physical-location")
+	{
+		physicalLocationRoutes.POST("", h.PhysicalLocationHandler.CreatePhysicalLocation)
+		physicalLocationRoutes.GET("", h.PhysicalLocationHandler.GetAllPhysicalLocations)
+		physicalLocationRoutes.GET("/:id", h.PhysicalLocationHandler.GetPhysicalLocationByID)
+		physicalLocationRoutes.PUT("/:id", h.PhysicalLocationHandler.UpdatePhysicalLocation)
+		physicalLocationRoutes.DELETE("/:id", h.PhysicalLocationHandler.DeletePhysicalLocation)
+		physicalLocationRoutes.PATCH("/:id/status", h.PhysicalLocationHandler.UpdatePhysicalLocationActiveStatus)
+	}
+
+	accessPermissionRoutes := group.Group("/access-permissions")
+	{
+		accessPermissionRoutes.POST("", h.AccessPermissionHandler.CreateAccessPermission)
+		accessPermissionRoutes.GET("", h.AccessPermissionHandler.GetAllAccessPermissions)
+		accessPermissionRoutes.GET("/:id", h.AccessPermissionHandler.GetAccessPermissionByID)
+		accessPermissionRoutes.PUT("/:id", h.AccessPermissionHandler.UpdateAccessPermission)
+		accessPermissionRoutes.DELETE("/:id", h.AccessPermissionHandler.DeleteAccessPermission)
+		accessPermissionRoutes.PATCH("/:id/status", h.AccessPermissionHandler.UpdateAccessPermissionActiveStatus)
+	}
+
+	areaRoutes := group.Group("/area")
+	{
+		areaRoutes.POST("", h.AreaHandler.CreateArea)
+		areaRoutes.GET("", h.AreaHandler.GetAllAreas)
+		areaRoutes.GET("/:id", h.AreaHandler.GetAreaByID)
+		areaRoutes.PUT("/:id", h.AreaHandler.UpdateArea)
+		areaRoutes.PATCH("/:id/status", h.AreaHandler.UpdateAreaActiveStatus)
+	}
+
+	statusTicketRoutes := group.Group("/status-ticket")
+	{
+		statusTicketRoutes.POST("", h.StatusTicketHandler.CreateStatusTicket)
+		statusTicketRoutes.GET("", h.StatusTicketHandler.GetAllStatusTickets)
+		statusTicketRoutes.GET("/:id", h.StatusTicketHandler.GetStatusTicketByID)
+		statusTicketRoutes.DELETE("/:id", h.StatusTicketHandler.DeleteStatusTicket)
+		statusTicketRoutes.PATCH("/:id/status", h.StatusTicketHandler.UpdateStatusTicketActiveStatus)
+		statusTicketRoutes.PUT("/reorder", h.StatusTicketHandler.ReorderStatusTickets)
+	}
+}
+
+// Fungsi helper untuk merapikan pendaftaran route data utama
+func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers) {
+	ticketRoutes := group.Group("/ticket")
+	{
+		ticketRoutes.POST("", h.TicketHandler.CreateTicket)
+		ticketRoutes.GET("", h.TicketHandler.GetAllTickets)
+		ticketRoutes.GET("/:id", h.TicketHandler.GetTicketByID)
+		ticketRoutes.PUT("/:id", h.TicketHandler.UpdateTicket)
+		ticketRoutes.PUT("/reorder", h.TicketHandler.ReorderTickets)
+		ticketRoutes.POST("/:id/progress", h.TicketHandler.ProgressTicketStatus)
+		ticketRoutes.PUT("/:id/change-status", h.TicketHandler.ChangeTicketStatus)
+	}
+}

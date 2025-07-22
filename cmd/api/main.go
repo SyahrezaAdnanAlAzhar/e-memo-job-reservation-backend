@@ -6,14 +6,16 @@ import (
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/auth"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/handler"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/router" 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/database"
 	redisClient "github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/redis"
-	"github.com/gin-gonic/gin"
+
 	"github.com/joho/godotenv"
 )
 
 func main() {
+	// INITIAL SET UP
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("Warning: .env file not found, using environment variables from OS")
@@ -25,147 +27,53 @@ func main() {
 	rdb := redisClient.Connect()
 	defer rdb.Close()
 
+	// DEPENDENCY INITIALIZATION (WIRING)
 	// REPOSITORY
-
 	authRepo := repository.NewAuthRepository(rdb)
-
-	// employeeRepo := repository.NewEmployeeRepository(db)
-	// MASTER DATA INDEPENDENT
-	physicalLocationRepo := repository.NewPhysicalLocationRepository(db)
+	employeeRepo := repository.NewEmployeeRepository(db)
 	departmentRepo := repository.NewDepartmentRepository(db)
-	accessPermissionRepo := repository.NewAccessPermissionRepository(db)
-
-	// MASTER DATA DEPENDENT
 	areaRepo := repository.NewAreaRepository(db)
+	physicalLocationRepo := repository.NewPhysicalLocationRepository(db)
+	accessPermissionRepo := repository.NewAccessPermissionRepository(db)
 	statusTicketRepo := repository.NewStatusTicketRepository(db)
-
-	// MAIN DATA
 	ticketRepo := repository.NewTicketRepository(db)
 	jobRepo := repository.NewJobRepository(db)
 	workflowRepo := repository.NewWorkflowRepository(db)
-	employeeRepo := repository.NewEmployeeRepository(db)
 	trackStatusTicketRepo := repository.NewTrackStatusTicketRepository(db)
 
 	// SERVICE
-
 	authService := service.NewAuthService(authRepo, employeeRepo)
-
-	// MASTER DATA INDEPENDENT
 	departmentService := service.NewDepartmentService(departmentRepo)
+	areaService := service.NewAreaService(areaRepo)
 	physicalLocationService := service.NewPhysicalLocationService(physicalLocationRepo)
 	accessPermissionService := service.NewAccessPermissionService(accessPermissionRepo)
-
-	// MASTER DATA DEPENDENT
-	areaService := service.NewAreaService(areaRepo)
 	statusTicketService := service.NewStatusTicketService(statusTicketRepo)
-
-	// MAIN DATA
 	ticketService := service.NewTicketService(&service.TicketServiceConfig{
 		TicketRepo:            ticketRepo,
 		JobRepo:               jobRepo,
 		WorkflowRepo:          workflowRepo,
 		TrackStatusTicketRepo: trackStatusTicketRepo,
+		StatusTicketRepo:      statusTicketRepo,
 		DB:                    db,
 	})
 
 	// HANDLER
+	allHandlers := &router.AllHandlers{
+		AuthHandler:             handler.NewAuthHandler(authService),
+		DepartmentHandler:       handler.NewDepartmentHandler(departmentService),
+		AreaHandler:             handler.NewAreaHandler(areaService),
+		PhysicalLocationHandler: handler.NewPhysicalLocationHandler(physicalLocationService),
+		AccessPermissionHandler: handler.NewAccessPermissionHandler(accessPermissionService),
+		StatusTicketHandler:     handler.NewStatusTicketHandler(statusTicketService),
+		TicketHandler:           handler.NewTicketHandler(ticketService),
+	}
 
-	authHandler := handler.NewAuthHandler(authService)
-
-	// employeeHandler := handler.NewEmployeeHandler(employeeRepo)
-	// MASTER DATA INDEPENDENT
-	departmentHandler := handler.NewDepartmentHandler(departmentService)
-	physicalLocationHandler := handler.NewPhysicalLocationHandler(physicalLocationService)
-	accessPermissionHandler := handler.NewAccessPermissionHandler(accessPermissionService)
-
-	// MASTER DATA DEPENDENT
-	areaHandler := handler.NewAreaHandler(areaService)
-	statusTicketHandler := handler.NewStatusTicketHandler(statusTicketService)
-
-	// MAIN DATA
-	ticketHandler := handler.NewTicketHandler(ticketService)
-
-	// AUTHENTICATION
-
+	// MIDDLEWARE
 	authMiddleware := auth.NewAuthMiddleware(authRepo)
-	// SETUP
-	router := gin.Default()
 
-	// PUBLIC API
-	public := router.Group("/api/e-memo-job-reservation")
-	{
-		public.POST("/login", authHandler.Login)
-		public.POST("/refresh", authHandler.RefreshToken)
-	}
-
-	// PRIVATE API
-	private := router.Group("/api/e-memo-job-reservation")
-	private.Use(authMiddleware.JWTMiddleware())
-	{
-		private.POST("/logout", authHandler.Logout)
-		// MASTER DATA INDEPENDENT
-		deptRoutes := private.Group("/department")
-		{
-			deptRoutes.POST("", departmentHandler.CreateDepartment)
-			deptRoutes.GET("", departmentHandler.GetAllDepartments)
-			deptRoutes.GET("/:id", departmentHandler.GetDepartmentByID)
-			deptRoutes.DELETE("/:id", departmentHandler.DeleteDepartment)
-			deptRoutes.PUT("/:id", departmentHandler.UpdateDepartment)
-			deptRoutes.PATCH("/:id/status", departmentHandler.UpdateDepartmentActiveStatus)
-		}
-		physicalLocationRoutes := private.Group("/physical-location")
-		{
-			physicalLocationRoutes.POST("", physicalLocationHandler.CreatePhysicalLocation)
-			physicalLocationRoutes.GET("", physicalLocationHandler.GetAllPhysicalLocations)
-			physicalLocationRoutes.GET("/:id", physicalLocationHandler.GetPhysicalLocationByID)
-			physicalLocationRoutes.PUT("/:id", physicalLocationHandler.UpdatePhysicalLocation)
-			physicalLocationRoutes.DELETE("/:id", physicalLocationHandler.DeletePhysicalLocation)
-			physicalLocationRoutes.PATCH("/:id/status", physicalLocationHandler.UpdatePhysicalLocationActiveStatus)
-		}
-		accessPermissionRoutes := private.Group("/access-permissions")
-		{
-			accessPermissionRoutes.POST("", accessPermissionHandler.CreateAccessPermission)
-			accessPermissionRoutes.GET("", accessPermissionHandler.GetAllAccessPermissions)
-			accessPermissionRoutes.GET("/:id", accessPermissionHandler.GetAccessPermissionByID)
-			accessPermissionRoutes.PUT("/:id", accessPermissionHandler.UpdateAccessPermission)
-			accessPermissionRoutes.DELETE("/:id", accessPermissionHandler.DeleteAccessPermission)
-			accessPermissionRoutes.PATCH("/:id/status", accessPermissionHandler.UpdateAccessPermissionActiveStatus)
-		}
-
-		// MASTER DATA DEPENDENT
-		areaRoutes := private.Group("/area")
-		{
-			areaRoutes.POST("", areaHandler.CreateArea)
-			areaRoutes.GET("", areaHandler.GetAllAreas)
-			areaRoutes.GET("/:id", areaHandler.GetAreaByID)
-			areaRoutes.PUT("/:id", areaHandler.UpdateArea)
-			areaRoutes.PATCH("/:id/status", areaHandler.UpdateAreaActiveStatus)
-		}
-
-		statusTicketRoutes := private.Group("/status-ticket")
-		{
-			statusTicketRoutes.POST("", statusTicketHandler.CreateStatusTicket)
-			statusTicketRoutes.GET("", statusTicketHandler.GetAllStatusTickets)
-			statusTicketRoutes.GET("/:id", statusTicketHandler.GetStatusTicketByID)
-			statusTicketRoutes.DELETE("/:id", statusTicketHandler.DeleteStatusTicket)
-			statusTicketRoutes.PATCH("/:id/status", statusTicketHandler.UpdateStatusTicketActiveStatus)
-			statusTicketRoutes.PUT("/reorder", statusTicketHandler.ReorderStatusTickets)
-		}
-
-		// MAIN DATA
-		ticketRoutes := private.Group("/ticket")
-		{
-			ticketRoutes.POST("", ticketHandler.CreateTicket)
-			ticketRoutes.GET("", ticketHandler.GetAllTickets)
-			ticketRoutes.GET("/:id", ticketHandler.GetTicketByID)
-			ticketRoutes.PUT("/:id", ticketHandler.UpdateTicket)
-			// ticketRoutes.PUT("/:id/status", ticketHandler.UpdateTicketStatus)
-			ticketRoutes.PUT("/reorder", ticketHandler.ReorderTickets)
-			ticketRoutes.POST("/:id/progress", ticketHandler.ProgressTicketStatus)
-			ticketRoutes.PUT("/:id/change-status", ticketHandler.ChangeTicketStatus)
-		}
-	}
+	// SET UP AND RUN SERVER
+	appRouter := router.SetupRouter(allHandlers, authMiddleware)
 
 	log.Println("Starting server on :8080...")
-	router.Run(":8080")
+	appRouter.Run(":8080")
 }

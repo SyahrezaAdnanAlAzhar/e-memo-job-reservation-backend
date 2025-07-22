@@ -24,7 +24,7 @@ type TicketServiceConfig struct {
 	WorkflowRepo          *repository.WorkflowRepository
 	DB                    *sql.DB
 	TrackStatusTicketRepo *repository.TrackStatusTicketRepository
-	statusTicketRepo      *repository.StatusTicketRepository
+	StatusTicketRepo      *repository.StatusTicketRepository
 }
 
 func NewTicketService(cfg *TicketServiceConfig) *TicketService {
