@@ -149,6 +149,7 @@ func main() {
 			ticketRoutes.PUT("/:id", ticketHandler.UpdateTicket)
 			ticketRoutes.PUT("/:id/status", ticketHandler.UpdateTicketStatus)
 			ticketRoutes.PUT("/reorder", ticketHandler.ReorderTickets)
+			ticketRoutes.POST("/:id/progress", ticketHandler.ProgressTicketStatus) 
 		}
 	}
 

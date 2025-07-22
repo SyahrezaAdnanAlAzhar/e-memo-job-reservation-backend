@@ -15,6 +15,7 @@ type TicketService struct {
 	db                    *sql.DB
 	trackStatusTicketRepo *repository.TrackStatusTicketRepository
 	employeeRepo          *repository.EmployeeRepository
+	statusTicketRepo      *repository.StatusTicketRepository
 }
 
 type TicketServiceConfig struct {
@@ -23,6 +24,7 @@ type TicketServiceConfig struct {
 	WorkflowRepo          *repository.WorkflowRepository
 	DB                    *sql.DB
 	TrackStatusTicketRepo *repository.TrackStatusTicketRepository
+	statusTicketRepo      *repository.StatusTicketRepository
 }
 
 func NewTicketService(cfg *TicketServiceConfig) *TicketService {
@@ -223,6 +225,32 @@ func (s *TicketService) UpdateTicketStatus(ctx context.Context, ticketID int, re
 	defer tx.Rollback()
 
 	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, req.NewStatusID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// UPDATE TO THE NEXT STATUS
+func (s *TicketService) ProgressTicketStatus(ctx context.Context, ticketID int) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil { return err }
+	defer tx.Rollback()
+
+	currentStatusID, _, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
+	if err != nil {
+		return errors.New("could not find current status for the ticket")
+	}
+
+	nextStatus, err := s.statusTicketRepo.GetNextStatusInSection(currentStatusID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.New("ticket is already at its final status in the section")
+		}
+		return err
+	}
+
+	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, nextStatus.ID); err != nil {
 		return err
 	}
 

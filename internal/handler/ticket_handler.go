@@ -84,7 +84,7 @@ func (h *TicketHandler) GetTicketByID(c *gin.Context) {
 	c.JSON(http.StatusOK, ticket)
 }
 
-// UPDATE
+// PUT UPDATE
 func (h *TicketHandler) UpdateTicket(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var req repository.UpdateTicketRequest
@@ -112,7 +112,7 @@ func (h *TicketHandler) UpdateTicket(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Ticket updated and resubmitted for approval"})
 }
 
-// REORDER
+// PUT REORDER
 func (h *TicketHandler) ReorderTickets(c *gin.Context) {
 	var req repository.ReorderTicketsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -127,7 +127,7 @@ func (h *TicketHandler) ReorderTickets(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Ticket priorities updated successfully"})
 }
 
-// UPDATE STATUS
+// PUT UPDATE STATUS
 func (h *TicketHandler) UpdateTicketStatus(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var req service.UpdateTicketStatusRequest
@@ -141,4 +141,20 @@ func (h *TicketHandler) UpdateTicketStatus(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Ticket status updated successfully"})
+}
+
+// PUT/ PROGRESS TO NEXT STATUS
+func (h *TicketHandler) ProgressTicketStatus(c *gin.Context) {
+    id, _ := strconv.Atoi(c.Param("id"))
+    
+    err := h.service.ProgressTicketStatus(c.Request.Context(), id)
+	if err != nil {
+        if err.Error() == "ticket is already at its final status in the section" {
+            c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+            return
+        }
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to progress ticket status", "details": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Ticket status progressed successfully"})
 }
