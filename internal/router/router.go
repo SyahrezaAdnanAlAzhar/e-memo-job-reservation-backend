@@ -114,12 +114,17 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers) {
 		workflowRoutes.POST("", h.WorkflowHandler.CreateWorkflow)
 		workflowRoutes.GET("", h.WorkflowHandler.GetAllWorkflows)
 		workflowRoutes.GET("/:id", h.WorkflowHandler.GetWorkflowByID)
+		workflowRoutes.PUT("/:id", h.WorkflowHandler.UpdateWorkflow)
+		workflowRoutes.DELETE("/:id", h.WorkflowHandler.DeleteWorkflow)
+		workflowRoutes.PATCH("/:id/status", h.WorkflowHandler.UpdateWorkflowActiveStatus)
 
 		stepRoutes := group.Group("/workflow-step")
 		{
 			stepRoutes.POST("", h.WorkflowHandler.AddWorkflowStep)
 			stepRoutes.GET("", h.WorkflowHandler.GetAllWorkflowSteps)
 			stepRoutes.GET("/:id", h.WorkflowHandler.GetWorkflowStepByID)
+			stepRoutes.DELETE("/:id", h.WorkflowHandler.DeleteWorkflowStep)
+			stepRoutes.PATCH("/:id/status", h.WorkflowHandler.UpdateWorkflowStepActiveStatus)
 		}
 	}
 }

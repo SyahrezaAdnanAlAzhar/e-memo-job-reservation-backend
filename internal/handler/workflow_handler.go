@@ -126,3 +126,93 @@ func (h *WorkflowHandler) GetWorkflowStepByID(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, step)
 }
+
+// UPDATE WORKFLOW NAME
+func (h *WorkflowHandler) UpdateWorkflow(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	var req dto.UpdateWorkflowRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	updatedWorkflow, err := h.service.UpdateWorkflowName(id, req)
+	if err != nil {
+		if err.Error() == "workflow name already exists" {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Workflow not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update workflow"})
+		return
+	}
+	c.JSON(http.StatusOK, updatedWorkflow)
+}
+
+// DELETE WORKFLOW
+func (h *WorkflowHandler) DeleteWorkflow(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	if err := h.service.DeleteWorkflow(id); err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Workflow not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete workflow"})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// DELETE WORKFLOW STEP
+func (h *WorkflowHandler) DeleteWorkflowStep(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	if err := h.service.DeleteWorkflowStep(id); err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Workflow step not found or sequence is not 0"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete workflow step"})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// CHANGE WORKFLOW STATUS
+func (h *WorkflowHandler) UpdateWorkflowActiveStatus(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	var req dto.UpdateWorkflowStatusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.service.UpdateWorkflowActiveStatus(c.Request.Context(), id, req); err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Workflow not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update workflow status"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Workflow and its steps status updated successfully"})
+}
+
+// CHANGE WORKFLOW STEP STATUS
+func (h *WorkflowHandler) UpdateWorkflowStepActiveStatus(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	var req dto.UpdateWorkflowStatusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.service.UpdateWorkflowStepActiveStatus(id, req); err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Workflow step not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update workflow step status"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Workflow step status updated successfully"})
+}
