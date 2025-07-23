@@ -90,3 +90,57 @@ func (r *SpecifiedLocationRepository) FindByID(id int) (*model.SpecifiedLocation
 	)
 	return &loc, err
 }
+
+// UPDATE
+func (r *SpecifiedLocationRepository) Update(id int, req dto.UpdateSpecifiedLocationRequest) (*model.SpecifiedLocation, error) {
+	query := `
+        UPDATE specified_location 
+        SET physical_location_id = $1, name = $2, updated_at = NOW()
+        WHERE id = $3
+        RETURNING id, physical_location_id, name, is_active, created_at, updated_at`
+
+	row := r.DB.QueryRow(query, req.PhysicalLocationID, req.Name, id)
+
+	var updatedLoc model.SpecifiedLocation
+	err := row.Scan(
+		&updatedLoc.ID, &updatedLoc.PhysicalLocationID, &updatedLoc.Name, &updatedLoc.IsActive,
+		&updatedLoc.CreatedAt, &updatedLoc.UpdatedAt,
+	)
+	return &updatedLoc, err
+}
+
+// DELETE
+func (r *SpecifiedLocationRepository) Delete(id int) error {
+	query := "DELETE FROM specified_location WHERE id = $1"
+	result, err := r.DB.Exec(query, id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+// CHANGE STATUS
+func (r *SpecifiedLocationRepository) UpdateActiveStatus(id int, isActive bool) error {
+	query := "UPDATE specified_location SET is_active = $1, updated_at = NOW() WHERE id = $2"
+	result, err := r.DB.Exec(query, isActive, id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+// HELPER UNIQUE NAME ON IN PHYSICAL LOCATION
+func (r *SpecifiedLocationRepository) IsNameTakenInPhysicalLocation(name string, physicalLocationID int, currentID int) (bool, error) {
+	var exists bool
+	query := "SELECT EXISTS(SELECT 1 FROM specified_location WHERE name = $1 AND physical_location_id = $2 AND id != $3)"
+	err := r.DB.QueryRow(query, name, physicalLocationID, currentID).Scan(&exists)
+	return exists, err
+}
