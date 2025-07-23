@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 )
 
 type WorkflowRepository struct {
@@ -13,6 +14,21 @@ func NewWorkflowRepository(db *sql.DB) *WorkflowRepository {
 	return &WorkflowRepository{DB: db}
 }
 
+// CREATE
+func (r *WorkflowRepository) Create(ctx context.Context, tx *sql.Tx, name string) (*model.Workflow, error) {
+	query := `
+        INSERT INTO workflow (name, is_active) VALUES ($1, true)
+        RETURNING id, name, is_active, created_at, updated_at`
+	
+	row := tx.QueryRowContext(ctx, query, name)
+
+	var newWorkflow model.Workflow
+	err := row.Scan(
+		&newWorkflow.ID, &newWorkflow.Name, &newWorkflow.IsActive,
+		&newWorkflow.CreatedAt, &newWorkflow.UpdatedAt,
+	)
+	return &newWorkflow, err
+}
 
 // HELPER
 // GET INITIAL STATUS BY RULE
