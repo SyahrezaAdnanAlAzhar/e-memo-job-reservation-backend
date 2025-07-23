@@ -88,3 +88,60 @@ func (h *SectionStatusTicketHandler) UpdateSectionStatusTicketActiveStatus(c *gi
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Section status and related data updated successfully"})
 }
+
+// PUT /section-status-ticket/:id
+func (h *SectionStatusTicketHandler) UpdateSectionStatusTicket(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	var req dto.UpdateSectionStatusTicketRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	updatedSection, err := h.service.UpdateSectionStatusTicketName(id, req)
+	if err != nil {
+		if err.Error() == "section name already exists" {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Section not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update section"})
+		return
+	}
+	c.JSON(http.StatusOK, updatedSection)
+}
+
+// DELETE /section-status-ticket/:id
+func (h *SectionStatusTicketHandler) DeleteSectionStatusTicket(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	err := h.service.DeleteSectionStatusTicket(id)
+	if err != nil {
+		if err.Error() == "cannot delete, must have at least two sections" || err.Error() == "cannot delete the first section" {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Section not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete section"})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// PUT /section-status-ticket/reorder
+func (h *SectionStatusTicketHandler) ReorderSections(c *gin.Context) {
+	var req dto.ReorderSectionsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.service.ReorderSections(c.Request.Context(), req); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reorder sections", "details": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Sections reordered successfully"})
+}
