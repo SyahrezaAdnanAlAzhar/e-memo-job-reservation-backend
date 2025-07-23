@@ -8,3 +8,7 @@ type CreateEmployeePositionRequest struct {
 type UpdateEmployeePositionRequest struct {
 	Name string `json:"name" binding:"required"`
 }
+
+type UpdateEmployeePositionStatusRequest struct {
+	IsActive bool `json:"is_active"`
+}

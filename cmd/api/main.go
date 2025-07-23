@@ -52,7 +52,7 @@ func main() {
 	accessPermissionService := service.NewAccessPermissionService(accessPermissionRepo)
 	statusTicketService := service.NewStatusTicketService(statusTicketRepo)
 	positionPermissionService := service.NewPositionPermissionService(positionPermissionRepo)
-	employeePositionService := service.NewEmployeePositionService(employeePositionRepo, positionToWorkflowMappingRepo, db)
+	employeePositionService := service.NewEmployeePositionService(employeePositionRepo, positionToWorkflowMappingRepo, ticketRepo, statusTicketRepo, db)
 	ticketService := service.NewTicketService(&service.TicketServiceConfig{
 		TicketRepo:            ticketRepo,
 		JobRepo:               jobRepo,

@@ -13,13 +13,15 @@ import (
 )
 
 type EmployeePositionService struct {
-	positionRepo *repository.EmployeePositionRepository
-	mappingRepo  *repository.PositionToWorkflowMappingRepository
-	db           *sql.DB
+	positionRepo     *repository.EmployeePositionRepository
+	mappingRepo      *repository.PositionToWorkflowMappingRepository
+	ticketRepo       *repository.TicketRepository
+	statusTicketRepo *repository.StatusTicketRepository
+	db               *sql.DB
 }
 
-func NewEmployeePositionService(positionRepo *repository.EmployeePositionRepository, mappingRepo *repository.PositionToWorkflowMappingRepository, db *sql.DB) *EmployeePositionService {
-	return &EmployeePositionService{positionRepo: positionRepo, mappingRepo: mappingRepo, db: db}
+func NewEmployeePositionService(positionRepo *repository.EmployeePositionRepository, mappingRepo *repository.PositionToWorkflowMappingRepository, ticketRepo *repository.TicketRepository, statusTicketRepo *repository.StatusTicketRepository, db *sql.DB) *EmployeePositionService {
+	return &EmployeePositionService{positionRepo: positionRepo, mappingRepo: mappingRepo, ticketRepo: ticketRepo, statusTicketRepo: statusTicketRepo, db: db}
 }
 
 // CREATE
@@ -65,4 +67,45 @@ func (s *EmployeePositionService) GetAllEmployeePositions() ([]model.EmployeePos
 // GET BY ID
 func (s *EmployeePositionService) GetEmployeePositionByID(id int) (*model.EmployeePosition, error) {
 	return s.positionRepo.FindByID(id)
+}
+
+// UPDATE
+func (s *EmployeePositionService) UpdateEmployeePosition(id int, req dto.UpdateEmployeePositionRequest) (*model.EmployeePosition, error) {
+	isTaken, err := s.positionRepo.IsNameTaken(req.Name, id)
+	if err != nil {
+		return nil, err
+	}
+	if isTaken {
+		return nil, errors.New("position name already exists")
+	}
+	return s.positionRepo.Update(id, req)
+}
+
+// DELETE
+func (s *EmployeePositionService) DeleteEmployeePosition(ctx context.Context, id int) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	cancelledStatus, err := s.statusTicketRepo.FindBySequence(0)
+	if err != nil {
+		return errors.New("critical configuration error: 'Dibatalkan' status not found")
+	}
+
+	if err := s.ticketRepo.CancelTicketsByPosition(ctx, tx, id, cancelledStatus.ID); err != nil {
+		return err
+	}
+
+	if err := s.positionRepo.Delete(ctx, tx, id); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// CHANGE STATUS
+func (s *EmployeePositionService) UpdateEmployeePositionActiveStatus(id int, req dto.UpdateEmployeePositionStatusRequest) error {
+	return s.positionRepo.UpdateActiveStatus(id, req.IsActive)
 }
