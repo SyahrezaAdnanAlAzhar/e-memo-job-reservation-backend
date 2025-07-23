@@ -63,7 +63,7 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers) {
 		physicalLocationRoutes.PATCH("/:id/status", h.PhysicalLocationHandler.UpdatePhysicalLocationActiveStatus)
 	}
 
-	accessPermissionRoutes := group.Group("/access-permissions")
+	accessPermissionRoutes := group.Group("/access-permission")
 	{
 		accessPermissionRoutes.POST("", h.AccessPermissionHandler.CreateAccessPermission)
 		accessPermissionRoutes.GET("", h.AccessPermissionHandler.GetAllAccessPermissions)
