@@ -16,7 +16,7 @@ func NewWorkflowStepRepository(db *sql.DB) *WorkflowStepRepository {
 
 // CREATE
 func (r *WorkflowStepRepository) Create(ctx context.Context, tx *sql.Tx, workflowID, statusTicketID, stepSequence int) error {
-	query := "INSERT INTO workflow_step (workflow_id, status_ticket_id, step_sequence, is_active) VALUES ($1, $2, $3, true)"
+	query := "INSERT INTO workflow_step (workflow_id, status_ticket_id, step_sequence, is_active) VALUES ($1, $2, $3, false)"
 	_, err := tx.ExecContext(ctx, query, workflowID, statusTicketID, stepSequence)
 	return err
 }

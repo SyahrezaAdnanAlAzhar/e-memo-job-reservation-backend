@@ -18,7 +18,7 @@ func NewWorkflowRepository(db *sql.DB) *WorkflowRepository {
 // CREATE
 func (r *WorkflowRepository) Create(ctx context.Context, tx *sql.Tx, name string) (*model.Workflow, error) {
 	query := `
-        INSERT INTO workflow (name, is_active) VALUES ($1, true)
+        INSERT INTO workflow (name, is_active) VALUES ($1, false)
         RETURNING id, name, is_active, created_at, updated_at`
 	
 	row := tx.QueryRowContext(ctx, query, name)
