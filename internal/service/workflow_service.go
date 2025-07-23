@@ -123,3 +123,49 @@ func (s *WorkflowService) GetWorkflowStepsByWorkflowID(workflowID int) ([]model.
 func (s *WorkflowService) GetWorkflowStepByID(id int) (*model.WorkflowStep, error) {
 	return s.stepRepo.FindByID(id)
 }
+
+// UPDATE WORKFLOW NAME
+func (s *WorkflowService) UpdateWorkflowName(id int, req dto.UpdateWorkflowRequest) (*model.Workflow, error) {
+	isTaken, err := s.workflowRepo.IsNameTaken(req.Name, id)
+	if err != nil {
+		return nil, err
+	}
+	if isTaken {
+		return nil, errors.New("workflow name already exists")
+	}
+	return s.workflowRepo.Update(id, req)
+}
+
+// DELETE WORKFLOW
+func (s *WorkflowService) DeleteWorkflow(id int) error {
+	return s.workflowRepo.Delete(id)
+}
+
+// DELETE WORKFLOW STEP
+func (s *WorkflowService) DeleteWorkflowStep(id int) error {
+	return s.stepRepo.Delete(id)
+}
+
+// CHANGE WORKFLOW STATUS
+func (s *WorkflowService) UpdateWorkflowActiveStatus(ctx context.Context, id int, req dto.UpdateWorkflowStatusRequest) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := s.workflowRepo.UpdateActiveStatus(ctx, tx, id, req.IsActive); err != nil {
+		return err
+	}
+
+	if err := s.stepRepo.UpdateActiveStatusByWorkflowID(ctx, tx, id, req.IsActive); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// CHANGE WORKFLOW STEP STATUS
+func (s *WorkflowService) UpdateWorkflowStepActiveStatus(id int, req dto.UpdateWorkflowStatusRequest) error {
+	return s.stepRepo.UpdateActiveStatus(id, req.IsActive)
+}
