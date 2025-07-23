@@ -49,3 +49,26 @@ func (s *SpecifiedLocationService) GetSpecifiedLocationsByPhysicalLocationID(phy
 func (s *SpecifiedLocationService) GetSpecifiedLocationByID(id int) (*model.SpecifiedLocation, error) {
 	return s.repo.FindByID(id)
 }
+
+// UPDATE
+func (s *SpecifiedLocationService) UpdateSpecifiedLocation(id int, req dto.UpdateSpecifiedLocationRequest) (*model.SpecifiedLocation, error) {
+	isTaken, err := s.repo.IsNameTakenInPhysicalLocation(req.Name, req.PhysicalLocationID, id)
+	if err != nil {
+		return nil, err
+	}
+	if isTaken {
+		return nil, errors.New("location name already exists in this physical location")
+	}
+
+	return s.repo.Update(id, req)
+}
+
+// DELETE
+func (s *SpecifiedLocationService) DeleteSpecifiedLocation(id int) error {
+	return s.repo.Delete(id)
+}
+
+// CHANGE STATUS
+func (s *SpecifiedLocationService) UpdateSpecifiedLocationActiveStatus(id int, req dto.UpdateSpecifiedLocationStatusRequest) error {
+	return s.repo.UpdateActiveStatus(id, req.IsActive)
+}
