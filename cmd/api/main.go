@@ -43,6 +43,7 @@ func main() {
 	positionPermissionRepo := repository.NewPositionPermissionRepository(db)
 	employeePositionRepo := repository.NewEmployeePositionRepository(db)
 	positionToWorkflowMappingRepo := repository.NewPositionToWorkflowMappingRepository(db)
+	workflowStepRepo := repository.NewWorkflowStepRepository(db)
 
 	// SERVICE
 	authService := service.NewAuthService(authRepo, employeeRepo)
@@ -52,6 +53,7 @@ func main() {
 	accessPermissionService := service.NewAccessPermissionService(accessPermissionRepo)
 	statusTicketService := service.NewStatusTicketService(statusTicketRepo)
 	positionPermissionService := service.NewPositionPermissionService(positionPermissionRepo)
+	workflowService := service.NewWorkflowService(workflowRepo, workflowStepRepo, db)
 	employeePositionService := service.NewEmployeePositionService(
 		employeePositionRepo,
 		positionToWorkflowMappingRepo,
@@ -78,6 +80,7 @@ func main() {
 		TicketHandler:             handler.NewTicketHandler(ticketService),
 		PositionPermissionHandler: handler.NewPositionPermissionHandler(positionPermissionService),
 		EmployeePositionHandler:   handler.NewEmployeePositionHandler(employeePositionService),
+		WorkflowHandler: handler.NewWorkflowHandler(workflowService),
 	}
 
 	// MIDDLEWARE

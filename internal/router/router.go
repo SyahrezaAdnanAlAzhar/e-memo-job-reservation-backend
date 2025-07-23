@@ -17,6 +17,7 @@ type AllHandlers struct {
 	TicketHandler             *handler.TicketHandler
 	PositionPermissionHandler *handler.PositionPermissionHandler
 	EmployeePositionHandler   *handler.EmployeePositionHandler
+	WorkflowHandler           *handler.WorkflowHandler
 }
 
 func SetupRouter(h *AllHandlers, authMiddleware *auth.AuthMiddleware) *gin.Engine {
@@ -107,6 +108,10 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers) {
 		posRoutes.PUT("/:id", h.EmployeePositionHandler.UpdateEmployeePosition)
 		posRoutes.DELETE("/:id", h.EmployeePositionHandler.DeleteEmployeePosition)
 		posRoutes.PATCH("/:id/status", h.EmployeePositionHandler.UpdateEmployeePositionActiveStatus)
+	}
+	workflowRoutes := group.Group("/workflow")
+	{
+		workflowRoutes.POST("", h.WorkflowHandler.CreateWorkflow)
 	}
 }
 
