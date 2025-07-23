@@ -163,6 +163,29 @@ func (r *StatusTicketRepository) GetSectionIDByName(sectionName string) (int, er
     return sectionID, err
 }
 
+// CHANGE STATUS BASED ON SECTION
+func (r *StatusTicketRepository) UpdateActiveStatusBySectionID(ctx context.Context, tx *sql.Tx, sectionID int, isActive bool) error {
+	query := "UPDATE status_ticket SET is_active = $1, updated_at = NOW() WHERE section_id = $2"
+	_, err := tx.ExecContext(ctx, query, isActive, sectionID)
+	return err
+}
+
+// GET FALLBACK ACTIVE STATUS
+func (r *StatusTicketRepository) GetDynamicFallbackStatusID(ctx context.Context, tx *sql.Tx, deactivatedSectionSequence int) (int, error) {
+	var fallbackStatusID int
+	query := `
+        SELECT st.id
+        FROM status_ticket st
+        JOIN section_status_ticket sst ON st.section_id = sst.id
+        WHERE sst.is_active = true
+          AND sst.sequence < $1
+        ORDER BY sst.sequence DESC, st.sequence DESC
+        LIMIT 1`
+	
+	err := tx.QueryRowContext(ctx, query, deactivatedSectionSequence).Scan(&fallbackStatusID)
+	return fallbackStatusID, err
+}
+
 // FIND BY SEQUENCE
 func (r *StatusTicketRepository) FindBySequence(sequence int) (*model.StatusTicket, error) {
 	query := "SELECT id, name, sequence, is_active, created_at, updated_at FROM status_ticket WHERE sequence = $1"
