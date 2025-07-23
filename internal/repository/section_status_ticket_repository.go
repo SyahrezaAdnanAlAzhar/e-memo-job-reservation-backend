@@ -126,3 +126,11 @@ func (r *SectionStatusTicketRepository) IsNameTaken(name string, currentID int) 
 	err := r.DB.QueryRow(query, name, currentID).Scan(&exists)
 	return exists, err
 }
+
+// HELPER COUNT ALL
+func (r *SectionStatusTicketRepository) CountAll() (int, error) {
+	var count int
+	query := "SELECT COUNT(*) FROM section_status_ticket"
+	err := r.DB.QueryRow(query).Scan(&count)
+	return count, err
+}
