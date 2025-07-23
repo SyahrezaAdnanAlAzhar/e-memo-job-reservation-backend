@@ -53,7 +53,7 @@ func main() {
 	areaService := service.NewAreaService(areaRepo)
 	physicalLocationService := service.NewPhysicalLocationService(physicalLocationRepo)
 	accessPermissionService := service.NewAccessPermissionService(accessPermissionRepo)
-	sectionStatusTicketService := service.NewSectionStatusTicketService(sectionStatusTicketRepo)
+	sectionStatusTicketService := service.NewSectionStatusTicketService(sectionStatusTicketRepo, statusTicketRepo, ticketRepo, db)
 	statusTicketService := service.NewStatusTicketService(statusTicketRepo)
 	positionPermissionService := service.NewPositionPermissionService(positionPermissionRepo)
 	workflowService := service.NewWorkflowService(workflowRepo, workflowStepRepo, db)
