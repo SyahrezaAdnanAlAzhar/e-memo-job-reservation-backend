@@ -94,3 +94,77 @@ func (s *SectionStatusTicketService) UpdateSectionStatusTicketActiveStatus(ctx c
 
 	return tx.Commit()
 }
+
+// UPDATE NAME
+func (s *SectionStatusTicketService) UpdateSectionStatusTicketName(id int, req dto.UpdateSectionStatusTicketRequest) (*model.SectionStatusTicket, error) {
+	isTaken, err := s.repo.IsNameTaken(req.Name, id)
+	if err != nil {
+		return nil, err
+	}
+	if isTaken {
+		return nil, errors.New("section name already exists")
+	}
+	return s.repo.Update(id, req)
+}
+
+// DELETE
+func (s *SectionStatusTicketService) DeleteSectionStatusTicket(id int) error {
+	count, err := s.repo.CountAll()
+	if err != nil {
+		return err
+	}
+	if count <= 2 {
+		return errors.New("cannot delete, must have at least two sections")
+	}
+
+	section, err := s.repo.FindByID(id)
+	if err != nil {
+		return err
+	}
+	if section.Sequence == 1 {
+		return errors.New("cannot delete the first section")
+	}
+
+	return s.repo.Delete(id)
+}
+
+// REORDER
+func (s *SectionStatusTicketService) ReorderSections(ctx context.Context, req dto.ReorderSectionsRequest) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// GET ALL STATUS FROM SPECIFIC SECTION
+	allStatuses, err := s.statusTicketRepo.FindAllOrdered()
+	if err != nil {
+		return err
+	}
+
+	// ORGANIZED STATUS BASED ON SECTION_ID AND KEEP THE SEQUENCE
+	statusesBySection := make(map[int][]model.StatusTicket)
+	for _, status := range allStatuses {
+		statusesBySection[status.SectionID] = append(statusesBySection[status.SectionID], status)
+	}
+
+	// REORDERING
+	globalStatusSequence := 0
+	for newSectionSequence, sectionID := range req.OrderedSectionIDs {
+		// UPDATE SECTION SEQUENCE
+		if err := s.repo.UpdateSequence(ctx, tx, sectionID, newSectionSequence+1); err != nil {
+			return err
+		}
+
+		// UPDATE STATUS SEQUENCE
+		statusesInSection := statusesBySection[sectionID]
+		for _, status := range statusesInSection {
+			if err := s.statusTicketRepo.UpdateSequence(ctx, tx, status.ID, globalStatusSequence); err != nil {
+				return err
+			}
+			globalStatusSequence++
+		}
+	}
+
+	return tx.Commit()
+}
