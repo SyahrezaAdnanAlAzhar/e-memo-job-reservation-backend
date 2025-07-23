@@ -18,6 +18,7 @@ type AllHandlers struct {
 	PositionPermissionHandler *handler.PositionPermissionHandler
 	EmployeePositionHandler   *handler.EmployeePositionHandler
 	WorkflowHandler           *handler.WorkflowHandler
+	SpecifiedLocationHandler  *handler.SpecifiedLocationHandler
 }
 
 func SetupRouter(h *AllHandlers, authMiddleware *auth.AuthMiddleware) *gin.Engine {
@@ -126,6 +127,12 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers) {
 			stepRoutes.DELETE("/:id", h.WorkflowHandler.DeleteWorkflowStep)
 			stepRoutes.PATCH("/:id/status", h.WorkflowHandler.UpdateWorkflowStepActiveStatus)
 		}
+	}
+	specLocRoutes := group.Group("/specified-location")
+	{
+		specLocRoutes.POST("", h.SpecifiedLocationHandler.CreateSpecifiedLocation)
+		specLocRoutes.GET("", h.SpecifiedLocationHandler.GetAllSpecifiedLocations)
+		specLocRoutes.GET("/:id", h.SpecifiedLocationHandler.GetSpecifiedLocationByID)
 	}
 }
 
