@@ -104,6 +104,9 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers) {
 		posRoutes.POST("", h.EmployeePositionHandler.CreateEmployeePosition)
 		posRoutes.GET("", h.EmployeePositionHandler.GetAllEmployeePositions)
 		posRoutes.GET("/:id", h.EmployeePositionHandler.GetEmployeePositionByID)
+		posRoutes.PUT("/:id", h.EmployeePositionHandler.UpdateEmployeePosition)
+		posRoutes.DELETE("/:id", h.EmployeePositionHandler.DeleteEmployeePosition)
+		posRoutes.PATCH("/:id/status", h.EmployeePositionHandler.UpdateEmployeePositionActiveStatus)
 	}
 }
 
