@@ -185,3 +185,59 @@ func (r *TicketRepository) UpdatePriority(ctx context.Context, tx *sql.Tx, ticke
 	_, err := tx.ExecContext(ctx, query, newPriority, ticketID)
 	return err
 }
+
+// UPDATE TICKET TO FALLBACK STATUS
+func (r *TicketRepository) MoveTicketsToFallbackStatus(ctx context.Context, tx *sql.Tx, sectionIDToDeactivate int, fallbackStatusID int) error {
+	findTicketsQuery := `
+        SELECT tst.ticket_id
+        FROM track_status_ticket tst
+        WHERE tst.finish_date IS NULL
+        AND tst.status_ticket_id IN (
+            SELECT id FROM status_ticket WHERE section_id = $1
+        )`
+	rows, err := tx.QueryContext(ctx, findTicketsQuery, sectionIDToDeactivate)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	var ticketIDsToMove []int
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			return err
+		}
+		ticketIDsToMove = append(ticketIDsToMove, id)
+	}
+
+	if len(ticketIDsToMove) == 0 {
+		return nil
+	}
+
+	deleteQuery := `
+        DELETE FROM track_status_ticket
+        WHERE ticket_id = ANY($1)
+        AND status_ticket_id IN (
+            SELECT id FROM status_ticket WHERE section_id = $2
+        )`
+	_, err = tx.ExecContext(ctx, deleteQuery, ticketIDsToMove, sectionIDToDeactivate)
+	if err != nil {
+		return err
+	}
+
+	createQuery := "INSERT INTO track_status_ticket (ticket_id, status_ticket_id, start_date) VALUES ($1, $2, NOW())"
+	stmt, err := tx.PrepareContext(ctx, createQuery)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, ticketID := range ticketIDsToMove {
+		_, err := stmt.ExecContext(ctx, ticketID, fallbackStatusID)
+		if err != nil {
+			return err 
+		}
+	}
+
+	return nil
+}
