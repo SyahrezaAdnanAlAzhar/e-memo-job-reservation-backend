@@ -10,3 +10,11 @@ type AddWorkflowStepRequest struct {
 	StatusTicketID int    `json:"status_ticket_id" binding:"required,gt=0"`
 	Position       string `json:"position" binding:"required,oneof=start end"`
 }
+
+type UpdateWorkflowStatusRequest struct {
+	IsActive bool `json:"is_active"`
+}
+
+type UpdateWorkflowRequest struct {
+	Name string `json:"name" binding:"required"`
+}

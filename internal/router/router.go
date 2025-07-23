@@ -124,7 +124,7 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers) {
 	}
 }
 
-// Fungsi helper untuk merapikan pendaftaran route data utama
+// MAIN TICKET
 func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers) {
 	ticketRoutes := group.Group("/ticket")
 	{

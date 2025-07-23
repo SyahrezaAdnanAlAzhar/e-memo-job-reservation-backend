@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 )
 
 type WorkflowRepository struct {
@@ -60,6 +61,44 @@ func (r *WorkflowRepository) FindByID(id int) (*model.Workflow, error) {
 	return &w, err
 }
 
+// UPDATE
+func (r *WorkflowRepository) Update(id int, req dto.UpdateWorkflowRequest) (*model.Workflow, error) {
+	query := `UPDATE workflow SET name = $1, updated_at = NOW() WHERE id = $2
+              RETURNING id, name, is_active, created_at, updated_at`
+	row := r.DB.QueryRow(query, req.Name, id)
+	var updatedWorkflow model.Workflow
+	err := row.Scan(&updatedWorkflow.ID, &updatedWorkflow.Name, &updatedWorkflow.IsActive, &updatedWorkflow.CreatedAt, &updatedWorkflow.UpdatedAt)
+	return &updatedWorkflow, err
+}
+
+// DELETE
+func (r *WorkflowRepository) Delete(id int) error {
+	query := "DELETE FROM workflow WHERE id = $1"
+	result, err := r.DB.Exec(query, id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+// CHANGE STATUS
+func (r *WorkflowRepository) UpdateActiveStatus(ctx context.Context, tx *sql.Tx, id int, isActive bool) error {
+	query := "UPDATE workflow SET is_active = $1, updated_at = NOW() WHERE id = $2"
+	result, err := tx.ExecContext(ctx, query, isActive, id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
 // HELPER
 // GET INITIAL STATUS BY RULE
 func (r *WorkflowRepository) GetInitialStatusByPosition(ctx context.Context, positionID int) (int, error) {
@@ -76,4 +115,12 @@ func (r *WorkflowRepository) GetInitialStatusByPosition(ctx context.Context, pos
 		return 0, err
 	}
 	return statusID, nil
+}
+
+// UPDATE VALIDATION
+func (r *WorkflowRepository) IsNameTaken(name string, currentID int) (bool, error) {
+	var exists bool
+	query := "SELECT EXISTS(SELECT 1 FROM workflow WHERE name = $1 AND id != $2)"
+	err := r.DB.QueryRow(query, name, currentID).Scan(&exists)
+	return exists, err
 }
