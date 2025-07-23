@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 )
 
 type WorkflowStepRepository struct {
@@ -17,5 +18,77 @@ func NewWorkflowStepRepository(db *sql.DB) *WorkflowStepRepository {
 func (r *WorkflowStepRepository) Create(ctx context.Context, tx *sql.Tx, workflowID, statusTicketID, stepSequence int) error {
 	query := "INSERT INTO workflow_step (workflow_id, status_ticket_id, step_sequence, is_active) VALUES ($1, $2, $3, true)"
 	_, err := tx.ExecContext(ctx, query, workflowID, statusTicketID, stepSequence)
+	return err
+}
+
+// GET ALL
+func (r *WorkflowStepRepository) FindAll() ([]model.WorkflowStep, error) {
+	query := "SELECT id, workflow_id, status_ticket_id, step_sequence, is_active, created_at, updated_at FROM workflow_step ORDER BY workflow_id, step_sequence ASC"
+	rows, err := r.DB.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var steps []model.WorkflowStep
+	for rows.Next() {
+		var s model.WorkflowStep
+		err := rows.Scan(&s.ID, &s.WorkflowID, &s.StatusTicketID, &s.StepSequence, &s.IsActive, &s.CreatedAt, &s.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		steps = append(steps, s)
+	}
+	return steps, nil
+}
+
+// GET ALL BY WORKFLOW ID
+func (r *WorkflowStepRepository) FindByWorkflowID(workflowID int) ([]model.WorkflowStep, error) {
+	query := "SELECT id, workflow_id, status_ticket_id, step_sequence, is_active, created_at, updated_at FROM workflow_step WHERE workflow_id = $1 ORDER BY step_sequence ASC"
+	rows, err := r.DB.Query(query, workflowID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var steps []model.WorkflowStep
+	for rows.Next() {
+		var s model.WorkflowStep
+		err := rows.Scan(&s.ID, &s.WorkflowID, &s.StatusTicketID, &s.StepSequence, &s.IsActive, &s.CreatedAt, &s.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		steps = append(steps, s)
+	}
+	return steps, nil
+}
+
+// GET BY ID
+func (r *WorkflowStepRepository) FindByID(id int) (*model.WorkflowStep, error) {
+	query := "SELECT id, workflow_id, status_ticket_id, step_sequence, is_active, created_at, updated_at FROM workflow_step WHERE id = $1"
+	row := r.DB.QueryRow(query, id)
+	var s model.WorkflowStep
+	err := row.Scan(&s.ID, &s.WorkflowID, &s.StatusTicketID, &s.StepSequence, &s.IsActive, &s.CreatedAt, &s.UpdatedAt)
+	return &s, err
+}
+
+// HELPER FOR INSERT STEP
+func (r *WorkflowStepRepository) GetLastSequence(ctx context.Context, tx *sql.Tx, workflowID int) (int, error) {
+	var lastSequence sql.NullInt64
+	query := "SELECT MAX(step_sequence) FROM workflow_step WHERE workflow_id = $1"
+	err := tx.QueryRowContext(ctx, query, workflowID).Scan(&lastSequence)
+	if err != nil && err != sql.ErrNoRows {
+		return -1, err
+	}
+	if !lastSequence.Valid {
+		return -1, nil
+	}
+	return int(lastSequence.Int64), nil
+}
+
+// Shift all sequences up to make room early
+func (r *WorkflowStepRepository) IncrementAllSequences(ctx context.Context, tx *sql.Tx, workflowID int) error {
+	query := "UPDATE workflow_step SET step_sequence = step_sequence + 1 WHERE workflow_id = $1"
+	_, err := tx.ExecContext(ctx, query, workflowID)
 	return err
 }

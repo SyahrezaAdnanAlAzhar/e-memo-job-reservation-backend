@@ -30,6 +30,36 @@ func (r *WorkflowRepository) Create(ctx context.Context, tx *sql.Tx, name string
 	return &newWorkflow, err
 }
 
+// GET ALL
+func (r *WorkflowRepository) FindAll() ([]model.Workflow, error) {
+	query := "SELECT id, name, is_active, created_at, updated_at FROM workflow ORDER BY id ASC"
+	rows, err := r.DB.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var workflows []model.Workflow
+	for rows.Next() {
+		var w model.Workflow
+		err := rows.Scan(&w.ID, &w.Name, &w.IsActive, &w.CreatedAt, &w.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		workflows = append(workflows, w)
+	}
+	return workflows, nil
+}
+
+// GET BY ID
+func (r *WorkflowRepository) FindByID(id int) (*model.Workflow, error) {
+	query := "SELECT id, name, is_active, created_at, updated_at FROM workflow WHERE id = $1"
+	row := r.DB.QueryRow(query, id)
+	var w model.Workflow
+	err := row.Scan(&w.ID, &w.Name, &w.IsActive, &w.CreatedAt, &w.UpdatedAt)
+	return &w, err
+}
+
 // HELPER
 // GET INITIAL STATUS BY RULE
 func (r *WorkflowRepository) GetInitialStatusByPosition(ctx context.Context, positionID int) (int, error) {
