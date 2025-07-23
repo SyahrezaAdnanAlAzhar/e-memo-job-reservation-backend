@@ -162,3 +162,16 @@ func (r *StatusTicketRepository) GetSectionIDByName(sectionName string) (int, er
     err := r.DB.QueryRow(query, sectionName).Scan(sectionID)
     return sectionID, err
 }
+
+// FIND BY SEQUENCE
+func (r *StatusTicketRepository) FindBySequence(sequence int) (*model.StatusTicket, error) {
+	query := "SELECT id, name, sequence, is_active, created_at, updated_at FROM status_ticket WHERE sequence = $1"
+	row := r.DB.QueryRow(query, sequence)
+
+	var s model.StatusTicket
+	err := row.Scan(&s.ID, &s.Name, &s.Sequence, &s.IsActive, &s.CreatedAt, &s.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
