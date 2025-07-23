@@ -92,3 +92,38 @@ func (r *WorkflowStepRepository) IncrementAllSequences(ctx context.Context, tx *
 	_, err := tx.ExecContext(ctx, query, workflowID)
 	return err
 }
+
+// DELETE
+func (r *WorkflowStepRepository) Delete(id int) error {
+	query := "DELETE FROM workflow_step WHERE id = $1 AND step_sequence = 0"
+	result, err := r.DB.Exec(query, id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+// CHANGE STATUS
+func (r *WorkflowStepRepository) UpdateActiveStatus(id int, isActive bool) error {
+	query := "UPDATE workflow_step SET is_active = $1, updated_at = NOW() WHERE id = $2"
+	result, err := r.DB.Exec(query, isActive, id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+// CHANGE STATUS (CASCADE DARI WORKFLOW)
+func (r *WorkflowStepRepository) UpdateActiveStatusByWorkflowID(ctx context.Context, tx *sql.Tx, workflowID int, isActive bool) error {
+	query := "UPDATE workflow_step SET is_active = $1, updated_at = NOW() WHERE workflow_id = $2"
+	_, err := tx.ExecContext(ctx, query, isActive, workflowID)
+	return err
+}
