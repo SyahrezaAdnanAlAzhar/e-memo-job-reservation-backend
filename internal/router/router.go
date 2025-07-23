@@ -99,6 +99,9 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers) {
 	sectionRoutes := group.Group("/section-status-ticket")
 	{
 		sectionRoutes.POST("", h.SectionStatusTicketHandler.CreateSectionStatusTicket)
+		sectionRoutes.GET("", h.SectionStatusTicketHandler.GetAllSectionStatusTickets)
+		sectionRoutes.GET("/:id", h.SectionStatusTicketHandler.GetSectionStatusTicketByID)
+		sectionRoutes.PATCH("/:id/status", h.SectionStatusTicketHandler.UpdateSectionStatusTicketActiveStatus)
 	}
 
 	posPermRoutes := group.Group("/position-permissions")
