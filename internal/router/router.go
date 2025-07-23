@@ -8,17 +8,18 @@ import (
 )
 
 type AllHandlers struct {
-	AuthHandler               *handler.AuthHandler
-	DepartmentHandler         *handler.DepartmentHandler
-	AreaHandler               *handler.AreaHandler
-	PhysicalLocationHandler   *handler.PhysicalLocationHandler
-	AccessPermissionHandler   *handler.AccessPermissionHandler
-	StatusTicketHandler       *handler.StatusTicketHandler
-	TicketHandler             *handler.TicketHandler
-	PositionPermissionHandler *handler.PositionPermissionHandler
-	EmployeePositionHandler   *handler.EmployeePositionHandler
-	WorkflowHandler           *handler.WorkflowHandler
-	SpecifiedLocationHandler  *handler.SpecifiedLocationHandler
+	AuthHandler                *handler.AuthHandler
+	DepartmentHandler          *handler.DepartmentHandler
+	AreaHandler                *handler.AreaHandler
+	PhysicalLocationHandler    *handler.PhysicalLocationHandler
+	AccessPermissionHandler    *handler.AccessPermissionHandler
+	SectionStatusTicketHandler *handler.SectionStatusTicketHandler
+	StatusTicketHandler        *handler.StatusTicketHandler
+	TicketHandler              *handler.TicketHandler
+	PositionPermissionHandler  *handler.PositionPermissionHandler
+	EmployeePositionHandler    *handler.EmployeePositionHandler
+	WorkflowHandler            *handler.WorkflowHandler
+	SpecifiedLocationHandler   *handler.SpecifiedLocationHandler
 }
 
 func SetupRouter(h *AllHandlers, authMiddleware *auth.AuthMiddleware) *gin.Engine {
@@ -94,6 +95,12 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers) {
 		statusTicketRoutes.PATCH("/:id/status", h.StatusTicketHandler.UpdateStatusTicketActiveStatus)
 		statusTicketRoutes.PUT("/reorder", h.StatusTicketHandler.ReorderStatusTickets)
 	}
+
+	sectionRoutes := group.Group("/section-status-ticket")
+	{
+		sectionRoutes.POST("", h.SectionStatusTicketHandler.CreateSectionStatusTicket)
+	}
+
 	posPermRoutes := group.Group("/position-permissions")
 	{
 		posPermRoutes.POST("", h.PositionPermissionHandler.CreatePositionPermission)
@@ -101,7 +108,7 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers) {
 		posPermRoutes.PATCH("/positions/:posId/permissions/:permId/status", h.PositionPermissionHandler.UpdatePositionPermissionActiveStatus)
 		posPermRoutes.DELETE("/positions/:posId/permissions/:permId", h.PositionPermissionHandler.DeletePositionPermission)
 	}
-	posRoutes := group.Group("/employee-positions")
+	posRoutes := group.Group("/employee-position")
 	{
 		posRoutes.POST("", h.EmployeePositionHandler.CreateEmployeePosition)
 		posRoutes.GET("", h.EmployeePositionHandler.GetAllEmployeePositions)

@@ -35,6 +35,7 @@ func main() {
 	areaRepo := repository.NewAreaRepository(db)
 	physicalLocationRepo := repository.NewPhysicalLocationRepository(db)
 	accessPermissionRepo := repository.NewAccessPermissionRepository(db)
+	sectionStatusTicketRepo := repository.NewSectionStatusTicketRepository(db)
 	statusTicketRepo := repository.NewStatusTicketRepository(db)
 	ticketRepo := repository.NewTicketRepository(db)
 	jobRepo := repository.NewJobRepository(db)
@@ -52,6 +53,7 @@ func main() {
 	areaService := service.NewAreaService(areaRepo)
 	physicalLocationService := service.NewPhysicalLocationService(physicalLocationRepo)
 	accessPermissionService := service.NewAccessPermissionService(accessPermissionRepo)
+	sectionStatusTicketService := service.NewSectionStatusTicketService(sectionStatusTicketRepo)
 	statusTicketService := service.NewStatusTicketService(statusTicketRepo)
 	positionPermissionService := service.NewPositionPermissionService(positionPermissionRepo)
 	workflowService := service.NewWorkflowService(workflowRepo, workflowStepRepo, db)
@@ -73,17 +75,18 @@ func main() {
 
 	// HANDLER
 	allHandlers := &router.AllHandlers{
-		AuthHandler:               handler.NewAuthHandler(authService),
-		DepartmentHandler:         handler.NewDepartmentHandler(departmentService),
-		AreaHandler:               handler.NewAreaHandler(areaService),
-		PhysicalLocationHandler:   handler.NewPhysicalLocationHandler(physicalLocationService),
-		AccessPermissionHandler:   handler.NewAccessPermissionHandler(accessPermissionService),
-		StatusTicketHandler:       handler.NewStatusTicketHandler(statusTicketService),
-		TicketHandler:             handler.NewTicketHandler(ticketService),
-		PositionPermissionHandler: handler.NewPositionPermissionHandler(positionPermissionService),
-		EmployeePositionHandler:   handler.NewEmployeePositionHandler(employeePositionService),
-		WorkflowHandler:           handler.NewWorkflowHandler(workflowService),
-		SpecifiedLocationHandler:  handler.NewSpecifiedLocationHandler(specifiedLocationService),
+		AuthHandler:                handler.NewAuthHandler(authService),
+		DepartmentHandler:          handler.NewDepartmentHandler(departmentService),
+		AreaHandler:                handler.NewAreaHandler(areaService),
+		PhysicalLocationHandler:    handler.NewPhysicalLocationHandler(physicalLocationService),
+		AccessPermissionHandler:    handler.NewAccessPermissionHandler(accessPermissionService),
+		SectionStatusTicketHandler: handler.NewSectionStatusTicketHandler(sectionStatusTicketService),
+		StatusTicketHandler:        handler.NewStatusTicketHandler(statusTicketService),
+		TicketHandler:              handler.NewTicketHandler(ticketService),
+		PositionPermissionHandler:  handler.NewPositionPermissionHandler(positionPermissionService),
+		EmployeePositionHandler:    handler.NewEmployeePositionHandler(employeePositionService),
+		WorkflowHandler:            handler.NewWorkflowHandler(workflowService),
+		SpecifiedLocationHandler:   handler.NewSpecifiedLocationHandler(specifiedLocationService),
 	}
 
 	// MIDDLEWARE
