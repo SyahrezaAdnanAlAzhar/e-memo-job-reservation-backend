@@ -14,7 +14,7 @@ import (
 type Claims struct {
 	TokenID    string `json:"jti"`
 	NPK        string `json:"npk"`
-	PositionID int    `json:"position_id"`
+	EmployeePositionID int    `json:"employee_position_id"`
 	jwt.RegisteredClaims
 }
 
@@ -35,7 +35,7 @@ func GenerateTokens(npk string, positionID int, tokenStore TokenStorer) (accessT
 	accessClaims := &Claims{
 		TokenID:    uuid.New().String(), 
 		NPK:        npk,
-		PositionID: positionID,
+		EmployeePositionID: positionID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(accessDuration)),
 		},
@@ -56,7 +56,7 @@ func GenerateTokens(npk string, positionID int, tokenStore TokenStorer) (accessT
 	refreshClaims := &Claims{
 		TokenID:    uuid.New().String(), 
 		NPK:        npk,
-		PositionID: positionID, 
+		EmployeePositionID: positionID, 
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(refreshDuration)),
 		},

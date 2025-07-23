@@ -350,7 +350,7 @@ func seedPositionPermission(db *sql.DB) {
 func seedPositionToWorkflowMapping(db *sql.DB) {
 	log.Println("Seeding position_to_workflow_mapping...")
 	mappings := []struct {
-		position_id int
+		employee_position_id int
 		workflow_id int
 	}{
 		{1, 1}, // Department -> Direct
@@ -359,7 +359,7 @@ func seedPositionToWorkflowMapping(db *sql.DB) {
 		{4, 3}, // Leader -> Full Approval
 	}
 	for _, m := range mappings {
-		_, err := db.Exec("INSERT INTO position_to_workflow_mapping (position_id, workflow_id) VALUES ($1, $2) ON CONFLICT(position_id) DO NOTHING", m.position_id, m.workflow_id)
+		_, err := db.Exec("INSERT INTO position_to_workflow_mapping (employee_position_id, workflow_id) VALUES ($1, $2) ON CONFLICT(employee_position_id) DO NOTHING", m.employee_position_id, m.workflow_id)
 		if err != nil {
 			log.Fatalf("Failed to seed position_to_workflow_mapping: %v", err)
 		}
@@ -440,7 +440,7 @@ func createEmployee(db *sql.DB, npkCounter *int, firstNames, lastNames []string,
 	fullName := firstNames[rand.Intn(len(firstNames))] + " " + lastNames[rand.Intn(len(lastNames))]
 
 	_, err := db.Exec(`
-        INSERT INTO employee (npk, department_id, area_id, name, position_id, is_active)
+        INSERT INTO employee (npk, department_id, area_id, name, employee_position_id, is_active)
         VALUES ($1, $2, $3, $4, $5, true) ON CONFLICT(npk) DO NOTHING`,
 		npk, deptID, areaID, fullName, position)
 

@@ -50,7 +50,7 @@ func (m *AuthMiddleware) JWTMiddleware() gin.HandlerFunc {
 		}
 
 		c.Set("user_npk", claims.NPK)
-		c.Set("user_position_id", claims.PositionID)
+		c.Set("user_position_id", claims.EmployeePositionID)
 
 		c.Next()
 	}

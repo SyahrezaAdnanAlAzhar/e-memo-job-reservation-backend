@@ -31,7 +31,7 @@ func (s *AuthService) Login(ctx context.Context, npk string) (string, string, er
 		return "", "", err 
 	}
 
-	accessToken, refreshToken, err := auth.GenerateTokens(employee.NPK, employee.PositionID, s.authRepo)
+	accessToken, refreshToken, err := auth.GenerateTokens(employee.NPK, employee.EmployeePositionID, s.authRepo)
 	if err != nil {
 		return "", "", err
 	}
@@ -70,7 +70,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenString strin
 		return "", "", err 
 	}
 
-	accessToken, newRefreshToken, err := auth.GenerateTokens(claims.NPK, claims.PositionID, s.authRepo)
+	accessToken, newRefreshToken, err := auth.GenerateTokens(claims.NPK, claims.EmployeePositionID, s.authRepo)
 	if err != nil {
 		return "", "", err
 	}
