@@ -64,3 +64,62 @@ func (s *WorkflowService) CreateWorkflowWithSteps(ctx context.Context, req dto.C
 
 	return newWorkflow, nil
 }
+
+// CREATE WORKFLOW STEP
+func (s *WorkflowService) AddWorkflowStep(ctx context.Context, req dto.AddWorkflowStepRequest) (*model.WorkflowStep, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	var newSequence int
+	if req.Position == "start" {
+		if err := s.stepRepo.IncrementAllSequences(ctx, tx, req.WorkflowID); err != nil {
+			return nil, err
+		}
+		newSequence = 0
+	} else {
+		lastSequence, err := s.stepRepo.GetLastSequence(ctx, tx, req.WorkflowID)
+		if err != nil {
+			return nil, err
+		}
+		newSequence = lastSequence + 1
+	}
+
+	if err := s.stepRepo.Create(ctx, tx, req.WorkflowID, req.StatusTicketID, newSequence); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return nil, errors.New("status ticket is already in this workflow")
+		}
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+    
+	return nil, nil
+}
+
+// GET ALL
+func (s *WorkflowService) GetAllWorkflows() ([]model.Workflow, error) {
+	return s.workflowRepo.FindAll()
+}
+
+func (s *WorkflowService) GetAllWorkflowSteps() ([]model.WorkflowStep, error) {
+	return s.stepRepo.FindAll()
+}
+
+// GET BY ID
+func (s *WorkflowService) GetWorkflowByID(id int) (*model.Workflow, error) {
+	return s.workflowRepo.FindByID(id)
+}
+
+func (s *WorkflowService) GetWorkflowStepsByWorkflowID(workflowID int) ([]model.WorkflowStep, error) {
+	return s.stepRepo.FindByWorkflowID(workflowID)
+}
+
+func (s *WorkflowService) GetWorkflowStepByID(id int) (*model.WorkflowStep, error) {
+	return s.stepRepo.FindByID(id)
+}
