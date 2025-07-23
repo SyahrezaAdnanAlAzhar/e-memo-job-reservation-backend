@@ -59,3 +59,50 @@ func (r *EmployeePositionRepository) FindByID(id int) (*model.EmployeePosition, 
 	err := row.Scan(&p.ID, &p.Name, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
 	return &p, err
 }
+
+// UPDATE
+func (r *EmployeePositionRepository) Update(id int, req dto.UpdateEmployeePositionRequest) (*model.EmployeePosition, error) {
+	query := `
+        UPDATE employee_position SET name = $1, updated_at = NOW() WHERE id = $2
+        RETURNING id, name, is_active, created_at, updated_at`
+	row := r.DB.QueryRow(query, req.Name, id)
+	var updatedPos model.EmployeePosition
+	err := row.Scan(&updatedPos.ID, &updatedPos.Name, &updatedPos.IsActive, &updatedPos.CreatedAt, &updatedPos.UpdatedAt)
+	return &updatedPos, err
+}
+
+// DELETE
+func (r *EmployeePositionRepository) Delete(ctx context.Context, tx *sql.Tx, id int) error {
+	query := "DELETE FROM employee_position WHERE id = $1"
+	result, err := tx.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+// CHANGE STATUS
+func (r *EmployeePositionRepository) UpdateActiveStatus(id int, isActive bool) error {
+	query := "UPDATE employee_position SET is_active = $1, updated_at = NOW() WHERE id = $2"
+	result, err := r.DB.Exec(query, isActive, id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+// HELPER
+func (r *EmployeePositionRepository) IsNameTaken(name string, currentID int) (bool, error) {
+	var exists bool
+	query := "SELECT EXISTS(SELECT 1 FROM employee_position WHERE name = $1 AND id != $2)"
+	err := r.DB.QueryRow(query, name, currentID).Scan(&exists)
+	return exists, err
+}
