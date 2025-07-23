@@ -7,6 +7,7 @@ type StatusTicket struct {
 	Name      string    `json:"name"`
 	Sequence  int       `json:"sequence"`
 	IsActive  bool      `json:"is_active"`
+	SectionID int       `json:"section_id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

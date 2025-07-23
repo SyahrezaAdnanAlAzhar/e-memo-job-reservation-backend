@@ -186,6 +186,34 @@ func (r *StatusTicketRepository) GetDynamicFallbackStatusID(ctx context.Context,
 	return fallbackStatusID, err
 }
 
+// GET ALL BY SECTION
+func (r *StatusTicketRepository) FindAllOrdered() ([]model.StatusTicket, error) {
+	query := "SELECT id, name, sequence, is_active, section_id FROM status_ticket ORDER BY section_id, sequence ASC"
+	rows, err := r.DB.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var statuses []model.StatusTicket
+	for rows.Next() {
+		var s model.StatusTicket
+		err := rows.Scan(&s.ID, &s.Name, &s.Sequence, &s.IsActive, &s.SectionID)
+		if err != nil {
+			return nil, err
+		}
+		statuses = append(statuses, s)
+	}
+	return statuses, nil
+}
+
+// UPDATE SEQUENCE
+func (r *StatusTicketRepository) UpdateSequence(ctx context.Context, tx *sql.Tx, id int, newSequence int) error {
+	query := "UPDATE status_ticket SET sequence = $1, updated_at = NOW() WHERE id = $2"
+	_, err := tx.ExecContext(ctx, query, newSequence, id)
+	return err
+}
+
 // FIND BY SEQUENCE
 func (r *StatusTicketRepository) FindBySequence(sequence int) (*model.StatusTicket, error) {
 	query := "SELECT id, name, sequence, is_active, created_at, updated_at FROM status_ticket WHERE sequence = $1"
