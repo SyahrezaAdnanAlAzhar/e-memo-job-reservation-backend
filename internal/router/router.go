@@ -133,6 +133,9 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers) {
 		specLocRoutes.POST("", h.SpecifiedLocationHandler.CreateSpecifiedLocation)
 		specLocRoutes.GET("", h.SpecifiedLocationHandler.GetAllSpecifiedLocations)
 		specLocRoutes.GET("/:id", h.SpecifiedLocationHandler.GetSpecifiedLocationByID)
+		specLocRoutes.PUT("/:id", h.SpecifiedLocationHandler.UpdateSpecifiedLocation)
+		specLocRoutes.DELETE("/:id", h.SpecifiedLocationHandler.DeleteSpecifiedLocation)
+		specLocRoutes.PATCH("/:id/status", h.SpecifiedLocationHandler.UpdateSpecifiedLocationActiveStatus)
 	}
 }
 

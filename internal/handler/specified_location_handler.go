@@ -87,3 +87,77 @@ func (h *SpecifiedLocationHandler) GetSpecifiedLocationByID(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, location)
 }
+
+// PUT /specified-location/:id
+func (h *SpecifiedLocationHandler) UpdateSpecifiedLocation(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	var req dto.UpdateSpecifiedLocationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	updatedLoc, err := h.service.UpdateSpecifiedLocation(id, req)
+	if err != nil {
+		if err.Error() == "location name already exists in this physical location" {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Specified location not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update specified location"})
+		return
+	}
+	c.JSON(http.StatusOK, updatedLoc)
+}
+
+// DELETE /specified-location/:id
+func (h *SpecifiedLocationHandler) DeleteSpecifiedLocation(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	if err := h.service.DeleteSpecifiedLocation(id); err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Specified location not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete specified location"})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// PATCH /specified-location/:id/status
+func (h *SpecifiedLocationHandler) UpdateSpecifiedLocationActiveStatus(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	var req dto.UpdateSpecifiedLocationStatusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.service.UpdateSpecifiedLocationActiveStatus(id, req); err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Specified location not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update status"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Specified location status updated successfully"})
+}
