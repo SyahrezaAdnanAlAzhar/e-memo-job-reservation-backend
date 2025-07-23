@@ -80,10 +80,49 @@ func (r *SectionStatusTicketRepository) UpdateActiveStatus(ctx context.Context, 
 	return nil
 }
 
+// UPDATE NAME
+func (r *SectionStatusTicketRepository) Update(id int, req dto.UpdateSectionStatusTicketRequest) (*model.SectionStatusTicket, error) {
+	query := `UPDATE section_status_ticket SET name = $1, updated_at = NOW() WHERE id = $2
+              RETURNING id, name, sequence, is_active, created_at, updated_at`
+	row := r.DB.QueryRow(query, req.Name, id)
+	var updatedSection model.SectionStatusTicket
+	err := row.Scan(&updatedSection.ID, &updatedSection.Name, &updatedSection.Sequence, &updatedSection.IsActive, &updatedSection.CreatedAt, &updatedSection.UpdatedAt)
+	return &updatedSection, err
+}
+
+// DELETE
+func (r *SectionStatusTicketRepository) Delete(id int) error {
+	query := "DELETE FROM section_status_ticket WHERE id = $1"
+	result, err := r.DB.Exec(query, id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+// REORDER
+func (r *SectionStatusTicketRepository) UpdateSequence(ctx context.Context, tx *sql.Tx, id int, newSequence int) error {
+	query := "UPDATE section_status_ticket SET sequence = $1, updated_at = NOW() WHERE id = $2"
+	_, err := tx.ExecContext(ctx, query, newSequence, id)
+	return err
+}
+
 // VALIDATION HELPER
 func (r *SectionStatusTicketRepository) CountActiveSections() (int, error) {
 	var count int
 	query := "SELECT COUNT(*) FROM section_status_ticket WHERE is_active = true"
 	err := r.DB.QueryRow(query).Scan(&count)
 	return count, err
+}
+
+// HELPER UNIQUE NAME
+func (r *SectionStatusTicketRepository) IsNameTaken(name string, currentID int) (bool, error) {
+	var exists bool
+	query := "SELECT EXISTS(SELECT 1 FROM section_status_ticket WHERE name = $1 AND id != $2)"
+	err := r.DB.QueryRow(query, name, currentID).Scan(&exists)
+	return exists, err
 }
