@@ -112,6 +112,15 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers) {
 	workflowRoutes := group.Group("/workflow")
 	{
 		workflowRoutes.POST("", h.WorkflowHandler.CreateWorkflow)
+		workflowRoutes.GET("", h.WorkflowHandler.GetAllWorkflows)
+		workflowRoutes.GET("/:id", h.WorkflowHandler.GetWorkflowByID)
+
+		stepRoutes := group.Group("/workflow-step")
+		{
+			stepRoutes.POST("", h.WorkflowHandler.AddWorkflowStep)
+			stepRoutes.GET("", h.WorkflowHandler.GetAllWorkflowSteps)
+			stepRoutes.GET("/:id", h.WorkflowHandler.GetWorkflowStepByID)
+		}
 	}
 }
 
