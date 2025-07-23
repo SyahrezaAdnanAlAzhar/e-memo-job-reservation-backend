@@ -6,7 +6,7 @@ import (
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/auth"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/handler"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/router" 
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/router"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/database"
 	redisClient "github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/redis"
@@ -41,6 +41,8 @@ func main() {
 	workflowRepo := repository.NewWorkflowRepository(db)
 	trackStatusTicketRepo := repository.NewTrackStatusTicketRepository(db)
 	positionPermissionRepo := repository.NewPositionPermissionRepository(db)
+	employeePositionRepo := repository.NewEmployeePositionRepository(db)
+	positionToWorkflowMappingRepo := repository.NewPositionToWorkflowMappingRepository(db)
 
 	// SERVICE
 	authService := service.NewAuthService(authRepo, employeeRepo)
@@ -50,6 +52,7 @@ func main() {
 	accessPermissionService := service.NewAccessPermissionService(accessPermissionRepo)
 	statusTicketService := service.NewStatusTicketService(statusTicketRepo)
 	positionPermissionService := service.NewPositionPermissionService(positionPermissionRepo)
+	employeePositionService := service.NewEmployeePositionService(employeePositionRepo, positionToWorkflowMappingRepo, db)
 	ticketService := service.NewTicketService(&service.TicketServiceConfig{
 		TicketRepo:            ticketRepo,
 		JobRepo:               jobRepo,
@@ -61,14 +64,15 @@ func main() {
 
 	// HANDLER
 	allHandlers := &router.AllHandlers{
-		AuthHandler:             handler.NewAuthHandler(authService),
-		DepartmentHandler:       handler.NewDepartmentHandler(departmentService),
-		AreaHandler:             handler.NewAreaHandler(areaService),
-		PhysicalLocationHandler: handler.NewPhysicalLocationHandler(physicalLocationService),
-		AccessPermissionHandler: handler.NewAccessPermissionHandler(accessPermissionService),
-		StatusTicketHandler:     handler.NewStatusTicketHandler(statusTicketService),
-		TicketHandler:           handler.NewTicketHandler(ticketService),
+		AuthHandler:               handler.NewAuthHandler(authService),
+		DepartmentHandler:         handler.NewDepartmentHandler(departmentService),
+		AreaHandler:               handler.NewAreaHandler(areaService),
+		PhysicalLocationHandler:   handler.NewPhysicalLocationHandler(physicalLocationService),
+		AccessPermissionHandler:   handler.NewAccessPermissionHandler(accessPermissionService),
+		StatusTicketHandler:       handler.NewStatusTicketHandler(statusTicketService),
+		TicketHandler:             handler.NewTicketHandler(ticketService),
 		PositionPermissionHandler: handler.NewPositionPermissionHandler(positionPermissionService),
+		EmployeePositionHandler:   handler.NewEmployeePositionHandler(employeePositionService),
 	}
 
 	// MIDDLEWARE
