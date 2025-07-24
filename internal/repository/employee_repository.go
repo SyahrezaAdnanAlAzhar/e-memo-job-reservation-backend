@@ -38,7 +38,10 @@ func (r *EmployeeRepository) FindByNPK(npk string) (*model.Employee, error) {
 	row := r.DB.QueryRow(query, npk)
 
 	var e model.Employee
-	err := row.Scan(&e.NPK, &e.Name, &e.EmployeePositionID, &e.IsActive)
+	err := row.Scan(
+		&e.NPK, &e.DepartmentID, &e.AreaID, &e.Name, &e.IsActive, &e.EmployeePositionID,
+		&e.Position.ID, &e.Position.Name,
+	)
 	if err != nil {
 		return nil, err
 	}

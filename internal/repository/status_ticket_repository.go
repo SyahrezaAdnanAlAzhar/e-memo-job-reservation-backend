@@ -5,8 +5,9 @@ import (
 	"database/sql"
 	"strconv"
 	"strings"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 )
 
 type StatusTicketRepository struct {
@@ -157,10 +158,10 @@ func (r *StatusTicketRepository) GetSectionID(statusID int) (int, error) {
 
 // GET SECTION BY NAME
 func (r *StatusTicketRepository) GetSectionIDByName(sectionName string) (int, error) {
-    var sectionID int
-    query := "SELECT id FROM section_status_ticket WHERE name = $1"
-    err := r.DB.QueryRow(query, sectionName).Scan(sectionID)
-    return sectionID, err
+	var sectionID int
+	query := "SELECT id FROM section_status_ticket WHERE name = $1"
+	err := r.DB.QueryRow(query, sectionName).Scan(sectionID)
+	return sectionID, err
 }
 
 // CHANGE STATUS BASED ON SECTION
@@ -181,7 +182,7 @@ func (r *StatusTicketRepository) GetDynamicFallbackStatusID(ctx context.Context,
           AND sst.sequence < $1
         ORDER BY sst.sequence DESC, st.sequence DESC
         LIMIT 1`
-	
+
 	err := tx.QueryRowContext(ctx, query, deactivatedSectionSequence).Scan(&fallbackStatusID)
 	return fallbackStatusID, err
 }
@@ -221,6 +222,19 @@ func (r *StatusTicketRepository) FindBySequence(sequence int) (*model.StatusTick
 
 	var s model.StatusTicket
 	err := row.Scan(&s.ID, &s.Name, &s.Sequence, &s.IsActive, &s.CreatedAt, &s.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
+// FIND BY NAME
+func (r *StatusTicketRepository) FindByName(name string) (*model.StatusTicket, error) {
+	query := "SELECT id, name, sequence, is_active, section_id FROM status_ticket WHERE name = $1"
+	row := r.DB.QueryRow(query, name)
+
+	var s model.StatusTicket
+	err := row.Scan(&s.ID, &s.Name, &s.Sequence, &s.IsActive, &s.SectionID)
 	if err != nil {
 		return nil, err
 	}
