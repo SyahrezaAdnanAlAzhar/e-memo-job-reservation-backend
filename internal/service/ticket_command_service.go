@@ -10,43 +10,37 @@ import (
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 )
 
-type TicketService struct {
+type TicketCommandService struct {
+	db                    *sql.DB
 	ticketRepo            *repository.TicketRepository
 	jobRepo               *repository.JobRepository
 	workflowRepo          *repository.WorkflowRepository
 	trackStatusTicketRepo *repository.TrackStatusTicketRepository
 	employeeRepo          *repository.EmployeeRepository
-	statusTicketRepo      *repository.StatusTicketRepository
-	rejectedTicketService *RejectedTicketService
-	db                    *sql.DB
 }
 
-type TicketServiceConfig struct {
+type TicketCommandServiceConfig struct {
+	DB                    *sql.DB
 	TicketRepo            *repository.TicketRepository
 	JobRepo               *repository.JobRepository
 	WorkflowRepo          *repository.WorkflowRepository
 	TrackStatusTicketRepo *repository.TrackStatusTicketRepository
 	EmployeeRepo          *repository.EmployeeRepository
-	StatusTicketRepo      *repository.StatusTicketRepository
-	RejectedTicketService *RejectedTicketService
-	DB                    *sql.DB
 }
 
-func NewTicketService(cfg *TicketServiceConfig) *TicketService {
-	return &TicketService{
+func NewTicketCommandService(cfg *TicketCommandServiceConfig) *TicketCommandService {
+	return &TicketCommandService{
+		db:                    cfg.DB,
 		ticketRepo:            cfg.TicketRepo,
 		jobRepo:               cfg.JobRepo,
 		workflowRepo:          cfg.WorkflowRepo,
 		trackStatusTicketRepo: cfg.TrackStatusTicketRepo,
 		employeeRepo:          cfg.EmployeeRepo,
-		statusTicketRepo:      cfg.StatusTicketRepo,
-		rejectedTicketService: cfg.RejectedTicketService,
-		db:                    cfg.DB,
 	}
 }
 
 // CREATE TICKET
-func (s *TicketService) CreateTicket(ctx context.Context, req dto.CreateTicketRequest, requestor string) (*model.Ticket, error) {
+func (s *TicketCommandService) CreateTicket(ctx context.Context, req dto.CreateTicketRequest, requestor string) (*model.Ticket, error) {
 	// GET EMPLOYEE DATA (TO GET THE POSITION)
 	positionID, err := s.employeeRepo.GetEmployeePositionID(ctx, requestor)
 	if err != nil {
@@ -112,28 +106,8 @@ func (s *TicketService) CreateTicket(ctx context.Context, req dto.CreateTicketRe
 	return createdTicket, nil
 }
 
-// GET ALL
-func (s *TicketService) GetAllTickets(filters map[string]string) ([]map[string]interface{}, error) {
-	allowedFilters := map[string]bool{
-		"department_target_id": true,
-		"current_status":       true,
-		"requestor_npk":        true,
-	}
-	for key := range filters {
-		if !allowedFilters[key] {
-			return nil, errors.New("invalid filter key: " + key)
-		}
-	}
-	return s.ticketRepo.FindAll(filters)
-}
-
-// GET BY ID
-func (s *TicketService) GetTicketByID(id int) (map[string]interface{}, error) {
-	return s.ticketRepo.FindByID(id)
-}
-
 // UPDATE TICKET
-func (s *TicketService) UpdateTicket(ctx context.Context, ticketID int, req dto.UpdateTicketRequest, userNPK string) error {
+func (s *TicketCommandService) UpdateTicket(ctx context.Context, ticketID int, req dto.UpdateTicketRequest, userNPK string) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -204,105 +178,7 @@ func (s *TicketService) UpdateTicket(ctx context.Context, ticketID int, req dto.
 	return tx.Commit()
 }
 
-// RE ORDER
-func (s *TicketService) ReorderTickets(ctx context.Context, req dto.ReorderTicketsRequest) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	for i, ticketID := range req.OrderedTicketIDs {
-		newPriority := i + 1
-		if err := s.ticketRepo.UpdatePriority(ctx, tx, ticketID, newPriority); err != nil {
-			return err
-		}
-	}
-	return tx.Commit()
-}
-
-// CHANGE STATUS TO REJECT ("Ditolak")
-func (s *TicketService) RejectTicket(ctx context.Context, ticketID int, req dto.RejectTicketRequest, userNPK string) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	ticket, err := s.ticketRepo.FindByIDAsStruct(ctx, ticketID)
-	if err != nil {
-		return errors.New("ticket not found")
-	}
-
-	user, err := s.employeeRepo.FindByNPK(userNPK)
-	if err != nil {
-		return errors.New("user not found")
-	}
-
-	isAllowed := user.DepartmentID == ticket.DepartmentTargetID && (user.Position.Name == "Head of Department" || user.Position.Name == "Section")
-	if !isAllowed {
-		return errors.New("user not authorized to reject this ticket")
-	}
-
-	_, err = s.statusTicketRepo.FindByName("Ditolak")
-	if err != nil {
-		return errors.New("critical configuration error: 'Ditolak' status not found")
-	}
-
-	rejectionReq := dto.CreateRejectedTicketRequest{
-		TicketID: int64(ticketID),
-		Feedback: req.Reason,
-	}
-
-	_, err = s.rejectedTicketService.CreateRejectedTicket(ctx, rejectionReq, userNPK)
-
-	return err
-}
-
-// CHANGE STATUS TO CANCEL ("Dibatalkan")
-func (s *TicketService) CancelTicket(ctx context.Context, ticketID int, userNPK string) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	ticket, err := s.ticketRepo.FindByIDAsStruct(ctx, ticketID)
-	if err != nil {
-		return errors.New("ticket not found")
-	}
-
-	user, err := s.employeeRepo.FindByNPK(userNPK)
-	if err != nil {
-		return errors.New("user not found")
-	}
-
-	requestor, err := s.employeeRepo.FindByNPK(ticket.Requestor)
-	if err != nil {
-		return errors.New("original requestor not found")
-	}
-
-	isOriginalRequestor := user.NPK == ticket.Requestor
-	isSameDeptApprover := user.DepartmentID == requestor.DepartmentID && (user.Position.Name == "Head of Department" || user.Position.Name == "Section")
-
-	if !isOriginalRequestor && !isSameDeptApprover {
-		return errors.New("user not authorized to cancel this ticket")
-	}
-
-	cancelledStatus, err := s.statusTicketRepo.FindByName("Dibatalkan")
-	if err != nil {
-		return errors.New("critical configuration error: 'Dibatalkan' status not found")
-	}
-
-	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, cancelledStatus.ID); err != nil {
-		return err
-	}
-
-	return tx.Commit()
-}
-
 // HELPER
-
 // CONVERTER
 func toNullInt64(val *int) sql.NullInt64 {
 	if val == nil {

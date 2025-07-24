@@ -5,18 +5,33 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
 
 	"github.com/gin-gonic/gin"
 )
 
 type TicketHandler struct {
-	service *service.TicketService
+	queryService    *service.TicketQueryService
+	commandService  *service.TicketCommandService
+	workflowService *service.TicketWorkflowService
+	priorityService *service.TicketPriorityService
 }
 
-func NewTicketHandler(service *service.TicketService) *TicketHandler {
-	return &TicketHandler{service: service}
+type TicketHandlerConfig struct {
+	QueryService    *service.TicketQueryService
+	CommandService  *service.TicketCommandService
+	WorkflowService *service.TicketWorkflowService
+	PriorityService *service.TicketPriorityService
+}
+
+func NewTicketHandler(cfg *TicketHandlerConfig) *TicketHandler {
+	return &TicketHandler{
+		queryService:    cfg.QueryService,
+		commandService:  cfg.CommandService,
+		workflowService: cfg.WorkflowService,
+		priorityService: cfg.PriorityService,
+	}
 }
 
 // POST /ticket
@@ -34,7 +49,7 @@ func (h *TicketHandler) CreateTicket(c *gin.Context) {
 		return
 	}
 
-	createdTicket, err := h.service.CreateTicket(c.Request.Context(), req, requestorNPK)
+	createdTicket, err := h.commandService.CreateTicket(c.Request.Context(), req, requestorNPK)
 	if err != nil {
 		switch err.Error() {
 		case "requestor not found", "no workflow defined for this user's position":
@@ -57,7 +72,7 @@ func (h *TicketHandler) GetAllTickets(c *gin.Context) {
 		}
 	}
 
-	tickets, err := h.service.GetAllTickets(filters)
+	tickets, err := h.queryService.GetAllTickets(filters)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -72,7 +87,7 @@ func (h *TicketHandler) GetAllTickets(c *gin.Context) {
 // GET BY ID
 func (h *TicketHandler) GetTicketByID(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	ticket, err := h.service.GetTicketByID(id)
+	ticket, err := h.queryService.GetTicketByID(id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
@@ -94,7 +109,7 @@ func (h *TicketHandler) UpdateTicket(c *gin.Context) {
 	}
 
 	userNPK := c.GetString("user_npk")
-	err := h.service.UpdateTicket(c.Request.Context(), id, req, userNPK)
+	err := h.commandService.UpdateTicket(c.Request.Context(), id, req, userNPK)
 	if err != nil {
 		switch err.Error() {
 		case "ticket not found":
@@ -119,7 +134,7 @@ func (h *TicketHandler) ReorderTickets(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	err := h.service.ReorderTickets(c.Request.Context(), req)
+	err := h.priorityService.ReorderTickets(c.Request.Context(), req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reorder tickets"})
 		return
@@ -138,7 +153,7 @@ func (h *TicketHandler) RejectTicket(c *gin.Context) {
 		return
 	}
 
-	err := h.service.RejectTicket(c.Request.Context(), id, req, userNPK)
+	err := h.workflowService.RejectTicket(c.Request.Context(), id, req, userNPK)
 	if err != nil {
 		if err.Error() == "user not authorized to reject this ticket" {
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
@@ -160,7 +175,7 @@ func (h *TicketHandler) CancelTicket(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	userNPK := c.GetString("user_npk")
 
-	err := h.service.CancelTicket(c.Request.Context(), id, userNPK)
+	err := h.workflowService.CancelTicket(c.Request.Context(), id, userNPK)
 	if err != nil {
 		if err.Error() == "user not authorized to cancel this ticket" {
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})

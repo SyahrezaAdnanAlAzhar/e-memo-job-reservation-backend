@@ -73,15 +73,34 @@ func main() {
 		employeeRepo,
 		db,
 	)
-	ticketService := service.NewTicketService(&service.TicketServiceConfig{
+
+	ticketQueryService := service.NewTicketQueryService(ticketRepo)
+
+	ticketCommandService := service.NewTicketCommandService(&service.TicketCommandServiceConfig{
+		DB:                    db,
 		TicketRepo:            ticketRepo,
 		JobRepo:               jobRepo,
 		WorkflowRepo:          workflowRepo,
 		TrackStatusTicketRepo: trackStatusTicketRepo,
 		EmployeeRepo:          employeeRepo,
+	})
+
+	ticketWorkflowService := service.NewTicketWorkflowService(&service.TicketWorkflowServiceConfig{
+		DB:                    db,
+		TicketRepo:            ticketRepo,
+		EmployeeRepo:          employeeRepo,
+		TrackStatusTicketRepo: trackStatusTicketRepo,
 		StatusTicketRepo:      statusTicketRepo,
 		RejectedTicketService: rejectedTicketService,
-		DB:                    db,
+	})
+
+	ticketPriorityService := service.NewTicketPriorityService(db, ticketRepo)
+
+	ticketHandler := handler.NewTicketHandler(&handler.TicketHandlerConfig{
+		QueryService:    ticketQueryService,
+		CommandService:  ticketCommandService,
+		WorkflowService: ticketWorkflowService,
+		PriorityService: ticketPriorityService,
 	})
 
 	// HANDLER
@@ -93,12 +112,12 @@ func main() {
 		AccessPermissionHandler:    handler.NewAccessPermissionHandler(accessPermissionService),
 		SectionStatusTicketHandler: handler.NewSectionStatusTicketHandler(sectionStatusTicketService),
 		StatusTicketHandler:        handler.NewStatusTicketHandler(statusTicketService),
-		TicketHandler:              handler.NewTicketHandler(ticketService),
 		PositionPermissionHandler:  handler.NewPositionPermissionHandler(positionPermissionService),
 		EmployeePositionHandler:    handler.NewEmployeePositionHandler(employeePositionService),
 		WorkflowHandler:            handler.NewWorkflowHandler(workflowService),
 		SpecifiedLocationHandler:   handler.NewSpecifiedLocationHandler(specifiedLocationService),
 		RejectedTicketHandler:      handler.NewRejectedTicketHandler(rejectedTicketService),
+		TicketHandler:              ticketHandler,
 	}
 
 	// MIDDLEWARE
