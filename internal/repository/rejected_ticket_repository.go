@@ -48,6 +48,34 @@ func (r *RejectedTicketRepository) UpdateFeedback(id int64, feedback string) (*m
 	return &updatedRejection, err
 }
 
+// UPDATE ALREADY_SEEN
+func (r *RejectedTicketRepository) UpdateAlreadySeen(id int64, seen bool) error {
+	query := "UPDATE rejected_ticket SET already_seen = $1, updated_at = NOW() WHERE id = $2"
+	result, err := r.DB.Exec(query, seen, id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+// DELETE
+func (r *RejectedTicketRepository) Delete(id int64) error {
+	query := "DELETE FROM rejected_ticket WHERE id = $1"
+	result, err := r.DB.Exec(query, id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
 // HELPER: Find Latest By Ticket ID
 func (r *RejectedTicketRepository) FindLatestByTicketID(ctx context.Context, ticketID int64) (*model.RejectedTicket, error) {
 	query := "SELECT id, ticket_id, rejector, feedback, already_seen FROM rejected_ticket WHERE ticket_id = $1 ORDER BY created_at DESC LIMIT 1"
