@@ -22,3 +22,7 @@ type ReorderTicketsRequest struct {
 type ChangeTicketStatusRequest struct {
 	TargetStatusID int `json:"target_status_id" binding:"required"`
 }
+
+type RejectTicketRequest struct {
+	Reason string `json:"reason" binding:"required"`
+}
