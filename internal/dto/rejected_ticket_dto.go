@@ -8,3 +8,7 @@ type CreateRejectedTicketRequest struct {
 type UpdateFeedbackRequest struct {
 	Feedback string `json:"feedback" binding:"required"`
 }
+
+type UpdateAlreadySeenRequest struct {
+	AlreadySeen bool `json:"already_seen"`
+}
