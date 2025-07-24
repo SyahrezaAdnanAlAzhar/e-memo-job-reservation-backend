@@ -99,6 +99,31 @@ func (r *WorkflowRepository) UpdateActiveStatus(ctx context.Context, tx *sql.Tx,
 	return nil
 }
 
+// GET NEXT WORKFLOW STEP
+func (r *WorkflowRepository) GetNextWorkflowStep(ctx context.Context, currentStatusID int) (nextStatusID int, isFinalStep bool, err error) {
+	query := `
+        WITH current_step AS (
+            SELECT workflow_id, step_sequence
+            FROM workflow_step
+            WHERE status_ticket_id = $1
+        )
+        SELECT ws.status_ticket_id
+        FROM workflow_step ws
+        WHERE ws.workflow_id = (SELECT workflow_id FROM current_step)
+          AND ws.step_sequence = (SELECT step_sequence FROM current_step) + 1
+        LIMIT 1`
+
+	err = r.DB.QueryRowContext(ctx, query, currentStatusID).Scan(&nextStatusID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, true, nil
+		}
+		return 0, false, err
+	}
+
+	return nextStatusID, false, nil
+}
+
 // HELPER
 // GET INITIAL STATUS BY RULE
 func (r *WorkflowRepository) GetInitialStatusByPosition(ctx context.Context, positionID int) (int, error) {
