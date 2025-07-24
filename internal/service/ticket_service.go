@@ -4,43 +4,44 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 )
 
 type TicketService struct {
 	ticketRepo            *repository.TicketRepository
 	jobRepo               *repository.JobRepository
 	workflowRepo          *repository.WorkflowRepository
-	db                    *sql.DB
 	trackStatusTicketRepo *repository.TrackStatusTicketRepository
 	employeeRepo          *repository.EmployeeRepository
 	statusTicketRepo      *repository.StatusTicketRepository
+	db                    *sql.DB
 }
 
 type TicketServiceConfig struct {
 	TicketRepo            *repository.TicketRepository
 	JobRepo               *repository.JobRepository
 	WorkflowRepo          *repository.WorkflowRepository
-	DB                    *sql.DB
 	TrackStatusTicketRepo *repository.TrackStatusTicketRepository
+	EmployeeRepo          *repository.EmployeeRepository
 	StatusTicketRepo      *repository.StatusTicketRepository
+	DB                    *sql.DB
 }
 
 func NewTicketService(cfg *TicketServiceConfig) *TicketService {
 	return &TicketService{
-		ticketRepo:   cfg.TicketRepo,
-		jobRepo:      cfg.JobRepo,
-		workflowRepo: cfg.WorkflowRepo,
-		db:           cfg.DB,
+		ticketRepo:            cfg.TicketRepo,
+		jobRepo:               cfg.JobRepo,
+		workflowRepo:          cfg.WorkflowRepo,
+		trackStatusTicketRepo: cfg.TrackStatusTicketRepo,
+		employeeRepo:          cfg.EmployeeRepo,
+		statusTicketRepo:      cfg.StatusTicketRepo,
+		db:                    cfg.DB,
 	}
 }
-
-// type UpdateTicketStatusRequest struct {
-// 	NewStatusID int `json:"new_status_id" binding:"required"`
-// }
 
 // CREATE TICKET
 func (s *TicketService) CreateTicket(ctx context.Context, req dto.CreateTicketRequest, requestor string) (*model.Ticket, error) {
@@ -218,72 +219,79 @@ func (s *TicketService) ReorderTickets(ctx context.Context, req dto.ReorderTicke
 	return tx.Commit()
 }
 
-// UPDATE STATUS
-// func (s *TicketService) UpdateTicketStatus(ctx context.Context, ticketID int, req UpdateTicketStatusRequest) error {
-// 	tx, err := s.db.BeginTx(ctx, nil)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer tx.Rollback()
-
-// 	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, req.NewStatusID); err != nil {
-// 		return err
-// 	}
-
-// 	return tx.Commit()
-// }
-
-// UPDATE TO THE NEXT STATUS
-func (s *TicketService) ProgressTicketStatus(ctx context.Context, ticketID int) error {
+// CHANGE STATUS TO REJECT ("Ditolak")
+func (s *TicketService) RejectTicket(ctx context.Context, ticketID int, req dto.RejectTicketRequest, userNPK string) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	currentStatusID, _, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
+	ticket, err := s.ticketRepo.FindByIDAsStruct(ctx, ticketID)
 	if err != nil {
-		return errors.New("could not find current status for the ticket")
+		return errors.New("ticket not found")
 	}
 
-	nextStatus, err := s.statusTicketRepo.GetNextStatusInSection(currentStatusID)
+	user, err := s.employeeRepo.FindByNPK(userNPK)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return errors.New("ticket is already at its final status in the section")
-		}
+		return errors.New("user not found")
+	}
+
+	isAllowed := user.DepartmentID == ticket.DepartmentTargetID && (user.Position.Name == "Head of Department" || user.Position.Name == "Section")
+	if !isAllowed {
+		return errors.New("user not authorized to reject this ticket")
+	}
+
+	rejectedStatus, err := s.statusTicketRepo.FindByName("Ditolak")
+	if err != nil {
+		return errors.New("critical configuration error: 'Ditolak' status not found")
+	}
+
+	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, rejectedStatus.ID); err != nil {
 		return err
 	}
 
-	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, nextStatus.ID); err != nil {
-		return err
-	}
+	log.Printf("Ticket %d rejected by %s. Reason: %s", ticketID, userNPK, req.Reason)
 
 	return tx.Commit()
 }
 
-// CHANGE TICKET STATUS TO HANDLE DELETE SECTION STATUS
-func (s *TicketService) ChangeTicketStatus(ctx context.Context, ticketID int, req dto.ChangeTicketStatusRequest) error {
-	deleteSectionID, err := s.statusTicketRepo.GetSectionIDByName("Delete Section")
-	if err != nil {
-		return errors.New("critical configuration error: delete section not found")
-	}
-
-	targetSectionID, err := s.statusTicketRepo.GetSectionID(req.TargetStatusID)
-	if err != nil {
-		return errors.New("invalid target status id")
-	}
-
-	if targetSectionID != deleteSectionID {
-		return errors.New("invalid target status for this action: must be a 'delete' or 'reject' status")
-	}
-
+// CHANGE STATUS TO CANCEL ("Dibatalkan")
+func (s *TicketService) CancelTicket(ctx context.Context, ticketID int, userNPK string) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, req.TargetStatusID); err != nil {
+	ticket, err := s.ticketRepo.FindByIDAsStruct(ctx, ticketID)
+	if err != nil {
+		return errors.New("ticket not found")
+	}
+
+	user, err := s.employeeRepo.FindByNPK(userNPK)
+	if err != nil {
+		return errors.New("user not found")
+	}
+
+	requestor, err := s.employeeRepo.FindByNPK(ticket.Requestor)
+	if err != nil {
+		return errors.New("original requestor not found")
+	}
+
+	isOriginalRequestor := user.NPK == ticket.Requestor
+	isSameDeptApprover := user.DepartmentID == requestor.DepartmentID && (user.Position.Name == "Head of Department" || user.Position.Name == "Section")
+
+	if !isOriginalRequestor && !isSameDeptApprover {
+		return errors.New("user not authorized to cancel this ticket")
+	}
+
+	cancelledStatus, err := s.statusTicketRepo.FindByName("Dibatalkan")
+	if err != nil {
+		return errors.New("critical configuration error: 'Dibatalkan' status not found")
+	}
+
+	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, cancelledStatus.ID); err != nil {
 		return err
 	}
 

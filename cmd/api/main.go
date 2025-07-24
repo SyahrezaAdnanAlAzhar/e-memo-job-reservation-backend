@@ -78,6 +78,7 @@ func main() {
 		JobRepo:               jobRepo,
 		WorkflowRepo:          workflowRepo,
 		TrackStatusTicketRepo: trackStatusTicketRepo,
+		EmployeeRepo:          employeeRepo,
 		StatusTicketRepo:      statusTicketRepo,
 		DB:                    db,
 	})
