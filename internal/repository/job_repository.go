@@ -55,3 +55,10 @@ func (r *JobRepository) GetPicByTicketID(ctx context.Context, ticketID int) (str
 
 	return picNpk.String, nil
 }
+
+// UPLOAD REPORT FILE
+func (r *JobRepository) UpdateReportFile(ctx context.Context, tx *sql.Tx, ticketID int, reportFilePath string) error {
+	query := "UPDATE job SET report_file = array_append(report_file, $1), updated_at = NOW() WHERE ticket_id = $2"
+	_, err := tx.ExecContext(ctx, query, reportFilePath, ticketID)
+	return err
+}

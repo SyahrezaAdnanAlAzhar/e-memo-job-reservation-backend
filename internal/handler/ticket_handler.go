@@ -3,10 +3,12 @@ package handler
 import (
 	"database/sql"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/filehandler"
 
 	"github.com/gin-gonic/gin"
 )
@@ -268,4 +270,57 @@ func (h *TicketHandler) StartWorkOnTicket(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Work on ticket has started"})
+}
+
+// POST /ticket/:id/complete-job
+func (h *TicketHandler) CompleteJob(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	userNPK := c.GetString("user_npk")
+
+	file, err := c.FormFile("report_file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "report_file is required"})
+		return
+	}
+
+	filePath, err := filehandler.SaveFile(c, file)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
+		return
+	}
+
+	err = h.workflowService.CompleteJob(c.Request.Context(), id, userNPK, filePath)
+	if err != nil {
+		os.Remove(filePath)
+		if err.Error() == "user is not the assigned PIC for this job" {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to complete job", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Job has been marked as complete"})
+}
+
+// POST /ticket/:id/close
+func (h *TicketHandler) CloseTicket(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	userNPK := c.GetString("user_npk")
+
+	err := h.workflowService.CloseTicket(c.Request.Context(), id, userNPK)
+	if err != nil {
+		if err.Error() == "user is not authorized to close this ticket" {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		if err.Error() == "job for this ticket has not been completed yet" {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to close ticket", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Ticket has been closed successfully"})
 }

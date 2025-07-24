@@ -267,3 +267,90 @@ func (s *TicketWorkflowService) StartWorkOnTicket(ctx context.Context, ticketID 
 
 	return tx.Commit()
 }
+
+// CHANGE STATUS TO COMPLETE JOB ("Job Selesai")
+func (s *TicketWorkflowService) CompleteJob(ctx context.Context, ticketID int, userNPK string, reportFilePath string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, currentStatusName, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
+	if err != nil {
+		return errors.New("ticket not found")
+	}
+	if currentStatusName != "Dikerjakan" {
+		return errors.New("ticket is not in 'Dikerjakan' status")
+	}
+
+	assignedPIC, err := s.jobRepo.GetPicByTicketID(ctx, ticketID)
+	if err != nil {
+		return err
+	}
+	if assignedPIC != userNPK {
+		return errors.New("user is not the assigned PIC for this job")
+	}
+
+	if err := s.jobRepo.UpdateReportFile(ctx, tx, ticketID, reportFilePath); err != nil {
+		return err
+	}
+
+	jobDoneStatus, err := s.statusTicketRepo.FindByName("Job Selesai")
+	if err != nil {
+		return errors.New("critical configuration error: 'Job Selesai' status not found")
+	}
+
+	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, jobDoneStatus.ID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// CHANGE STATUS TO CLOSE TICKET ("TICKET SELESAI")
+func (s *TicketWorkflowService) CloseTicket(ctx context.Context, ticketID int, userNPK string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, currentStatusName, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
+	if err != nil {
+		return errors.New("ticket not found")
+	}
+	if currentStatusName != "Job Selesai" {
+		return errors.New("job for this ticket has not been completed yet")
+	}
+
+	ticket, err := s.ticketRepo.FindByIDAsStruct(ctx, ticketID)
+	if err != nil {
+		return err
+	}
+	user, err := s.employeeRepo.FindByNPK(userNPK)
+	if err != nil {
+		return errors.New("user not found")
+	}
+	requestor, err := s.employeeRepo.FindByNPK(ticket.Requestor)
+	if err != nil {
+		return errors.New("original requestor not found")
+	}
+
+	isOriginalRequestor := user.NPK == ticket.Requestor
+	isSameDeptApprover := user.DepartmentID == requestor.DepartmentID && (user.Position.Name == "Head of Department" || user.Position.Name == "Section")
+	if !isOriginalRequestor && !isSameDeptApprover {
+		return errors.New("user is not authorized to close this ticket")
+	}
+
+	finalStatus, err := s.statusTicketRepo.FindByName("Tiket Selesai")
+	if err != nil {
+		return errors.New("critical configuration error: 'Tiket Selesai' status not found")
+	}
+
+	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, finalStatus.ID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}

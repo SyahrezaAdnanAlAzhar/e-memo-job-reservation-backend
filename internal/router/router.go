@@ -175,5 +175,7 @@ func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers) {
 		rejectedRoutes.PUT("/:id/feedback", h.RejectedTicketHandler.UpdateFeedback)
 		rejectedRoutes.PATCH("/:id/seen", h.RejectedTicketHandler.UpdateAlreadySeen)
 		rejectedRoutes.DELETE("/:id", h.RejectedTicketHandler.DeleteRejectedTicket)
+		ticketRoutes.POST("/:id/complete-job", h.TicketHandler.CompleteJob)
+		ticketRoutes.POST("/:id/close", h.TicketHandler.CloseTicket)
 	}
 }
