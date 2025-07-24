@@ -127,39 +127,52 @@ func (h *TicketHandler) ReorderTickets(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Ticket priorities updated successfully"})
 }
 
-// POST/ PROGRESS TO NEXT STATUS
-func (h *TicketHandler) ProgressTicketStatus(c *gin.Context) {
-    id, _ := strconv.Atoi(c.Param("id"))
-    
-    err := h.service.ProgressTicketStatus(c.Request.Context(), id)
-	if err != nil {
-        if err.Error() == "ticket is already at its final status in the section" {
-            c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
-            return
-        }
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to progress ticket status", "details": err.Error()})
+// POST /ticket/:id/reject
+func (h *TicketHandler) RejectTicket(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	userNPK := c.GetString("user_npk")
+
+	var req dto.RejectTicketRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Reason for rejection is required"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Ticket status progressed successfully"})
+
+	err := h.service.RejectTicket(c.Request.Context(), id, req, userNPK)
+	if err != nil {
+		if err.Error() == "user not authorized to reject this ticket" {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		if err.Error() == "ticket not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reject ticket", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Ticket has been rejected"})
 }
 
-// PUT/ CHANGE STATUS FOR DELETE SECTION STATUS
-func (h *TicketHandler) ChangeTicketStatus(c *gin.Context) {
-    id, _ := strconv.Atoi(c.Param("id"))
-	var req dto.ChangeTicketStatusRequest 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+// POST /ticket/:id/cancel
+func (h *TicketHandler) CancelTicket(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	userNPK := c.GetString("user_npk")
+
+	err := h.service.CancelTicket(c.Request.Context(), id, userNPK)
+	if err != nil {
+		if err.Error() == "user not authorized to cancel this ticket" {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		if err.Error() == "ticket not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel ticket", "details": err.Error()})
 		return
 	}
 
-    err := h.service.ChangeTicketStatus(c.Request.Context(), id, req)
-	if err != nil {
-        if err.Error() == "invalid target status for this action: must be a 'delete' or 'reject' status" {
-            c.JSON(http.StatusForbidden, gin.H{"error": err.Error()}) 
-            return
-        }
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to change ticket status", "details": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"message": "Ticket status changed successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Ticket has been cancelled"})
 }
