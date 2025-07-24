@@ -20,6 +20,7 @@ type AllHandlers struct {
 	EmployeePositionHandler    *handler.EmployeePositionHandler
 	WorkflowHandler            *handler.WorkflowHandler
 	SpecifiedLocationHandler   *handler.SpecifiedLocationHandler
+	RejectedTicketHandler      *handler.RejectedTicketHandler
 }
 
 func SetupRouter(h *AllHandlers, authMiddleware *auth.AuthMiddleware) *gin.Engine {
@@ -163,5 +164,11 @@ func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers) {
 		ticketRoutes.PUT("/reorder", h.TicketHandler.ReorderTickets)
 		ticketRoutes.POST("/:id/progress", h.TicketHandler.ProgressTicketStatus)
 		ticketRoutes.PUT("/:id/change-status", h.TicketHandler.ChangeTicketStatus)
+	}
+
+	rejectedRoutes := group.Group("/rejected-ticket")
+	{
+		rejectedRoutes.POST("", h.RejectedTicketHandler.CreateRejectedTicket)
+		rejectedRoutes.PUT("/:id/feedback", h.RejectedTicketHandler.UpdateFeedback)
 	}
 }

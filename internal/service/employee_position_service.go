@@ -20,7 +20,12 @@ type EmployeePositionService struct {
 	db               *sql.DB
 }
 
-func NewEmployeePositionService(positionRepo *repository.EmployeePositionRepository, mappingRepo *repository.PositionToWorkflowMappingRepository, ticketRepo *repository.TicketRepository, statusTicketRepo *repository.StatusTicketRepository, db *sql.DB) *EmployeePositionService {
+func NewEmployeePositionService(
+	positionRepo *repository.EmployeePositionRepository,
+	mappingRepo *repository.PositionToWorkflowMappingRepository,
+	ticketRepo *repository.TicketRepository,
+	statusTicketRepo *repository.StatusTicketRepository,
+	db *sql.DB) *EmployeePositionService {
 	return &EmployeePositionService{positionRepo: positionRepo, mappingRepo: mappingRepo, ticketRepo: ticketRepo, statusTicketRepo: statusTicketRepo, db: db}
 }
 

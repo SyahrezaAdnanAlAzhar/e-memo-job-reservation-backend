@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
@@ -16,6 +17,16 @@ type RejectedTicketService struct {
 	statusTicketRepo      *repository.StatusTicketRepository
 	employeeRepo          *repository.EmployeeRepository
 	db                    *sql.DB
+}
+
+func NewRejectedTicketService(
+	repo *repository.RejectedTicketRepository,
+	ticketRepo *repository.TicketRepository,
+	trackStatusTicketRepo *repository.TrackStatusTicketRepository,
+	statusTicketRepo *repository.StatusTicketRepository,
+	employeeRepo *repository.EmployeeRepository,
+	db *sql.DB) *RejectedTicketService {
+	return &RejectedTicketService{repo: repo, ticketRepo: ticketRepo, trackStatusTicketRepo: trackStatusTicketRepo, statusTicketRepo: statusTicketRepo, employeeRepo: employeeRepo, db: db}
 }
 
 // CREATE

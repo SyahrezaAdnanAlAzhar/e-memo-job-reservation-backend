@@ -46,6 +46,7 @@ func main() {
 	positionToWorkflowMappingRepo := repository.NewPositionToWorkflowMappingRepository(db)
 	workflowStepRepo := repository.NewWorkflowStepRepository(db)
 	specifiedLocationRepo := repository.NewSpecifiedLocationRepository(db)
+	rejectedTicketRepo := repository.NewRejectedTicketRepository(db)
 
 	// SERVICE
 	authService := service.NewAuthService(authRepo, employeeRepo)
@@ -64,6 +65,14 @@ func main() {
 		ticketRepo,
 		statusTicketRepo,
 		db)
+	rejectedTicketService := service.NewRejectedTicketService(
+		rejectedTicketRepo,
+		ticketRepo,
+		trackStatusTicketRepo,
+		statusTicketRepo,
+		employeeRepo,
+		db,
+	)
 	ticketService := service.NewTicketService(&service.TicketServiceConfig{
 		TicketRepo:            ticketRepo,
 		JobRepo:               jobRepo,
@@ -87,6 +96,7 @@ func main() {
 		EmployeePositionHandler:    handler.NewEmployeePositionHandler(employeePositionService),
 		WorkflowHandler:            handler.NewWorkflowHandler(workflowService),
 		SpecifiedLocationHandler:   handler.NewSpecifiedLocationHandler(specifiedLocationService),
+		RejectedTicketHandler:      handler.NewRejectedTicketHandler(rejectedTicketService),
 	}
 
 	// MIDDLEWARE
