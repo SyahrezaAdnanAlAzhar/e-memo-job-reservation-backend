@@ -92,6 +92,7 @@ func main() {
 		TrackStatusTicketRepo: trackStatusTicketRepo,
 		StatusTicketRepo:      statusTicketRepo,
 		RejectedTicketService: rejectedTicketService,
+		WorkflowRepo:          workflowRepo,
 	})
 
 	ticketPriorityService := service.NewTicketPriorityService(db, ticketRepo)

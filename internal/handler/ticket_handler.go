@@ -191,3 +191,55 @@ func (h *TicketHandler) CancelTicket(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Ticket has been cancelled"})
 }
+
+// POST /ticket/:id/approve-section
+func (h *TicketHandler) ApproveSection(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	userNPK := c.GetString("user_npk")
+
+	err := h.workflowService.ApproveSection(c.Request.Context(), id, userNPK)
+	if err != nil {
+		if err.Error() == "user is not authorized to perform this approval" {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		if err.Error() == "ticket is not in 'Approval Section' status" {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		if err.Error() == "ticket not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to approve ticket at section level", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Ticket approved at section level"})
+}
+
+// POST /ticket/:id/approve-department
+func (h *TicketHandler) ApproveDepartment(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	userNPK := c.GetString("user_npk")
+
+	err := h.workflowService.ApproveDepartment(c.Request.Context(), id, userNPK)
+	if err != nil {
+		if err.Error() == "user is not authorized to perform this approval" {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		if err.Error() == "ticket is not in 'Approval Department' status" {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		if err.Error() == "ticket not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to approve ticket at department level", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Ticket approved at department level"})
+}

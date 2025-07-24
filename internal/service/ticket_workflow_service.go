@@ -16,6 +16,7 @@ type TicketWorkflowService struct {
 	trackStatusTicketRepo *repository.TrackStatusTicketRepository
 	statusTicketRepo      *repository.StatusTicketRepository
 	rejectedTicketService *RejectedTicketService
+	workflowRepo          *repository.WorkflowRepository
 }
 
 type TicketWorkflowServiceConfig struct {
@@ -25,6 +26,7 @@ type TicketWorkflowServiceConfig struct {
 	TrackStatusTicketRepo *repository.TrackStatusTicketRepository
 	StatusTicketRepo      *repository.StatusTicketRepository
 	RejectedTicketService *RejectedTicketService
+	WorkflowRepo          *repository.WorkflowRepository
 }
 
 func NewTicketWorkflowService(cfg *TicketWorkflowServiceConfig) *TicketWorkflowService {
@@ -35,6 +37,7 @@ func NewTicketWorkflowService(cfg *TicketWorkflowServiceConfig) *TicketWorkflowS
 		trackStatusTicketRepo: cfg.TrackStatusTicketRepo,
 		statusTicketRepo:      cfg.StatusTicketRepo,
 		rejectedTicketService: cfg.RejectedTicketService,
+		workflowRepo:          cfg.WorkflowRepo,
 	}
 }
 
@@ -118,3 +121,104 @@ func (s *TicketWorkflowService) CancelTicket(ctx context.Context, ticketID int, 
 	return tx.Commit()
 }
 
+// CHANGE STATUS TO APPROVAL SECTION ("Approval Section")
+func (s *TicketWorkflowService) ApproveSection(ctx context.Context, ticketID int, userNPK string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	ticket, err := s.ticketRepo.FindByIDAsStruct(ctx, ticketID)
+	if err != nil {
+		return errors.New("ticket not found")
+	}
+
+	user, err := s.employeeRepo.FindByNPK(userNPK)
+	if err != nil {
+		return errors.New("user not found")
+	}
+
+	requestor, err := s.employeeRepo.FindByNPK(ticket.Requestor)
+	if err != nil {
+		return errors.New("original requestor not found")
+	}
+
+	isAllowed := user.DepartmentID == requestor.DepartmentID && (user.Position.Name == "Head of Department" || user.Position.Name == "Section")
+	if !isAllowed {
+		return errors.New("user is not authorized to perform this approval")
+	}
+
+	currentStatusID, currentStatusName, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
+	if err != nil {
+		return err
+	}
+	if currentStatusName != "Approval Section" {
+		return errors.New("ticket is not in 'Approval Section' status")
+	}
+
+	nextStatusID, isFinalStep, err := s.workflowRepo.GetNextWorkflowStep(ctx, currentStatusID)
+	if err != nil {
+		return err
+	}
+	if isFinalStep {
+		return errors.New("workflow configuration error: no next step found")
+	}
+
+	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, nextStatusID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// CHANGE STATUS TO APPROVAL DEPARTMENT ("Approval Department")
+func (s *TicketWorkflowService) ApproveDepartment(ctx context.Context, ticketID int, userNPK string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	ticket, err := s.ticketRepo.FindByIDAsStruct(ctx, ticketID)
+	if err != nil {
+		return errors.New("ticket not found")
+	}
+
+	user, err := s.employeeRepo.FindByNPK(userNPK)
+	if err != nil {
+		return errors.New("user not found")
+	}
+
+	requestor, err := s.employeeRepo.FindByNPK(ticket.Requestor)
+	if err != nil {
+		return errors.New("original requestor not found")
+	}
+
+	isAllowed := user.DepartmentID == requestor.DepartmentID && user.Position.Name == "Head of Department"
+	if !isAllowed {
+		return errors.New("user is not authorized to perform this approval")
+	}
+
+	currentStatusID, currentStatusName, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
+	if err != nil {
+		return err
+	}
+	if currentStatusName != "Approval Department" {
+		return errors.New("ticket is not in 'Approval Department' status")
+	}
+
+	nextStatusID, isFinalStep, err := s.workflowRepo.GetNextWorkflowStep(ctx, currentStatusID)
+	if err != nil {
+		return err
+	}
+	if isFinalStep {
+		return errors.New("workflow configuration error: no next step found")
+	}
+
+	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, nextStatusID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
