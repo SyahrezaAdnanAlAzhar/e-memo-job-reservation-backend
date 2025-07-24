@@ -127,22 +127,6 @@ func (h *TicketHandler) ReorderTickets(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Ticket priorities updated successfully"})
 }
 
-// PUT UPDATE STATUS
-// func (h *TicketHandler) UpdateTicketStatus(c *gin.Context) {
-// 	id, _ := strconv.Atoi(c.Param("id"))
-// 	var req service.UpdateTicketStatusRequest
-// 	if err := c.ShouldBindJSON(&req); err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-// 		return
-// 	}
-// 	err := h.service.UpdateTicketStatus(c.Request.Context(), id, req)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update ticket status"})
-// 		return
-// 	}
-// 	c.JSON(http.StatusOK, gin.H{"message": "Ticket status updated successfully"})
-// }
-
 // POST/ PROGRESS TO NEXT STATUS
 func (h *TicketHandler) ProgressTicketStatus(c *gin.Context) {
     id, _ := strconv.Atoi(c.Param("id"))
@@ -162,7 +146,7 @@ func (h *TicketHandler) ProgressTicketStatus(c *gin.Context) {
 // PUT/ CHANGE STATUS FOR DELETE SECTION STATUS
 func (h *TicketHandler) ChangeTicketStatus(c *gin.Context) {
     id, _ := strconv.Atoi(c.Param("id"))
-	var req service.ChangeTicketStatusRequest 
+	var req dto.ChangeTicketStatusRequest 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

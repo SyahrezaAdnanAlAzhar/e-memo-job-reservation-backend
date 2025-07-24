@@ -42,10 +42,6 @@ func NewTicketService(cfg *TicketServiceConfig) *TicketService {
 // 	NewStatusID int `json:"new_status_id" binding:"required"`
 // }
 
-type ChangeTicketStatusRequest struct {
-	TargetStatusID int `json:"target_status_id" binding:"required"`
-}
-
 // CREATE TICKET
 func (s *TicketService) CreateTicket(ctx context.Context, req dto.CreateTicketRequest, requestor string) (*model.Ticket, error) {
 	// GET EMPLOYEE DATA (TO GET THE POSITION)
@@ -266,7 +262,7 @@ func (s *TicketService) ProgressTicketStatus(ctx context.Context, ticketID int) 
 }
 
 // CHANGE TICKET STATUS TO HANDLE DELETE SECTION STATUS
-func (s *TicketService) ChangeTicketStatus(ctx context.Context, ticketID int, req ChangeTicketStatusRequest) error {
+func (s *TicketService) ChangeTicketStatus(ctx context.Context, ticketID int, req dto.ChangeTicketStatusRequest) error {
 	deleteSectionID, err := s.statusTicketRepo.GetSectionIDByName("Delete Section")
 	if err != nil {
 		return errors.New("critical configuration error: delete section not found")

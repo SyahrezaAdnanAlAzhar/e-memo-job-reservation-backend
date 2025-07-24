@@ -18,3 +18,7 @@ type ReorderTicketsRequest struct {
 	DepartmentTargetID int   `json:"department_target_id" binding:"required"`
 	OrderedTicketIDs   []int `json:"ordered_ticket_ids" binding:"required"`
 }
+
+type ChangeTicketStatusRequest struct {
+	TargetStatusID int `json:"target_status_id" binding:"required"`
+}
