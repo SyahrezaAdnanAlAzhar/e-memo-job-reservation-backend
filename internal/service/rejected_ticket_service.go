@@ -98,3 +98,68 @@ func (s *RejectedTicketService) UpdateFeedback(ctx context.Context, rejectionID 
 
 	return s.repo.UpdateFeedback(rejectionID, req.Feedback)
 }
+
+// UPDATE ALREADY_SEEN
+func (s *RejectedTicketService) UpdateAlreadySeen(ctx context.Context, rejectionID int64, req dto.UpdateAlreadySeenRequest, userNPK string) error {
+	user, err := s.employeeRepo.FindByNPK(userNPK)
+	if err != nil {
+		return errors.New("user not found")
+	}
+
+	rejection, err := s.repo.FindByID(rejectionID)
+	if err != nil {
+		return errors.New("rejection record not found")
+	}
+
+	ticket, err := s.ticketRepo.FindByIDAsStruct(ctx, int(rejection.TicketID))
+	if err != nil {
+		return errors.New("associated ticket not found")
+	}
+
+	requestor, err := s.employeeRepo.FindByNPK(ticket.Requestor)
+	if err != nil {
+		return errors.New("original requestor not found")
+	}
+
+	isOriginalRequestor := user.NPK == ticket.Requestor
+	isSameDeptApprover := user.DepartmentID == requestor.DepartmentID && (user.Position.Name == "Head of Department" || user.Position.Name == "Section")
+
+	if !isOriginalRequestor && !isSameDeptApprover {
+		return errors.New("user is not authorized to perform this action")
+	}
+
+	return s.repo.UpdateAlreadySeen(rejectionID, req.AlreadySeen)
+}
+
+// DELETE
+func (s *RejectedTicketService) DeleteRejectedTicket(ctx context.Context, rejectionID int64, userNPK string) error {
+	user, err := s.employeeRepo.FindByNPK(userNPK)
+	if err != nil {
+		return errors.New("user not found")
+	}
+
+	rejection, err := s.repo.FindByID(rejectionID)
+	if err != nil {
+		return errors.New("rejection record not found")
+	}
+
+	ticket, err := s.ticketRepo.FindByIDAsStruct(ctx, int(rejection.TicketID))
+	if err != nil {
+		return errors.New("associated ticket not found")
+	}
+
+	isTargetDeptApprover := user.DepartmentID == ticket.DepartmentTargetID && (user.Position.Name == "Head of Department" || user.Position.Name == "Section")
+	if !isTargetDeptApprover {
+		return errors.New("user is not authorized to delete this rejection record")
+	}
+
+	_, currentStatusName, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, int(rejection.TicketID))
+	if err != nil {
+		return err
+	}
+	if currentStatusName != "Ditolak" {
+		return errors.New("can only delete rejection record if ticket status is 'Ditolak'")
+	}
+
+	return s.repo.Delete(rejectionID)
+}
