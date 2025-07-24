@@ -17,6 +17,7 @@ type TicketWorkflowService struct {
 	statusTicketRepo      *repository.StatusTicketRepository
 	rejectedTicketService *RejectedTicketService
 	workflowRepo          *repository.WorkflowRepository
+	jobRepo               *repository.JobRepository
 }
 
 type TicketWorkflowServiceConfig struct {
@@ -27,6 +28,7 @@ type TicketWorkflowServiceConfig struct {
 	StatusTicketRepo      *repository.StatusTicketRepository
 	RejectedTicketService *RejectedTicketService
 	WorkflowRepo          *repository.WorkflowRepository
+	JobRepo               *repository.JobRepository
 }
 
 func NewTicketWorkflowService(cfg *TicketWorkflowServiceConfig) *TicketWorkflowService {
@@ -38,6 +40,7 @@ func NewTicketWorkflowService(cfg *TicketWorkflowServiceConfig) *TicketWorkflowS
 		statusTicketRepo:      cfg.StatusTicketRepo,
 		rejectedTicketService: cfg.RejectedTicketService,
 		workflowRepo:          cfg.WorkflowRepo,
+		jobRepo:               cfg.JobRepo,
 	}
 }
 
@@ -217,6 +220,48 @@ func (s *TicketWorkflowService) ApproveDepartment(ctx context.Context, ticketID 
 	}
 
 	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, nextStatusID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// CHANGE STATUS TO START WORK ("Dikerjakan")
+func (s *TicketWorkflowService) StartWorkOnTicket(ctx context.Context, ticketID int, userNPK string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, currentStatusName, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.New("ticket not found")
+		}
+		return err
+	}
+	if currentStatusName != "Menunggu Job" {
+		return errors.New("ticket is not in 'Menunggu Job' status")
+	}
+
+	assignedPIC, err := s.jobRepo.GetPicByTicketID(ctx, ticketID)
+	if err != nil {
+		return err
+	}
+	if assignedPIC == "" {
+		return errors.New("job has not been assigned to a PIC yet")
+	}
+	if assignedPIC != userNPK {
+		return errors.New("user is not the assigned PIC for this job")
+	}
+
+	inProgressStatus, err := s.statusTicketRepo.FindByName("Dikerjakan")
+	if err != nil {
+		return errors.New("critical configuration error: 'Dikerjakan' status not found")
+	}
+
+	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, inProgressStatus.ID); err != nil {
 		return err
 	}
 

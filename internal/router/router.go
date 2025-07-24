@@ -166,6 +166,7 @@ func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers) {
 		ticketRoutes.POST("/:id/cancel", h.TicketHandler.CancelTicket)
 		ticketRoutes.POST("/:id/approve-section", h.TicketHandler.ApproveSection)
 		ticketRoutes.POST("/:id/approve-department", h.TicketHandler.ApproveDepartment)
+		ticketRoutes.POST("/:id/start-work", h.TicketHandler.StartWorkOnTicket)
 	}
 
 	rejectedRoutes := group.Group("/rejected-ticket")

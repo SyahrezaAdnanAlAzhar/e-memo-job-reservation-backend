@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 )
 
 type JobRepository struct {
@@ -12,7 +13,6 @@ type JobRepository struct {
 func NewJobRepository(db *sql.DB) *JobRepository {
 	return &JobRepository{DB: db}
 }
-
 
 // CREATE
 func (r *JobRepository) Create(ctx context.Context, tx *sql.Tx, ticketID int, initialJobPriority int) error {
@@ -25,7 +25,7 @@ func (r *JobRepository) Create(ctx context.Context, tx *sql.Tx, ticketID int, in
 func (r *JobRepository) IsJobAssigned(ctx context.Context, ticketID int) (bool, error) {
 	var isAssigned bool
 	query := "SELECT (pic_job_npk IS NOT NULL) FROM job WHERE ticket_id = $1"
-	
+
 	err := r.DB.QueryRowContext(ctx, query, ticketID).Scan(&isAssigned)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -34,4 +34,24 @@ func (r *JobRepository) IsJobAssigned(ctx context.Context, ticketID int) (bool, 
 		return false, err
 	}
 	return isAssigned, nil
+}
+
+// GET PIC
+func (r *JobRepository) GetPicByTicketID(ctx context.Context, ticketID int) (string, error) {
+	var picNpk sql.NullString
+	query := "SELECT pic_job_npk FROM job WHERE ticket_id = $1"
+
+	err := r.DB.QueryRowContext(ctx, query, ticketID).Scan(&picNpk)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", errors.New("job not found for this ticket")
+		}
+		return "", err
+	}
+
+	if !picNpk.Valid {
+		return "", nil
+	}
+
+	return picNpk.String, nil
 }

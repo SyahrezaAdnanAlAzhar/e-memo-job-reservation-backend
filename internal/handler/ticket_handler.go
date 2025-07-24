@@ -243,3 +243,29 @@ func (h *TicketHandler) ApproveDepartment(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Ticket approved at department level"})
 }
+
+// POST /ticket/:id/start-work
+func (h *TicketHandler) StartWorkOnTicket(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	userNPK := c.GetString("user_npk")
+
+	err := h.workflowService.StartWorkOnTicket(c.Request.Context(), id, userNPK)
+	if err != nil {
+		if err.Error() == "user is not the assigned PIC for this job" {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		if err.Error() == "ticket is not in 'Menunggu Job' status" || err.Error() == "job has not been assigned to a PIC yet" {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		if err.Error() == "ticket not found" || err.Error() == "job not found for this ticket" {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start work on ticket", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Work on ticket has started"})
+}

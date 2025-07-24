@@ -93,6 +93,7 @@ func main() {
 		StatusTicketRepo:      statusTicketRepo,
 		RejectedTicketService: rejectedTicketService,
 		WorkflowRepo:          workflowRepo,
+		JobRepo:               jobRepo,
 	})
 
 	ticketPriorityService := service.NewTicketPriorityService(db, ticketRepo)
