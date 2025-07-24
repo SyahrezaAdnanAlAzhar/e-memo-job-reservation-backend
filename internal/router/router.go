@@ -170,5 +170,7 @@ func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers) {
 	{
 		rejectedRoutes.POST("", h.RejectedTicketHandler.CreateRejectedTicket)
 		rejectedRoutes.PUT("/:id/feedback", h.RejectedTicketHandler.UpdateFeedback)
+		rejectedRoutes.PATCH("/:id/seen", h.RejectedTicketHandler.UpdateAlreadySeen)
+		rejectedRoutes.DELETE("/:id", h.RejectedTicketHandler.DeleteRejectedTicket)
 	}
 }
