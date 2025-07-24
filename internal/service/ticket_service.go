@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"log"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
@@ -18,6 +17,7 @@ type TicketService struct {
 	trackStatusTicketRepo *repository.TrackStatusTicketRepository
 	employeeRepo          *repository.EmployeeRepository
 	statusTicketRepo      *repository.StatusTicketRepository
+	rejectedTicketService *RejectedTicketService
 	db                    *sql.DB
 }
 
@@ -28,6 +28,7 @@ type TicketServiceConfig struct {
 	TrackStatusTicketRepo *repository.TrackStatusTicketRepository
 	EmployeeRepo          *repository.EmployeeRepository
 	StatusTicketRepo      *repository.StatusTicketRepository
+	RejectedTicketService *RejectedTicketService
 	DB                    *sql.DB
 }
 
@@ -39,6 +40,7 @@ func NewTicketService(cfg *TicketServiceConfig) *TicketService {
 		trackStatusTicketRepo: cfg.TrackStatusTicketRepo,
 		employeeRepo:          cfg.EmployeeRepo,
 		statusTicketRepo:      cfg.StatusTicketRepo,
+		rejectedTicketService: cfg.RejectedTicketService,
 		db:                    cfg.DB,
 	}
 }
@@ -242,18 +244,19 @@ func (s *TicketService) RejectTicket(ctx context.Context, ticketID int, req dto.
 		return errors.New("user not authorized to reject this ticket")
 	}
 
-	rejectedStatus, err := s.statusTicketRepo.FindByName("Ditolak")
+	_, err = s.statusTicketRepo.FindByName("Ditolak")
 	if err != nil {
 		return errors.New("critical configuration error: 'Ditolak' status not found")
 	}
 
-	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, rejectedStatus.ID); err != nil {
-		return err
+	rejectionReq := dto.CreateRejectedTicketRequest{
+		TicketID: int64(ticketID),
+		Feedback: req.Reason,
 	}
 
-	log.Printf("Ticket %d rejected by %s. Reason: %s", ticketID, userNPK, req.Reason)
+	_, err = s.rejectedTicketService.CreateRejectedTicket(ctx, rejectionReq, userNPK)
 
-	return tx.Commit()
+	return err
 }
 
 // CHANGE STATUS TO CANCEL ("Dibatalkan")

@@ -80,6 +80,7 @@ func main() {
 		TrackStatusTicketRepo: trackStatusTicketRepo,
 		EmployeeRepo:          employeeRepo,
 		StatusTicketRepo:      statusTicketRepo,
+		RejectedTicketService: rejectedTicketService,
 		DB:                    db,
 	})
 
