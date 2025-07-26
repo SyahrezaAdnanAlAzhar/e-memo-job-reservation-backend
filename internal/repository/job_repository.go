@@ -16,7 +16,7 @@ func NewJobRepository(db *sql.DB) *JobRepository {
 
 // CREATE
 func (r *JobRepository) Create(ctx context.Context, tx *sql.Tx, ticketID int, initialJobPriority int) error {
-	query := "INSERT INTO job_from_ticket (ticket_id, job_priority) VALUES ($1, $2)"
+	query := "INSERT INTO job (ticket_id, job_priority) VALUES ($1, $2)"
 	_, err := tx.ExecContext(ctx, query, ticketID, initialJobPriority)
 	return err
 }
