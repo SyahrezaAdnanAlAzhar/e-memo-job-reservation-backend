@@ -88,3 +88,26 @@ func (r *PositionPermissionRepository) Delete(posID, permID int) error {
 	}
 	return nil
 }
+
+// GET PERMISSION BY POSITION TOKEN
+func (r *PositionPermissionRepository) CheckPermission(positionID int, permissionName string) (bool, error) {
+	var exists bool
+	
+	query := `
+        SELECT EXISTS (
+            SELECT 1
+            FROM position_permission pp
+            JOIN access_permission ap ON pp.access_permission_id = ap.id
+            WHERE pp.employee_position_id = $1
+              AND ap.name = $2
+              AND pp.is_active = true
+              AND ap.is_active = true
+        )`
+		
+	err := r.DB.QueryRow(query, positionID, permissionName).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	
+	return exists, nil
+}

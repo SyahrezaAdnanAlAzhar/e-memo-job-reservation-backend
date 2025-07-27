@@ -49,8 +49,12 @@ func (m *AuthMiddleware) JWTMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		c.Set("user_npk", claims.NPK)
+		c.Set("user_id", claims.UserID)
+		c.Set("user_type", claims.UserType)
 		c.Set("user_position_id", claims.EmployeePositionID)
+		if claims.EmployeeNPK != nil {
+			c.Set("user_npk", *claims.EmployeeNPK)
+		}
 
 		c.Next()
 	}
