@@ -6,98 +6,63 @@ import (
 	"errors"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"github.com/lib/pq"
 )
 
 type TicketWorkflowService struct {
 	db                    *sql.DB
 	ticketRepo            *repository.TicketRepository
+	jobRepo               *repository.JobRepository
 	employeeRepo          *repository.EmployeeRepository
 	trackStatusTicketRepo *repository.TrackStatusTicketRepository
 	statusTicketRepo      *repository.StatusTicketRepository
-	rejectedTicketService *RejectedTicketService
-	workflowRepo          *repository.WorkflowRepository
-	jobRepo               *repository.JobRepository
+	statusTransitionRepo  *repository.StatusTransitionRepository
+	actorRoleRepo         *repository.ActorRoleRepository
+	actorRoleMappingRepo  *repository.ActorRoleMappingRepository
+	ticketActionLogRepo   *repository.TicketActionLogRepository
 }
 
 type TicketWorkflowServiceConfig struct {
 	DB                    *sql.DB
 	TicketRepo            *repository.TicketRepository
+	JobRepo               *repository.JobRepository
 	EmployeeRepo          *repository.EmployeeRepository
 	TrackStatusTicketRepo *repository.TrackStatusTicketRepository
 	StatusTicketRepo      *repository.StatusTicketRepository
-	RejectedTicketService *RejectedTicketService
-	WorkflowRepo          *repository.WorkflowRepository
-	JobRepo               *repository.JobRepository
+	StatusTransitionRepo  *repository.StatusTransitionRepository
+	ActorRoleRepo         *repository.ActorRoleRepository
+	ActorRoleMappingRepo  *repository.ActorRoleMappingRepository
+	TicketActionLogRepo   *repository.TicketActionLogRepository
 }
 
 func NewTicketWorkflowService(cfg *TicketWorkflowServiceConfig) *TicketWorkflowService {
 	return &TicketWorkflowService{
 		db:                    cfg.DB,
 		ticketRepo:            cfg.TicketRepo,
+		jobRepo:               cfg.JobRepo,
 		employeeRepo:          cfg.EmployeeRepo,
 		trackStatusTicketRepo: cfg.TrackStatusTicketRepo,
 		statusTicketRepo:      cfg.StatusTicketRepo,
-		rejectedTicketService: cfg.RejectedTicketService,
-		workflowRepo:          cfg.WorkflowRepo,
-		jobRepo:               cfg.JobRepo,
+		statusTransitionRepo:  cfg.StatusTransitionRepo,
+		actorRoleRepo:         cfg.ActorRoleRepo,
+		actorRoleMappingRepo:  cfg.ActorRoleMappingRepo,
+		ticketActionLogRepo:   cfg.TicketActionLogRepo,
 	}
 }
 
-// CHANGE STATUS TO REJECT ("Ditolak")
-func (s *TicketWorkflowService) RejectTicket(ctx context.Context, ticketID int, req dto.RejectTicketRequest, userNPK string) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	ticket, err := s.ticketRepo.FindByIDAsStruct(ctx, ticketID)
-	if err != nil {
-		return errors.New("ticket not found")
-	}
-
+// EXECUTE ACTION TO GET TO THE NEXT STATUS BASED ON STATE
+func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int, userNPK string, req dto.ExecuteActionRequest, filePath string) error {
+	// GET ALL DATA
 	user, err := s.employeeRepo.FindByNPK(userNPK)
 	if err != nil {
 		return errors.New("user not found")
 	}
 
-	isAllowed := user.DepartmentID == ticket.DepartmentTargetID && (user.Position.Name == "Head of Department" || user.Position.Name == "Section")
-	if !isAllowed {
-		return errors.New("user not authorized to reject this ticket")
-	}
-
-	_, err = s.statusTicketRepo.FindByName("Ditolak")
-	if err != nil {
-		return errors.New("critical configuration error: 'Ditolak' status not found")
-	}
-
-	rejectionReq := dto.CreateRejectedTicketRequest{
-		TicketID: int64(ticketID),
-		Feedback: req.Reason,
-	}
-
-	_, err = s.rejectedTicketService.CreateRejectedTicket(ctx, rejectionReq, userNPK)
-
-	return err
-}
-
-// CHANGE STATUS TO CANCEL ("Dibatalkan")
-func (s *TicketWorkflowService) CancelTicket(ctx context.Context, ticketID int, userNPK string) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
 	ticket, err := s.ticketRepo.FindByIDAsStruct(ctx, ticketID)
 	if err != nil {
 		return errors.New("ticket not found")
-	}
-
-	user, err := s.employeeRepo.FindByNPK(userNPK)
-	if err != nil {
-		return errors.New("user not found")
 	}
 
 	requestor, err := s.employeeRepo.FindByNPK(ticket.Requestor)
@@ -105,252 +70,97 @@ func (s *TicketWorkflowService) CancelTicket(ctx context.Context, ticketID int, 
 		return errors.New("original requestor not found")
 	}
 
-	isOriginalRequestor := user.NPK == ticket.Requestor
-	isSameDeptApprover := user.DepartmentID == requestor.DepartmentID && (user.Position.Name == "Head of Department" || user.Position.Name == "Section")
+	job, _ := s.jobRepo.GetPicByTicketID(ctx, ticketID)
 
-	if !isOriginalRequestor && !isSameDeptApprover {
-		return errors.New("user not authorized to cancel this ticket")
-	}
-
-	cancelledStatus, err := s.statusTicketRepo.FindByName("Dibatalkan")
+	currentStatusID, _, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
 	if err != nil {
-		return errors.New("critical configuration error: 'Dibatalkan' status not found")
+		return errors.New("could not get current ticket status")
 	}
 
-	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, cancelledStatus.ID); err != nil {
-		return err
-	}
-
-	return tx.Commit()
-}
-
-// CHANGE STATUS TO APPROVAL SECTION ("Approval Section")
-func (s *TicketWorkflowService) ApproveSection(ctx context.Context, ticketID int, userNPK string) error {
-	tx, err := s.db.BeginTx(ctx, nil)
+	// ACTOR RESOLUTION
+	userContexts := s.determineUserContexts(user, ticket, requestor, job)
+	actorRoles, err := s.actorRoleMappingRepo.GetRolesForUserContext(user.EmployeePositionID, userContexts)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
 
-	ticket, err := s.ticketRepo.FindByIDAsStruct(ctx, ticketID)
-	if err != nil {
-		return errors.New("ticket not found")
+	if job != "" && user.NPK == job {
+		actorRoles = append(actorRoles, "ASSIGNED_PIC")
 	}
 
-	user, err := s.employeeRepo.FindByNPK(userNPK)
-	if err != nil {
-		return errors.New("user not found")
-	}
-
-	requestor, err := s.employeeRepo.FindByNPK(ticket.Requestor)
-	if err != nil {
-		return errors.New("original requestor not found")
-	}
-
-	isAllowed := user.DepartmentID == requestor.DepartmentID && (user.Position.Name == "Head of Department" || user.Position.Name == "Section")
-	if !isAllowed {
-		return errors.New("user is not authorized to perform this approval")
-	}
-
-	currentStatusID, currentStatusName, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
-	if err != nil {
-		return err
-	}
-	if currentStatusName != "Approval Section" {
-		return errors.New("ticket is not in 'Approval Section' status")
-	}
-
-	nextStatusID, isFinalStep, err := s.workflowRepo.GetNextWorkflowStep(ctx, currentStatusID)
-	if err != nil {
-		return err
-	}
-	if isFinalStep {
-		return errors.New("workflow configuration error: no next step found")
-	}
-
-	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, nextStatusID); err != nil {
-		return err
-	}
-
-	return tx.Commit()
-}
-
-// CHANGE STATUS TO APPROVAL DEPARTMENT ("Approval Department")
-func (s *TicketWorkflowService) ApproveDepartment(ctx context.Context, ticketID int, userNPK string) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	ticket, err := s.ticketRepo.FindByIDAsStruct(ctx, ticketID)
-	if err != nil {
-		return errors.New("ticket not found")
-	}
-
-	user, err := s.employeeRepo.FindByNPK(userNPK)
-	if err != nil {
-		return errors.New("user not found")
-	}
-
-	requestor, err := s.employeeRepo.FindByNPK(ticket.Requestor)
-	if err != nil {
-		return errors.New("original requestor not found")
-	}
-
-	isAllowed := user.DepartmentID == requestor.DepartmentID && user.Position.Name == "Head of Department"
-	if !isAllowed {
-		return errors.New("user is not authorized to perform this approval")
-	}
-
-	currentStatusID, currentStatusName, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
-	if err != nil {
-		return err
-	}
-	if currentStatusName != "Approval Department" {
-		return errors.New("ticket is not in 'Approval Department' status")
-	}
-
-	nextStatusID, isFinalStep, err := s.workflowRepo.GetNextWorkflowStep(ctx, currentStatusID)
-	if err != nil {
-		return err
-	}
-	if isFinalStep {
-		return errors.New("workflow configuration error: no next step found")
-	}
-
-	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, nextStatusID); err != nil {
-		return err
-	}
-
-	return tx.Commit()
-}
-
-// CHANGE STATUS TO START WORK ("Dikerjakan")
-func (s *TicketWorkflowService) StartWorkOnTicket(ctx context.Context, ticketID int, userNPK string) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	_, currentStatusName, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
+	// VALIDATE TRANSITION
+	transition, err := s.statusTransitionRepo.FindValidTransition(currentStatusID, req.ActionName)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return errors.New("ticket not found")
+			return errors.New("action not allowed from the current status")
 		}
 		return err
 	}
-	if currentStatusName != "Menunggu Job" {
-		return errors.New("ticket is not in 'Menunggu Job' status")
-	}
 
-	assignedPIC, err := s.jobRepo.GetPicByTicketID(ctx, ticketID)
+	// AUTHORIZATION
+	requiredRole, err := s.actorRoleRepo.GetRoleNameByID(transition.ActorRoleID)
 	if err != nil {
 		return err
 	}
-	if assignedPIC == "" {
-		return errors.New("job has not been assigned to a PIC yet")
-	}
-	if assignedPIC != userNPK {
-		return errors.New("user is not the assigned PIC for this job")
-	}
 
-	inProgressStatus, err := s.statusTicketRepo.FindByName("Dikerjakan")
-	if err != nil {
-		return errors.New("critical configuration error: 'Dikerjakan' status not found")
+	isAuthorized := false
+	for _, role := range actorRoles {
+		if role == requiredRole {
+			isAuthorized = true
+			break
+		}
 	}
-
-	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, inProgressStatus.ID); err != nil {
-		return err
+	if !isAuthorized {
+		return errors.New("user does not have the required role for this action")
 	}
 
-	return tx.Commit()
-}
+	// INPUT VALIDATION
+	if transition.RequiresReason && req.Reason == "" {
+		return errors.New("reason is required for this action")
+	}
+	if transition.RequiresFile && filePath == "" {
+		return errors.New("file upload is required for this action")
+	}
 
-// CHANGE STATUS TO COMPLETE JOB ("Job Selesai")
-func (s *TicketWorkflowService) CompleteJob(ctx context.Context, ticketID int, userNPK string, reportFilePath string) error {
+	// EXEC
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	_, currentStatusName, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
-	if err != nil {
-		return errors.New("ticket not found")
-	}
-	if currentStatusName != "Dikerjakan" {
-		return errors.New("ticket is not in 'Dikerjakan' status")
+	// SAVE FILE
+	var filePaths pq.StringArray
+	if filePath != "" {
+		filePaths = pq.StringArray{filePath}
 	}
 
-	assignedPIC, err := s.jobRepo.GetPicByTicketID(ctx, ticketID)
-	if err != nil {
-		return err
+	logEntry := model.TicketActionLog{
+		FilePath: filePaths,
 	}
-	if assignedPIC != userNPK {
-		return errors.New("user is not the assigned PIC for this job")
-	}
-
-	if err := s.jobRepo.UpdateReportFile(ctx, tx, ticketID, reportFilePath); err != nil {
+	if err := s.ticketActionLogRepo.Create(ctx, tx, logEntry); err != nil {
 		return err
 	}
 
-	jobDoneStatus, err := s.statusTicketRepo.FindByName("Job Selesai")
-	if err != nil {
-		return errors.New("critical configuration error: 'Job Selesai' status not found")
-	}
-
-	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, jobDoneStatus.ID); err != nil {
+	// CHANGE STATUS TICKET
+	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, transition.ToStatusID); err != nil {
 		return err
 	}
 
 	return tx.Commit()
 }
 
-// CHANGE STATUS TO CLOSE TICKET ("TICKET SELESAI")
-func (s *TicketWorkflowService) CloseTicket(ctx context.Context, ticketID int, userNPK string) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
+// HELPER FUNCTION
+func (s *TicketWorkflowService) determineUserContexts(user *model.Employee, ticket *model.Ticket, requestor *model.Employee, jobPIC string) []string {
+	var contexts []string
+	if user.NPK == ticket.Requestor {
+		contexts = append(contexts, "SELF")
 	}
-	defer tx.Rollback()
-
-	_, currentStatusName, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
-	if err != nil {
-		return errors.New("ticket not found")
+	if user.DepartmentID == requestor.DepartmentID {
+		contexts = append(contexts, "REQUESTOR_DEPT")
 	}
-	if currentStatusName != "Job Selesai" {
-		return errors.New("job for this ticket has not been completed yet")
+	if user.DepartmentID == ticket.DepartmentTargetID {
+		contexts = append(contexts, "TARGET_DEPT")
 	}
-
-	ticket, err := s.ticketRepo.FindByIDAsStruct(ctx, ticketID)
-	if err != nil {
-		return err
-	}
-	user, err := s.employeeRepo.FindByNPK(userNPK)
-	if err != nil {
-		return errors.New("user not found")
-	}
-	requestor, err := s.employeeRepo.FindByNPK(ticket.Requestor)
-	if err != nil {
-		return errors.New("original requestor not found")
-	}
-
-	isOriginalRequestor := user.NPK == ticket.Requestor
-	isSameDeptApprover := user.DepartmentID == requestor.DepartmentID && (user.Position.Name == "Head of Department" || user.Position.Name == "Section")
-	if !isOriginalRequestor && !isSameDeptApprover {
-		return errors.New("user is not authorized to close this ticket")
-	}
-
-	finalStatus, err := s.statusTicketRepo.FindByName("Tiket Selesai")
-	if err != nil {
-		return errors.New("critical configuration error: 'Tiket Selesai' status not found")
-	}
-
-	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, finalStatus.ID); err != nil {
-		return err
-	}
-
-	return tx.Commit()
+	return contexts
 }

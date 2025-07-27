@@ -29,6 +29,8 @@ func main() {
 
 	// DEPENDENCY INITIALIZATION (WIRING)
 	// REPOSITORY
+	actorRoleRepo := repository.NewActorRoleRepository(db)
+	actorRoleMappingRepo := repository.NewActorRoleMappingRepository(db)
 	appUserRepo := repository.NewAppUserRepository(db)
 	authRepo := repository.NewAuthRepository(rdb)
 	employeeRepo := repository.NewEmployeeRepository(db)
@@ -47,7 +49,9 @@ func main() {
 	positionToWorkflowMappingRepo := repository.NewPositionToWorkflowMappingRepository(db)
 	workflowStepRepo := repository.NewWorkflowStepRepository(db)
 	specifiedLocationRepo := repository.NewSpecifiedLocationRepository(db)
+	statusTransitionRepo := repository.NewStatusTransitionRepository(db)
 	rejectedTicketRepo := repository.NewRejectedTicketRepository(db)
+	ticketActionLogRepo := repository.NewTicketActionLogRepository(db)
 
 	// SERVICE
 	authService := service.NewAuthService(authRepo, appUserRepo)
@@ -89,12 +93,14 @@ func main() {
 	ticketWorkflowService := service.NewTicketWorkflowService(&service.TicketWorkflowServiceConfig{
 		DB:                    db,
 		TicketRepo:            ticketRepo,
+		JobRepo:               jobRepo,
 		EmployeeRepo:          employeeRepo,
 		TrackStatusTicketRepo: trackStatusTicketRepo,
 		StatusTicketRepo:      statusTicketRepo,
-		RejectedTicketService: rejectedTicketService,
-		WorkflowRepo:          workflowRepo,
-		JobRepo:               jobRepo,
+		StatusTransitionRepo:  statusTransitionRepo,
+		ActorRoleRepo:         actorRoleRepo,
+		ActorRoleMappingRepo:  actorRoleMappingRepo,
+		TicketActionLogRepo:   ticketActionLogRepo,
 	})
 
 	ticketPriorityService := service.NewTicketPriorityService(db, ticketRepo)
