@@ -26,3 +26,8 @@ type ChangeTicketStatusRequest struct {
 type RejectTicketRequest struct {
 	Reason string `json:"reason" binding:"required"`
 }
+
+type ExecuteActionRequest struct {
+	ActionName string `json:"action_name" binding:"required"`
+	Reason     string `json:"reason"`
+}
