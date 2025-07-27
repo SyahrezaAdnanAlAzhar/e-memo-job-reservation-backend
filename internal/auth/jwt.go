@@ -1,45 +1,55 @@
 package auth
 
 import (
-	"errors"
 	"context"
+	"errors"
 	"fmt"
+	"log"
 	"os"
 	"time"
-	"log"
-	"github.com/google/uuid"
+
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 type Claims struct {
-	TokenID    string `json:"jti"`
-	NPK        string `json:"npk"`
-	EmployeePositionID int    `json:"employee_position_id"`
+	UserID             int     `json:"uid"`
+	UserType           string  `json:"typ"`
+	EmployeeNPK        *string `json:"npk,omitempty"` // Pointer agar bisa null
+	EmployeePositionID int     `json:"pos_id"`
+	TokenID            string  `json:"jti"`
 	jwt.RegisteredClaims
 }
 
 type TokenStorer interface {
-	StoreRefreshToken(ctx context.Context, npk string, tokenID string, expiresIn time.Duration) error
+	StoreRefreshToken(ctx context.Context, userID int, tokenID string, expiresIn time.Duration) error
 }
 
-func GenerateTokens(npk string, positionID int, tokenStore TokenStorer) (accessToken string, refreshToken string, err error) {
+func GenerateTokens(user *model.AppUser, tokenStore TokenStorer) (accessToken string, refreshToken string, err error) {
 	// GENERATE ACCESS TOKEN
 	accessLifespanStr := os.Getenv("ACCESS_TOKEN_LIFESPAN")
 	accessDuration, err := time.ParseDuration(accessLifespanStr)
-	
+
 	if err != nil {
 		log.Printf("Invalid ACCESS_TOKEN_LIFESPAN format, defaulting to 15m. Error: %v", err)
 		accessDuration = 15 * time.Minute
 	}
 
-	accessClaims := &Claims{
-		TokenID:    uuid.New().String(), 
-		NPK:        npk,
-		EmployeePositionID: positionID,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(accessDuration)),
-		},
+	var npkClaim *string
+	if user.EmployeeNPK.Valid {
+		npkClaim = &user.EmployeeNPK.String
 	}
+
+	accessClaims := &Claims{
+		UserID:             user.ID,
+		UserType:           user.UserType,
+		EmployeeNPK:        npkClaim,
+		EmployeePositionID: user.EmployeePositionID,
+		TokenID:            uuid.New().String(),
+		RegisteredClaims:   jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(accessDuration))},
+	}
+
 	accessToken, err = jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims).SignedString([]byte(os.Getenv("JWT_SECRET_KEY")))
 	if err != nil {
 		return "", "", err
@@ -54,24 +64,25 @@ func GenerateTokens(npk string, positionID int, tokenStore TokenStorer) (accessT
 	}
 
 	refreshClaims := &Claims{
-		TokenID:    uuid.New().String(), 
-		NPK:        npk,
-		EmployeePositionID: positionID, 
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(refreshDuration)),
-		},
+		UserID:             user.ID,
+		UserType:           user.UserType,
+		EmployeeNPK:        npkClaim,
+		EmployeePositionID: user.EmployeePositionID,
+		TokenID:            uuid.New().String(),
+		RegisteredClaims:   jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(refreshDuration))},
 	}
+
 	refreshToken, err = jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString([]byte(os.Getenv("JWT_REFRESH_SECRET_KEY")))
 	if err != nil {
 		return "", "", err
 	}
-	
+
 	// STORE REFRESH TOKEN TO REDIS
-	err = tokenStore.StoreRefreshToken(context.Background(), npk, refreshClaims.TokenID, refreshDuration)
+	err = tokenStore.StoreRefreshToken(context.Background(), user.ID, refreshClaims.TokenID, refreshDuration)
 	if err != nil {
 		return "", "", err
 	}
-	
+
 	return accessToken, refreshToken, nil
 }
 
