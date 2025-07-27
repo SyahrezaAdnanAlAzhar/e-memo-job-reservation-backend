@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -17,8 +18,8 @@ func NewAuthRepository(rdb *redis.Client) *AuthRepository {
 }
 
 // STORE REFRESH TOKEN TO Redis WITH Time-to-live (TTL)
-func (r *AuthRepository) StoreRefreshToken(ctx context.Context, npk string, tokenID string, expiresIn time.Duration) error {
-	key := "refresh_tokens:" + npk
+func (r *AuthRepository) StoreRefreshToken(ctx context.Context, userID int, tokenID string, expiresIn time.Duration) error {
+	key := fmt.Sprintf("refresh_tokens:%d", userID)
 	err := r.RDB.SAdd(ctx, key, tokenID).Err()
 	if err != nil {
 		return err
@@ -27,8 +28,8 @@ func (r *AuthRepository) StoreRefreshToken(ctx context.Context, npk string, toke
 }
 
 // VALIDATE AND DELETE TOKEN
-func (r *AuthRepository) ValidateAndDelRefreshToken(ctx context.Context, npk string, tokenID string) error {
-	key := "refresh_tokens:" + npk
+func (r *AuthRepository) ValidateAndDelRefreshToken(ctx context.Context, userID int, tokenID string) error {
+	key := fmt.Sprintf("refresh_tokens:%d", userID)
 
 	result, err := r.RDB.SRem(ctx, key, tokenID).Result()
 	if err != nil {
@@ -58,7 +59,7 @@ func (r *AuthRepository) IsTokenBlacklisted(ctx context.Context, tokenID string)
 }
 
 // DELETE REFRESH TOKEN WHEN USER LOG OUT
-func (r *AuthRepository) DeleteAllUserRefreshTokens(ctx context.Context, npk string) error {
-	key := "refresh_tokens:" + npk
+func (r *AuthRepository) DeleteAllUserRefreshTokens(ctx context.Context, userID int) error {
+	key := fmt.Sprintf("refresh_tokens:%d", userID)
 	return r.RDB.Del(ctx, key).Err()
 }

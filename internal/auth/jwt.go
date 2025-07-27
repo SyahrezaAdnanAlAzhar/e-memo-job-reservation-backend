@@ -16,7 +16,7 @@ import (
 type Claims struct {
 	UserID             int     `json:"uid"`
 	UserType           string  `json:"typ"`
-	EmployeeNPK        *string `json:"npk,omitempty"` // Pointer agar bisa null
+	EmployeeNPK        *string `json:"npk,omitempty"`
 	EmployeePositionID int     `json:"pos_id"`
 	TokenID            string  `json:"jti"`
 	jwt.RegisteredClaims

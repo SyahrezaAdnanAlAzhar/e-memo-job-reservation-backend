@@ -28,7 +28,7 @@ func (s *AuthService) Login(ctx context.Context, npk string) (string, string, er
 		if err == sql.ErrNoRows {
 			return "", "", errors.New("invalid npk")
 		}
-		return "", "", err 
+		return "", "", err
 	}
 
 	accessToken, refreshToken, err := auth.GenerateTokens(employee.NPK, employee.EmployeePositionID, s.authRepo)
@@ -39,16 +39,15 @@ func (s *AuthService) Login(ctx context.Context, npk string) (string, string, er
 	return accessToken, refreshToken, nil
 }
 
-
 func (s *AuthService) Logout(ctx context.Context, tokenString string) error {
-	claims, err := auth.ValidateToken(tokenString, false) 
+	claims, err := auth.ValidateToken(tokenString, false)
 	if err != nil {
 		return nil
 	}
 
 	remainingDuration := time.Until(claims.ExpiresAt.Time)
 	if remainingDuration <= 0 {
-		return nil 
+		return nil
 	}
 
 	err = s.authRepo.BlacklistToken(ctx, claims.TokenID, remainingDuration)
@@ -67,7 +66,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenString strin
 
 	err = s.authRepo.ValidateAndDelRefreshToken(ctx, claims.NPK, claims.TokenID)
 	if err != nil {
-		return "", "", err 
+		return "", "", err
 	}
 
 	accessToken, newRefreshToken, err := auth.GenerateTokens(claims.NPK, claims.EmployeePositionID, s.authRepo)
