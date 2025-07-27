@@ -123,11 +123,15 @@ func main() {
 		TicketHandler:              ticketHandler,
 	}
 
+	allRepositories := &router.AllRepositories{
+		PositionPermissionRepo: positionPermissionRepo,
+	}
+
 	// MIDDLEWARE
 	authMiddleware := auth.NewAuthMiddleware(authRepo)
 
 	// SET UP AND RUN SERVER
-	appRouter := router.SetupRouter(allHandlers, authMiddleware)
+	appRouter := router.SetupRouter(allHandlers, allRepositories, authMiddleware)
 
 	log.Println("Starting server on :8080...")
 	appRouter.Run(":8080")
