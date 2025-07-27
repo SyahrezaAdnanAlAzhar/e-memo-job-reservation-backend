@@ -28,14 +28,14 @@ type RefreshRequest struct {
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request, NPK is required"})
 		return
 	}
 
-	accessToken, refreshToken, err := h.Service.Login(c.Request.Context(), req.NPK)
+	accessToken, refreshToken, err := h.Service.LoginByNPK(c.Request.Context(), req.NPK)
 	if err != nil {
-		if err.Error() == "invalid npk" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid NPK"})
+		if err.Error() == "invalid credentials" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid NPK or password"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to login"})

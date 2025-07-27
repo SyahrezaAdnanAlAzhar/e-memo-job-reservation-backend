@@ -29,6 +29,7 @@ func main() {
 
 	// DEPENDENCY INITIALIZATION (WIRING)
 	// REPOSITORY
+	appUserRepo := repository.NewAppUserRepository(db)
 	authRepo := repository.NewAuthRepository(rdb)
 	employeeRepo := repository.NewEmployeeRepository(db)
 	departmentRepo := repository.NewDepartmentRepository(db)
@@ -49,7 +50,7 @@ func main() {
 	rejectedTicketRepo := repository.NewRejectedTicketRepository(db)
 
 	// SERVICE
-	authService := service.NewAuthService(authRepo, employeeRepo)
+	authService := service.NewAuthService(authRepo, appUserRepo)
 	departmentService := service.NewDepartmentService(departmentRepo)
 	areaService := service.NewAreaService(areaRepo)
 	physicalLocationService := service.NewPhysicalLocationService(physicalLocationRepo)
