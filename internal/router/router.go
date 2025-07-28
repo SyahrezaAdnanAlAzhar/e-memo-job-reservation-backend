@@ -170,5 +170,6 @@ func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllRepositor
 		ticketRoutes.GET("/:id", h.TicketHandler.GetTicketByID)
 		ticketRoutes.PUT("/:id", h.TicketHandler.UpdateTicket)
 		ticketRoutes.PUT("/reorder", auth.RequirePermission("TICKET_PRIORITY_MANAGE", r.PositionPermissionRepo), h.TicketHandler.ReorderTickets)
+		ticketRoutes.POST("/:id/action", h.TicketHandler.ExecuteAction)
 	}
 }

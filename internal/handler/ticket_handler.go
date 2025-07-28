@@ -3,10 +3,12 @@ package handler
 import (
 	"database/sql"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/filehandler"
 
 	"github.com/gin-gonic/gin"
 )
@@ -140,4 +142,56 @@ func (h *TicketHandler) ReorderTickets(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Ticket priorities updated successfully"})
+}
+
+// POST /ticket/:id/action
+func (h *TicketHandler) ExecuteAction(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID format"})
+		return
+	}
+	userNPK := c.GetString("user_npk")
+
+	var req dto.ExecuteActionRequest
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
+	}
+
+	var filePath string
+	file, err := c.FormFile("file")
+	if err == nil {
+		savedPath, saveErr := filehandler.SaveFile(c, file)
+		if saveErr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save uploaded file"})
+			return
+		}
+		filePath = savedPath
+	} else if err != http.ErrMissingFile {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file upload", "details": err.Error()})
+		return
+	}
+
+	err = h.workflowService.ExecuteAction(c.Request.Context(), id, userNPK, req, filePath)
+
+	if err != nil {
+		if filePath != "" {
+			os.Remove(filePath)
+		}
+
+		switch err.Error() {
+		case "ticket not found", "user not found", "original requestor not found":
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case "user does not have the required role for this action":
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		case "action not allowed from the current status", "reason is required for this action", "file upload is required for this action":
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to execute action", "details": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Action '" + req.ActionName + "' executed successfully"})
 }
