@@ -8,8 +8,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 )
 
 type ticketWithScore struct {
@@ -86,7 +86,7 @@ func (j *TicketReorderJob) reorderTicketsForDepartment(ctx context.Context, depa
 
 	// UPDATE PRIORITY
 	for newPriority, scoredTicket := range scoredTickets {
-		err := j.ticketRepo.UpdatePriority(ctx, tx, scoredTicket.ID, newPriority+1)
+		err := j.ticketRepo.ForceUpdatePriority(ctx, tx, scoredTicket.ID, newPriority+1)
 		if err != nil {
 			return err
 		}

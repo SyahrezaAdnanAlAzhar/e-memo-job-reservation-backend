@@ -193,6 +193,17 @@ func (r *TicketRepository) UpdatePriority(ctx context.Context, tx *sql.Tx, ticke
 	return result.RowsAffected()
 }
 
+// FORCE REORDER
+func (r *TicketRepository) ForceUpdatePriority(ctx context.Context, tx *sql.Tx, ticketID int, newPriority int) error {
+	query := `
+        UPDATE ticket 
+        SET ticket_priority = $1, version = version + 1, updated_at = NOW()
+        WHERE id = $2`
+	
+	_, err := tx.ExecContext(ctx, query, newPriority, ticketID)
+	return err
+}
+
 // UPDATE TICKET TO FALLBACK STATUS
 func (r *TicketRepository) MoveTicketsToFallbackStatus(ctx context.Context, tx *sql.Tx, sectionIDToDeactivate int, fallbackStatusID int) error {
 	findTicketsQuery := `
