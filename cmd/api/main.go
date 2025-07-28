@@ -8,6 +8,7 @@ import (
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/router"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/websocket"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/database"
 	redisClient "github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/redis"
 
@@ -26,6 +27,9 @@ func main() {
 
 	rdb := redisClient.Connect()
 	defer rdb.Close()
+
+	hub := websocket.NewHub()
+	go hub.Run()
 
 	// DEPENDENCY INITIALIZATION (WIRING)
 	// REPOSITORY
@@ -114,6 +118,8 @@ func main() {
 	})
 
 	// HANDLER
+	wsHandler := handler.NewWebSocketHandler(hub)
+
 	allHandlers := &router.AllHandlers{
 		AuthHandler:                handler.NewAuthHandler(authService),
 		DepartmentHandler:          handler.NewDepartmentHandler(departmentService),
@@ -139,7 +145,7 @@ func main() {
 	authMiddleware := auth.NewAuthMiddleware(authRepo)
 
 	// SET UP AND RUN SERVER
-	appRouter := router.SetupRouter(allHandlers, allRepositories, authMiddleware)
+	appRouter := router.SetupRouter(allHandlers, allRepositories, authMiddleware, wsHandler)
 
 	log.Println("Starting server on :8080...")
 	appRouter.Run(":8080")

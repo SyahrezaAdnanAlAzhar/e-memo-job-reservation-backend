@@ -29,7 +29,7 @@ type AllRepositories struct {
 	PositionPermissionRepo *repository.PositionPermissionRepository
 }
 
-func SetupRouter(h *AllHandlers, r *AllRepositories, authMiddleware *auth.AuthMiddleware) *gin.Engine {
+func SetupRouter(h *AllHandlers, r *AllRepositories, authMiddleware *auth.AuthMiddleware, wsHandler *handler.WebSocketHandler) *gin.Engine {
 	router := gin.Default()
 
 	api := router.Group("/api/e-memo-job-reservation")
@@ -44,6 +44,8 @@ func SetupRouter(h *AllHandlers, r *AllRepositories, authMiddleware *auth.AuthMi
 	private.Use(authMiddleware.JWTMiddleware())
 	{
 		private.POST("/logout", h.AuthHandler.Logout)
+
+		private.GET("/ws", wsHandler.ServeWs)
 
 		setupMasterDataRoutes(private, h, r)
 
