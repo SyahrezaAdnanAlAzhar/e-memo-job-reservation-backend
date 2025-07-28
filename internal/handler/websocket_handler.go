@@ -3,6 +3,8 @@ package handler
 import (
 	"log"
 	"net/http"
+	"os"
+	"strings"
 
 	ws "github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/websocket"
 	"github.com/gin-gonic/gin"
@@ -13,7 +15,16 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		return true
+		allowedOrigins := strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
+
+		origin := r.Header.Get("Origin")
+		for _, allowed := range allowedOrigins {
+			if origin == allowed {
+				return true
+			}
+		}
+		log.Printf("WebSocket connection from origin '%s' rejected", origin)
+		return false
 	},
 }
 
