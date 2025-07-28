@@ -1,17 +1,21 @@
 package dto
 
+import "time"
+
 type CreateTicketRequest struct {
-	DepartmentTargetID  int    `json:"department_target_id" binding:"required,gt=0"`
-	PhysicalLocationID  *int   `json:"physical_location_id"`
-	SpecifiedLocationID *int   `json:"specified_location_id"`
-	Description         string `json:"description" binding:"required"`
+	DepartmentTargetID  int     `json:"department_target_id" binding:"required,gt=0"`
+	PhysicalLocationID  *int    `json:"physical_location_id"`
+	SpecifiedLocationID *int    `json:"specified_location_id"`
+	Description         string  `json:"description" binding:"required"`
+	Deadline            *string `json:"deadline"` // "YYYY-MM-DD"
 }
 
 type UpdateTicketRequest struct {
-	DepartmentTargetID  int    `json:"department_target_id" binding:"required"`
-	Description         string `json:"description" binding:"required"`
-	PhysicalLocationID  *int   `json:"physical_location_id"`
-	SpecifiedLocationID *int   `json:"specified_location_id"`
+	DepartmentTargetID  int     `json:"department_target_id" binding:"required"`
+	Description         string  `json:"description" binding:"required"`
+	PhysicalLocationID  *int    `json:"physical_location_id"`
+	SpecifiedLocationID *int    `json:"specified_location_id"`
+	Deadline            *string `json:"deadline"`
 }
 
 type ReorderTicketsRequest struct {
@@ -35,4 +39,28 @@ type ExecuteActionRequest struct {
 type ReorderTicketItem struct {
 	TicketID int `json:"ticket_id" binding:"required"`
 	Version  int `json:"version" binding:"required"`
+}
+
+type TicketDetailResponse struct {
+	TicketID           int    `json:"ticket_id"`
+	Description        string `json:"description"`
+	DepartmentTargetID int    `json:"department_target_id"`
+	TicketPriority     int    `json:"ticket_priority"`
+	JobPriority        *int   `json:"job_priority"`
+
+	LocationName          *string `json:"location_name"`
+	SpecifiedLocationName *string `json:"specified_location_name"`
+
+	TicketAgeDays *int       `json:"ticket_age_days"`
+	Deadline      *time.Time `json:"deadline"`
+	DaysRemaining *int       `json:"days_remaining"`
+
+	RequestorName       string  `json:"requestor_name"`
+	RequestorDepartment *string `json:"requestor_department"`
+	PicName             *string `json:"pic_name"`
+	PicAreaName         *string `json:"pic_area_name"`
+
+	CurrentStatus *string `json:"current_status"`
+
+	Version int `json:"version"`
 }

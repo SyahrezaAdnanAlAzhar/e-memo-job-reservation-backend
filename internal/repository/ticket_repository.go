@@ -5,8 +5,10 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"time"
+
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 )
 
 type TicketRepository struct {
@@ -66,7 +68,6 @@ func scanToMap(rows *sql.Rows) ([]map[string]interface{}, error) {
 	return results, nil
 }
 
-
 func toNullInt64(val *int) sql.NullInt64 {
 	if val == nil {
 		return sql.NullInt64{Valid: false}
@@ -74,14 +75,26 @@ func toNullInt64(val *int) sql.NullInt64 {
 	return sql.NullInt64{Int64: int64(*val), Valid: true}
 }
 
+// PARSE DEADLINE
+func ParseDeadline(deadlineStr *string) (sql.NullTime, error) {
+	if deadlineStr == nil {
+		return sql.NullTime{Valid: false}, nil
+	}
+	// Format "2006-01-02"
+	t, err := time.Parse("2006-01-02", *deadlineStr)
+	if err != nil {
+		return sql.NullTime{Valid: false}, err
+	}
+	return sql.NullTime{Time: t, Valid: true}, nil
+}
 
 // MAIN
 
 // CREATE TICKET
 func (r *TicketRepository) Create(ctx context.Context, tx *sql.Tx, ticket model.Ticket) (*model.Ticket, error) {
 	query := `
-        INSERT INTO ticket (requestor, department_target_id, physical_location_id, specified_location_id, description, ticket_priority)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO ticket (requestor, department_target_id, physical_location_id, specified_location_id, description, ticket_priority, deadline)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id, created_at, updated_at`
 
 	row := tx.QueryRowContext(ctx, query,
@@ -91,6 +104,7 @@ func (r *TicketRepository) Create(ctx context.Context, tx *sql.Tx, ticket model.
 		ticket.SpecifiedLocationID,
 		ticket.Description,
 		ticket.TicketPriority,
+		ticket.Deadline,
 	)
 
 	var newTicket model.Ticket = ticket
@@ -147,7 +161,6 @@ func (r *TicketRepository) FindByID(id int) (map[string]interface{}, error) {
 	return results[0], nil
 }
 
-
 // GET BY ID AS STRUCT
 func (r *TicketRepository) FindByIDAsStruct(ctx context.Context, id int) (*model.Ticket, error) {
 	query := "SELECT id, requestor_npk, department_target_id, physical_location_id, specified_location_id, description, ticket_priority FROM ticket WHERE id = $1"
@@ -161,23 +174,24 @@ func (r *TicketRepository) FindByIDAsStruct(ctx context.Context, id int) (*model
 	return &t, nil
 }
 
-
 // UPDATE TICKET
 func (r *TicketRepository) Update(ctx context.Context, tx *sql.Tx, id int, req dto.UpdateTicketRequest) error {
 	query := `
         UPDATE ticket 
-        SET department_target_id = $1, description = $2, physical_location_id = $3, specified_location_id = $4, updated_at = NOW()
+        SET department_target_id = $1, description = $2, physical_location_id = $3, specified_location_id = $4, deadline = $5, updated_at = NOW()
         WHERE id = $5`
+
+	deadline, _ := ParseDeadline(req.Deadline)
 
 	_, err := tx.ExecContext(ctx, query,
 		req.DepartmentTargetID,
 		req.Description,
 		toNullInt64(req.PhysicalLocationID),
 		toNullInt64(req.SpecifiedLocationID),
+		deadline,
 		id)
 	return err
 }
-
 
 // REORDER
 func (r *TicketRepository) UpdatePriority(ctx context.Context, tx *sql.Tx, ticketID int, version int, newPriority int) (int64, error) {
@@ -185,7 +199,7 @@ func (r *TicketRepository) UpdatePriority(ctx context.Context, tx *sql.Tx, ticke
         UPDATE ticket 
         SET ticket_priority = $1, version = version + 1, updated_at = NOW()
         WHERE id = $2 AND version = $3`
-	
+
 	result, err := tx.ExecContext(ctx, query, newPriority, ticketID, version)
 	if err != nil {
 		return 0, err
@@ -199,7 +213,7 @@ func (r *TicketRepository) ForceUpdatePriority(ctx context.Context, tx *sql.Tx, 
         UPDATE ticket 
         SET ticket_priority = $1, version = version + 1, updated_at = NOW()
         WHERE id = $2`
-	
+
 	_, err := tx.ExecContext(ctx, query, newPriority, ticketID)
 	return err
 }
@@ -253,7 +267,7 @@ func (r *TicketRepository) MoveTicketsToFallbackStatus(ctx context.Context, tx *
 	for _, ticketID := range ticketIDsToMove {
 		_, err := stmt.ExecContext(ctx, ticketID, fallbackStatusID)
 		if err != nil {
-			return err 
+			return err
 		}
 	}
 

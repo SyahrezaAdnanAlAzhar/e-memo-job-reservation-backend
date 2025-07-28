@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
@@ -59,6 +60,11 @@ func (s *TicketCommandService) CreateTicket(ctx context.Context, req dto.CreateT
 		return nil, err
 	}
 
+	deadline, err := repository.ParseDeadline(req.Deadline)
+	if err != nil {
+		return nil, errors.New("invalid deadline format, please use YYYY-MM-DD")
+	}
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -78,6 +84,7 @@ func (s *TicketCommandService) CreateTicket(ctx context.Context, req dto.CreateT
 		SpecifiedLocationID: toNullInt64(req.SpecifiedLocationID),
 		Description:         req.Description,
 		TicketPriority:      lastPriority,
+		Deadline:            deadline,
 	}
 
 	// INSERT DATA TO TICKET TABLE
@@ -103,7 +110,7 @@ func (s *TicketCommandService) CreateTicket(ctx context.Context, req dto.CreateT
 		return nil, err
 	}
 
-	return createdTicket, nil
+	return createdTicket, err
 }
 
 // UPDATE TICKET
@@ -151,6 +158,12 @@ func (s *TicketCommandService) UpdateTicket(ctx context.Context, ticketID int, r
 
 	if !canEdit {
 		return errors.New("ticket cannot be edited in its current state")
+	}
+
+	if req.Deadline != nil {
+		if _, err := time.Parse("2006-01-02", *req.Deadline); err != nil {
+			return errors.New("invalid deadline format, please use YYYY-MM-DD")
+		}
 	}
 
 	// EXECUTE UPDATE

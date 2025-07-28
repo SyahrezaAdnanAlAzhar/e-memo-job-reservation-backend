@@ -15,6 +15,7 @@ type Ticket struct {
 	TicketPriority      int           `json:"ticket_priority"`
 	SupportFile         []string      `json:"support_file"`
 	Version             int           `json:"version"`
+	Deadline            sql.NullTime  `json:"deadline"`
 	CreatedAt           time.Time     `json:"created_at"`
 	UpdatedAt           time.Time     `json:"updated_at"`
 }
