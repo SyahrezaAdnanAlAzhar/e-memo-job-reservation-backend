@@ -4,22 +4,27 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/websocket"
+	"github.com/gin-gonic/gin"
 )
 
 type JobService struct {
 	jobRepo      *repository.JobRepository
 	employeeRepo *repository.EmployeeRepository
 	db           *sql.DB
+	hub          *websocket.Hub
 }
 
-func NewJobService(jobRepo *repository.JobRepository, employeeRepo *repository.EmployeeRepository, db *sql.DB) *JobService {
+func NewJobService(jobRepo *repository.JobRepository, employeeRepo *repository.EmployeeRepository, db *sql.DB, hub *websocket.Hub) *JobService {
 	return &JobService{
 		jobRepo:      jobRepo,
 		employeeRepo: employeeRepo,
 		db:           db,
+		hub:          hub,
 	}
 }
 
@@ -82,17 +87,28 @@ func (s *JobService) ReorderJobs(ctx context.Context, req dto.ReorderJobsRequest
 	for i, item := range req.Items {
 		newPriority := i + 1
 
-		rowsAffected, err := s.jobRepo.UpdatePriority(ctx, tx, item.JobID, item.Version, newPriority)
-		if err != nil {
+		rowsAffected, _ := s.jobRepo.UpdatePriority(ctx, tx, item.JobID, item.Version, newPriority)
+		if err := tx.Commit(); err != nil {
 			return err
 		}
 
 		if rowsAffected == 0 {
 			return errors.New("data conflict: job has been modified by another user, please refresh")
 		}
+
+		payload := gin.H{
+			"department_target_id": req.DepartmentTargetID,
+			"message":              "Job priorities have been updated.",
+		}
+		message, err := websocket.NewMessage("JOB_PRIORITY_UPDATED", payload)
+		if err != nil {
+			log.Printf("CRITICAL: Failed to create websocket message for job reorder: %v", err)
+		} else {
+			s.hub.BroadcastMessage(message)
+		}
 	}
 
-	return tx.Commit()
+	return nil
 }
 
 // Helper function

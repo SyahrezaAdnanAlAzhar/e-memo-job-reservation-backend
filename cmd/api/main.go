@@ -65,7 +65,7 @@ func main() {
 	accessPermissionService := service.NewAccessPermissionService(accessPermissionRepo)
 	sectionStatusTicketService := service.NewSectionStatusTicketService(sectionStatusTicketRepo, statusTicketRepo, ticketRepo, db)
 	statusTicketService := service.NewStatusTicketService(statusTicketRepo)
-	jobService := service.NewJobService(jobRepo, employeeRepo, db)
+	jobService := service.NewJobService(jobRepo, employeeRepo, db, hub)
 	positionPermissionService := service.NewPositionPermissionService(positionPermissionRepo)
 	workflowService := service.NewWorkflowService(workflowRepo, workflowStepRepo, db)
 	specifiedLocationService := service.NewSpecifiedLocationService(specifiedLocationRepo)
@@ -108,7 +108,7 @@ func main() {
 		TicketActionLogRepo:   ticketActionLogRepo,
 	})
 
-	ticketPriorityService := service.NewTicketPriorityService(db, ticketRepo, employeeRepo)
+	ticketPriorityService := service.NewTicketPriorityService(db, hub, ticketRepo, employeeRepo)
 
 	ticketHandler := handler.NewTicketHandler(&handler.TicketHandlerConfig{
 		QueryService:    ticketQueryService,
