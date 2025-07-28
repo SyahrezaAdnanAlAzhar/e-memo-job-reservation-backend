@@ -22,6 +22,7 @@ type AllHandlers struct {
 	WorkflowHandler            *handler.WorkflowHandler
 	SpecifiedLocationHandler   *handler.SpecifiedLocationHandler
 	RejectedTicketHandler      *handler.RejectedTicketHandler
+	JobHandler                 *handler.JobHandler
 }
 
 type AllRepositories struct {
@@ -171,5 +172,11 @@ func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllRepositor
 		ticketRoutes.PUT("/:id", h.TicketHandler.UpdateTicket)
 		ticketRoutes.PUT("/reorder", auth.RequirePermission("TICKET_PRIORITY_MANAGE", r.PositionPermissionRepo), h.TicketHandler.ReorderTickets)
 		ticketRoutes.POST("/:id/action", h.TicketHandler.ExecuteAction)
+	}
+
+	jobRoutes := group.Group("/job")
+	{
+		jobRoutes.PUT("/:id/assign", auth.RequirePermission("JOB_ASSIGN_PIC", r.PositionPermissionRepo), h.JobHandler.AssignPIC)
+		jobRoutes.PUT("/reorder", auth.RequirePermission("JOB_PRIORITY_MANAGE", r.PositionPermissionRepo), h.JobHandler.ReorderJobs)
 	}
 }

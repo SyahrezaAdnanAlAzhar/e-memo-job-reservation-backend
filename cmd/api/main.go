@@ -61,6 +61,7 @@ func main() {
 	accessPermissionService := service.NewAccessPermissionService(accessPermissionRepo)
 	sectionStatusTicketService := service.NewSectionStatusTicketService(sectionStatusTicketRepo, statusTicketRepo, ticketRepo, db)
 	statusTicketService := service.NewStatusTicketService(statusTicketRepo)
+	jobService := service.NewJobService(jobRepo, employeeRepo, db)
 	positionPermissionService := service.NewPositionPermissionService(positionPermissionRepo)
 	workflowService := service.NewWorkflowService(workflowRepo, workflowStepRepo, db)
 	specifiedLocationService := service.NewSpecifiedLocationService(specifiedLocationRepo)
@@ -126,6 +127,7 @@ func main() {
 		WorkflowHandler:            handler.NewWorkflowHandler(workflowService),
 		SpecifiedLocationHandler:   handler.NewSpecifiedLocationHandler(specifiedLocationService),
 		RejectedTicketHandler:      handler.NewRejectedTicketHandler(rejectedTicketService),
+		JobHandler:                 handler.NewJobHandler(jobService),
 		TicketHandler:              ticketHandler,
 	}
 
