@@ -97,10 +97,18 @@ func (r *JobRepository) AssignPIC(id int, picNpk string) error {
 }
 
 // UpdatePriority
-func (r *JobRepository) UpdatePriority(ctx context.Context, tx *sql.Tx, jobID int, newPriority int) error {
-	query := "UPDATE job SET job_priority = $1, updated_at = NOW() WHERE id = $2"
-	_, err := tx.ExecContext(ctx, query, newPriority, jobID)
-	return err
+func (r *JobRepository) UpdatePriority(ctx context.Context, tx *sql.Tx, jobID int, version int, newPriority int) (int64, error) {
+	query := `
+        UPDATE job 
+        SET job_priority = $1, version = version + 1, updated_at = NOW()
+        WHERE id = $2 AND version = $3`
+
+	result, err := tx.ExecContext(ctx, query, newPriority, jobID, version)
+	if err != nil {
+		return 0, err
+	}
+
+	return result.RowsAffected()
 }
 
 // CheckJobsInDepartment

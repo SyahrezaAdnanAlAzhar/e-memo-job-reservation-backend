@@ -104,7 +104,7 @@ func main() {
 		TicketActionLogRepo:   ticketActionLogRepo,
 	})
 
-	ticketPriorityService := service.NewTicketPriorityService(db, ticketRepo)
+	ticketPriorityService := service.NewTicketPriorityService(db, ticketRepo, employeeRepo)
 
 	ticketHandler := handler.NewTicketHandler(&handler.TicketHandlerConfig{
 		QueryService:    ticketQueryService,

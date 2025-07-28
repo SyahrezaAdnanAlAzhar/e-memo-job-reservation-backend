@@ -15,8 +15,8 @@ type UpdateTicketRequest struct {
 }
 
 type ReorderTicketsRequest struct {
-	DepartmentTargetID int   `json:"department_target_id" binding:"required"`
-	OrderedTicketIDs   []int `json:"ordered_ticket_ids" binding:"required"`
+	DepartmentTargetID int                 `json:"department_target_id" binding:"required"`
+	Items              []ReorderTicketItem `json:"items" binding:"required,min=1"`
 }
 
 type ChangeTicketStatusRequest struct {
@@ -30,4 +30,9 @@ type RejectTicketRequest struct {
 type ExecuteActionRequest struct {
 	ActionName string `json:"action_name" binding:"required"`
 	Reason     string `json:"reason"`
+}
+
+type ReorderTicketItem struct {
+	TicketID int `json:"ticket_id" binding:"required"`
+	Version  int `json:"version" binding:"required"`
 }

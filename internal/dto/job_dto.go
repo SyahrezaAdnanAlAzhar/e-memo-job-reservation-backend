@@ -5,6 +5,11 @@ type AssignPICRequest struct {
 }
 
 type ReorderJobsRequest struct {
-	DepartmentTargetID int   `json:"department_target_id" binding:"required"`
-	OrderedJobIDs      []int `json:"ordered_job_ids" binding:"required"`
+	DepartmentTargetID int              `json:"department_target_id" binding:"required"`
+	Items              []ReorderJobItem `json:"items" binding:"required,min=1"`
+}
+
+type ReorderJobItem struct {
+	JobID   int `json:"job_id" binding:"required"`
+	Version int `json:"version" binding:"required"`
 }

@@ -180,10 +180,17 @@ func (r *TicketRepository) Update(ctx context.Context, tx *sql.Tx, id int, req d
 
 
 // REORDER
-func (r *TicketRepository) UpdatePriority(ctx context.Context, tx *sql.Tx, ticketID int, newPriority int) error {
-	query := "UPDATE ticket SET ticket_priority = $1 WHERE id = $2"
-	_, err := tx.ExecContext(ctx, query, newPriority, ticketID)
-	return err
+func (r *TicketRepository) UpdatePriority(ctx context.Context, tx *sql.Tx, ticketID int, version int, newPriority int) (int64, error) {
+	query := `
+        UPDATE ticket 
+        SET ticket_priority = $1, version = version + 1, updated_at = NOW()
+        WHERE id = $2 AND version = $3`
+	
+	result, err := tx.ExecContext(ctx, query, newPriority, ticketID, version)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 // UPDATE TICKET TO FALLBACK STATUS
