@@ -44,10 +44,18 @@ func (h *WebSocketHandler) ServeWs(c *gin.Context) {
 		return
 	}
 
+	userID, exists := c.Get("user_id")
+	if !exists {
+		log.Println("Error: user_id not found in context for WebSocket connection")
+		conn.Close()
+		return
+	}
+
 	client := &ws.Client{
-		Hub:  h.hub,
-		Conn: conn,
-		Send: make(chan []byte, 256),
+		Hub:    h.hub,
+		Conn:   conn,
+		Send:   make(chan []byte, 256),
+		UserID: userID.(int),
 	}
 	client.Hub.Register <- client
 

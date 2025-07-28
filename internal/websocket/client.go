@@ -8,14 +8,15 @@ import (
 )
 
 const (
-	pongWait = 60 * time.Second
+	pongWait   = 60 * time.Second
 	pingPeriod = (pongWait * 9) / 10
 )
 
 type Client struct {
-	Hub  *Hub
-	Conn *websocket.Conn
-	Send chan []byte 
+	Hub    *Hub
+	Conn   *websocket.Conn
+	Send   chan []byte
+	UserID int
 }
 
 // SEND MESSAGE FROM WEBSOCKET CONNECTION TO HUB
@@ -28,13 +29,14 @@ func (c *Client) ReadPump() {
 	c.Conn.SetPongHandler(func(string) error { c.Conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 
 	for {
-		_, _, err := c.Conn.ReadMessage()
+		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
 			break
 		}
+		c.Hub.incomingMessages <- clientMessage{client: c, message: message}
 	}
 }
 
