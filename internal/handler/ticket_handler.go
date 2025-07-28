@@ -36,7 +36,7 @@ func NewTicketHandler(cfg *TicketHandlerConfig) *TicketHandler {
 	}
 }
 
-// POST /ticket
+// POST /tickets
 func (h *TicketHandler) CreateTicket(c *gin.Context) {
 	var req dto.CreateTicketRequest
 
@@ -144,7 +144,7 @@ func (h *TicketHandler) ReorderTickets(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Ticket priorities updated successfully"})
 }
 
-// POST /ticket/:id/action
+// POST /tickets/:id/action
 func (h *TicketHandler) ExecuteAction(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

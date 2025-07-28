@@ -17,7 +17,7 @@ func NewJobHandler(service *service.JobService) *JobHandler {
 	return &JobHandler{service: service}
 }
 
-// PUT /job/:id/assign
+// PUT /jobs/:id/assign
 func (h *JobHandler) AssignPIC(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -50,7 +50,7 @@ func (h *JobHandler) AssignPIC(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "PIC assigned successfully"})
 }
 
-//PUT /job/reorder
+// PUT /jobs/reorder
 func (h *JobHandler) ReorderJobs(c *gin.Context) {
 	userNPK := c.GetString("user_npk")
 

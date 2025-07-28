@@ -166,7 +166,7 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllReposit
 
 // MAIN TICKET
 func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllRepositories) {
-	ticketRoutes := group.Group("/ticket")
+	ticketRoutes := group.Group("/tickets")
 	{
 		ticketRoutes.POST("", h.TicketHandler.CreateTicket)
 		ticketRoutes.GET("", h.TicketHandler.GetAllTickets)
@@ -176,7 +176,7 @@ func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllRepositor
 		ticketRoutes.POST("/:id/action", h.TicketHandler.ExecuteAction)
 	}
 
-	jobRoutes := group.Group("/job")
+	jobRoutes := group.Group("/jobs")
 	{
 		jobRoutes.PUT("/:id/assign", auth.RequirePermission("JOB_ASSIGN_PIC", r.PositionPermissionRepo), h.JobHandler.AssignPIC)
 		jobRoutes.PUT("/reorder", auth.RequirePermission("JOB_PRIORITY_MANAGE", r.PositionPermissionRepo), h.JobHandler.ReorderJobs)
