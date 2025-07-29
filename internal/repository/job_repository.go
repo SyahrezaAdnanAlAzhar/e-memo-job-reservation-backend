@@ -123,3 +123,13 @@ func (r *JobRepository) CheckJobsInDepartment(jobIDs []int, departmentID int) (i
 	err := r.DB.QueryRow(query, pq.Array(jobIDs), departmentID).Scan(&count)
 	return count, err
 }
+
+func (r *JobRepository) ForceUpdatePriority(ctx context.Context, tx *sql.Tx, jobID int, newPriority int) error {
+	query := `
+        UPDATE job 
+        SET job_priority = $1, version = version + 1, updated_at = NOW()
+        WHERE id = $2`
+
+	_, err := tx.ExecContext(ctx, query, newPriority, jobID)
+	return err
+}

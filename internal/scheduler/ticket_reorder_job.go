@@ -75,7 +75,11 @@ func (j *TicketReorderJob) reorderTicketsForDepartment(ctx context.Context, depa
 		ageWeight := calculateAgeWeight(ageInDays)
 		priorityWeight := 2.0 / float64(ticket.TicketPriority)
 
-		score := (ageInDays * ageWeight) + priorityWeight
+		// DEADLINE WEIGHT
+		deadlineWeight := calculateDeadlineWeight(ticket.Deadline)
+
+		score := (ageInDays * ageWeight * 1.0) + (priorityWeight * 1.5) + (deadlineWeight * 2.0)
+
 		scoredTickets[i] = ticketWithScore{ID: ticket.ID, Score: score}
 	}
 
@@ -109,6 +113,26 @@ func calculateAgeWeight(days float64) float64 {
 	return math.Sqrt(days) * 0.5
 }
 
+func calculateDeadlineWeight(deadline sql.NullTime) float64 {
+	if !deadline.Valid {
+		return 10.0
+	}
+
+	daysRemaining := deadline.Time.Sub(time.Now()).Hours() / 24
+
+	const steepnessFactor = 3.0
+	const baseScore = 100.0
+	const minScore = 5.0
+
+	if daysRemaining >= 0 {
+		weight := (baseScore-minScore)*math.Exp(-daysRemaining/steepnessFactor) + minScore
+		return weight
+	} else {
+		const penaltyPerDay = 15.0
+		return baseScore + (-daysRemaining * penaltyPerDay)
+	}
+}
+
 // HELPER
 
 // GET ACTIVE TARGET DEPARMENT
@@ -133,12 +157,15 @@ func (j *TicketReorderJob) getActiveTargetDepartments(ctx context.Context) ([]in
 // GET ALL TICKET ACTIVE FROM SELECTED TARGET DEPARTMENT
 func (j *TicketReorderJob) getActiveTicketsByDepartment(ctx context.Context, tx *sql.Tx, departmentID int) ([]model.Ticket, error) {
 	query := `
-        SELECT t.id, t.created_at, t.ticket_priority 
+        SELECT t.id, t.created_at, t.ticket_priority, t.deadline
         FROM ticket t
         WHERE t.department_target_id = $1
-        AND NOT EXISTS (
+        AND EXISTS (
             SELECT 1 FROM track_status_ticket tst
-            WHERE tst.ticket_id = t.id AND tst.status_ticket_id IN (1, 7)
+            JOIN status_ticket st ON tst.status_ticket_id = st.id
+            WHERE tst.ticket_id = t.id 
+            AND tst.finish_date IS NULL
+            AND st.name IN ('Menunggu Job', 'Dikerjakan')
         )`
 
 	rows, err := tx.QueryContext(ctx, query, departmentID)
@@ -150,7 +177,7 @@ func (j *TicketReorderJob) getActiveTicketsByDepartment(ctx context.Context, tx 
 	var tickets []model.Ticket
 	for rows.Next() {
 		var t model.Ticket
-		if err := rows.Scan(&t.ID, &t.CreatedAt, &t.TicketPriority); err != nil {
+		if err := rows.Scan(&t.ID, &t.CreatedAt, &t.TicketPriority, &t.Deadline); err != nil {
 			return nil, err
 		}
 		tickets = append(tickets, t)

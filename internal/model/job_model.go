@@ -17,4 +17,5 @@ type Job struct {
 	Version              int            `json:"version"`
 	CreatedAt            time.Time      `json:"created_at"`
 	UpdatedAt            time.Time      `json:"updated_at"`
+	Ticket               Ticket         `json:"ticket,omitempty"`
 }
