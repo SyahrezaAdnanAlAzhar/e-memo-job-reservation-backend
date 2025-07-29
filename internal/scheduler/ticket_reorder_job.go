@@ -118,7 +118,7 @@ func calculateDeadlineWeight(deadline sql.NullTime) float64 {
 		return 10.0
 	}
 
-	daysRemaining := deadline.Time.Sub(time.Now()).Hours() / 24
+	daysRemaining := time.Until(deadline.Time).Hours() / 24
 
 	const steepnessFactor = 3.0
 	const baseScore = 100.0
