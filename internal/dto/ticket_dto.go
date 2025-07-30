@@ -42,25 +42,38 @@ type ReorderTicketItem struct {
 }
 
 type TicketDetailResponse struct {
-	TicketID           int    `json:"ticket_id"`
-	Description        string `json:"description"`
-	DepartmentTargetID int    `json:"department_target_id"`
-	TicketPriority     int    `json:"ticket_priority"`
-	JobPriority        *int   `json:"job_priority"`
+	// CORE INFORMATION
+	TicketID           int        `json:"ticket_id"`
+	Description        string     `json:"description"`
+	TicketPriority     int        `json:"ticket_priority"`
+	Version            int        `json:"version"`
+	
+	// DEPARTMENT INFORMATION
+	DepartmentTargetID int        `json:"department_target_id"`
+	DepartmentTargetName string   `json:"department_target_name"`
 
-	LocationName          *string `json:"location_name"`
-	SpecifiedLocationName *string `json:"specified_location_name"`
+	// JOB INFOMATION
+	JobID                *int       `json:"job_id"`
+	JobPriority          *int       `json:"job_priority"`
+	
+	// LOCATION INFORMATION
+	LocationName          *string    `json:"location_name"`
+	SpecifiedLocationName *string    `json:"specified_location_name"`
 
-	TicketAgeDays *int       `json:"ticket_age_days"`
-	Deadline      *time.Time `json:"deadline"`
-	DaysRemaining *int       `json:"days_remaining"`
+	// TIME INFORMATION
+	CreatedAt             time.Time  `json:"created_at"`
+	TicketAgeDays         *int       `json:"ticket_age_days"`
+	Deadline              *time.Time `json:"deadline"`
+	DaysRemaining         *int       `json:"days_remaining"`
 
-	RequestorName       string  `json:"requestor_name"`
-	RequestorDepartment *string `json:"requestor_department"`
-	PicName             *string `json:"pic_name"`
-	PicAreaName         *string `json:"pic_area_name"`
+	// PEOPLE INFORMATION
+	RequestorName         string     `json:"requestor_name"`
+	RequestorDepartment   *string    `json:"requestor_department"`
+	PicName               *string    `json:"pic_name"`
+	PicAreaName           *string    `json:"pic_area_name"`
 
-	CurrentStatus *string `json:"current_status"`
-
-	Version int `json:"version"`
+	// STATUS IFNORMATION
+	CurrentStatus         *string    `json:"current_status"`
+	CurrentStatusHexCode  *string    `json:"current_status_hex_code"`
+	CurrentSectionName    *string    `json:"current_section_name"`
 }

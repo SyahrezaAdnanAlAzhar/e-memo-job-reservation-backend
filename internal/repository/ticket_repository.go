@@ -3,8 +3,6 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
@@ -20,74 +18,46 @@ func NewTicketRepository(db *sql.DB) *TicketRepository {
 	return &TicketRepository{DB: db}
 }
 
-// HELPER
-
-// GET LAST PRIORITY
-func (r *TicketRepository) GetLastPriority(ctx context.Context, tx *sql.Tx, departmentTargetID int) (int, error) {
-	var lastPriority sql.NullInt64
-	query := "SELECT MAX(ticket_priority) FROM ticket WHERE department_target_id = $1"
-	err := tx.QueryRowContext(ctx, query, departmentTargetID).Scan(&lastPriority)
-	if err != nil && err != sql.ErrNoRows {
-		return 0, err
-	}
-	if !lastPriority.Valid {
-		return 1, nil
-	}
-	return int(lastPriority.Int64) + 1, nil
-}
-
-// SCAN TO MAP
-func scanToMap(rows *sql.Rows) ([]map[string]interface{}, error) {
-	columns, err := rows.Columns()
-	if err != nil {
-		return nil, err
-	}
-
-	var results []map[string]interface{}
-	for rows.Next() {
-		values := make([]interface{}, len(columns))
-		valuePtrs := make([]interface{}, len(columns))
-		for i := range columns {
-			valuePtrs[i] = &values[i]
-		}
-
-		if err := rows.Scan(valuePtrs...); err != nil {
-			return nil, err
-		}
-
-		rowData := make(map[string]interface{})
-		for i, col := range columns {
-			val := values[i]
-			if b, ok := val.([]byte); ok {
-				rowData[col] = string(b)
-			} else {
-				rowData[col] = val
-			}
-		}
-		results = append(results, rowData)
-	}
-	return results, nil
-}
-
-func toNullInt64(val *int) sql.NullInt64 {
-	if val == nil {
-		return sql.NullInt64{Valid: false}
-	}
-	return sql.NullInt64{Int64: int64(*val), Valid: true}
-}
-
-// PARSE DEADLINE
-func ParseDeadline(deadlineStr *string) (sql.NullTime, error) {
-	if deadlineStr == nil {
-		return sql.NullTime{Valid: false}, nil
-	}
-	// Format "2006-01-02"
-	t, err := time.Parse("2006-01-02", *deadlineStr)
-	if err != nil {
-		return sql.NullTime{Valid: false}, err
-	}
-	return sql.NullTime{Time: t, Valid: true}, nil
-}
+const baseTicketQuery = `
+    SELECT
+        t.id,
+        t.description,
+        t.department_target_id,
+        dt.name as department_target_name,
+        t.ticket_priority,
+        t.version,
+        j.id as job_id,
+        j.job_priority,
+        pl.name as location_name,
+        sl.name as specified_location_name,
+        t.created_at,
+        (NOW()::date - t.created_at::date) as ticket_age_days,
+        t.deadline,
+        (t.deadline::date - NOW()::date) as days_remaining,
+        req_emp.name as requestor_name,
+        req_dept.name as requestor_department,
+        pic_emp.name as pic_name,
+        pic_area.name as pic_area_name,
+        current_st.name as current_status,
+        current_st.hex_color as current_status_hex_code,
+        current_sst.name as current_section_name
+    FROM ticket t
+    LEFT JOIN job j ON t.id = j.ticket_id
+    LEFT JOIN department dt ON t.department_target_id = dt.id
+    LEFT JOIN physical_location pl ON t.physical_location_id = pl.id
+    LEFT JOIN specified_location sl ON t.specified_location_id = sl.id
+    JOIN employee req_emp ON t.requestor = req_emp.npk
+    LEFT JOIN department req_dept ON req_emp.department_id = req_dept.id
+    LEFT JOIN employee pic_emp ON j.pic_job = pic_emp.npk
+    LEFT JOIN area pic_area ON pic_emp.area_id = pic_area.id
+    LEFT JOIN (
+        SELECT DISTINCT ON (ticket_id) ticket_id, status_ticket_id
+        FROM track_status_ticket
+        ORDER BY ticket_id, start_date DESC
+    ) current_tst ON t.id = current_tst.ticket_id
+    LEFT JOIN status_ticket current_st ON current_tst.status_ticket_id = current_st.id
+    LEFT JOIN section_status_ticket current_sst ON current_st.section_id = current_sst.id
+`
 
 // MAIN
 
@@ -117,49 +87,37 @@ func (r *TicketRepository) Create(ctx context.Context, tx *sql.Tx, ticket model.
 }
 
 // GET ALL
-func (r *TicketRepository) FindAll(filters map[string]string) ([]map[string]interface{}, error) {
-	baseQuery := "SELECT * FROM view_ticket_list"
-	var conditions []string
-	var args []interface{}
-	argID := 1
+func (r *TicketRepository) FindAll() ([]dto.TicketDetailResponse, error) {
+	// Untuk saat ini, kita hanya menjalankan query dasar tanpa filter.
+	// Nanti kita akan tambahkan logika WHERE dan ORDER BY di sini.
+	query := baseTicketQuery + " ORDER BY t.ticket_priority ASC"
 
-	for key, val := range filters {
-		conditions = append(conditions, fmt.Sprintf("%s = $%d", key, argID))
-		args = append(args, val)
-		argID++
-	}
-
-	if len(conditions) > 0 {
-		baseQuery += " WHERE " + strings.Join(conditions, " AND ")
-	}
-	baseQuery += " ORDER BY ticket_priority ASC"
-
-	rows, err := r.DB.Query(baseQuery, args...)
+	rows, err := r.DB.Query(query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	return scanToMap(rows)
+	return scanTicketDetails(rows)
 }
 
 // GET BY ID
-func (r *TicketRepository) FindByID(id int) (map[string]interface{}, error) {
-	query := "SELECT * FROM view_ticket_list WHERE ticket_id = $1"
+func (r *TicketRepository) FindByID(id int) (*dto.TicketDetailResponse, error) {
+	query := baseTicketQuery + " WHERE t.id = $1"
 	rows, err := r.DB.Query(query, id)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	results, err := scanToMap(rows)
+	tickets, err := scanTicketDetails(rows)
 	if err != nil {
 		return nil, err
 	}
-	if len(results) == 0 {
+	if len(tickets) == 0 {
 		return nil, sql.ErrNoRows
 	}
-	return results[0], nil
+	return &tickets[0], nil
 }
 
 // GET BY ID AS STRUCT
@@ -289,4 +247,109 @@ func (r *TicketRepository) CheckTicketsFromDepartment(ticketIDs []int, requestor
 	var count int
 	err := r.DB.QueryRow(query, pq.Array(ticketIDs), requestorDepartmentID).Scan(&count)
 	return count, err
+}
+
+// HELPER
+
+// GET LAST PRIORITY
+func (r *TicketRepository) GetLastPriority(ctx context.Context, tx *sql.Tx, departmentTargetID int) (int, error) {
+	var lastPriority sql.NullInt64
+	query := "SELECT MAX(ticket_priority) FROM ticket WHERE department_target_id = $1"
+	err := tx.QueryRowContext(ctx, query, departmentTargetID).Scan(&lastPriority)
+	if err != nil && err != sql.ErrNoRows {
+		return 0, err
+	}
+	if !lastPriority.Valid {
+		return 1, nil
+	}
+	return int(lastPriority.Int64) + 1, nil
+}
+
+// SCAN TO MAP
+func scanToMap(rows *sql.Rows) ([]map[string]interface{}, error) {
+	columns, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
+
+	var results []map[string]interface{}
+	for rows.Next() {
+		values := make([]interface{}, len(columns))
+		valuePtrs := make([]interface{}, len(columns))
+		for i := range columns {
+			valuePtrs[i] = &values[i]
+		}
+
+		if err := rows.Scan(valuePtrs...); err != nil {
+			return nil, err
+		}
+
+		rowData := make(map[string]interface{})
+		for i, col := range columns {
+			val := values[i]
+			if b, ok := val.([]byte); ok {
+				rowData[col] = string(b)
+			} else {
+				rowData[col] = val
+			}
+		}
+		results = append(results, rowData)
+	}
+	return results, nil
+}
+
+func toNullInt64(val *int) sql.NullInt64 {
+	if val == nil {
+		return sql.NullInt64{Valid: false}
+	}
+	return sql.NullInt64{Int64: int64(*val), Valid: true}
+}
+
+// PARSE DEADLINE
+func ParseDeadline(deadlineStr *string) (sql.NullTime, error) {
+	if deadlineStr == nil {
+		return sql.NullTime{Valid: false}, nil
+	}
+	// Format "2006-01-02"
+	t, err := time.Parse("2006-01-02", *deadlineStr)
+	if err != nil {
+		return sql.NullTime{Valid: false}, err
+	}
+	return sql.NullTime{Time: t, Valid: true}, nil
+}
+
+// QUERY MAPPING
+func scanTicketDetails(rows *sql.Rows) ([]dto.TicketDetailResponse, error) {
+	var tickets []dto.TicketDetailResponse
+	for rows.Next() {
+		var t dto.TicketDetailResponse
+		err := rows.Scan(
+			&t.TicketID,
+			&t.Description,
+			&t.DepartmentTargetID,
+			&t.DepartmentTargetName,
+			&t.TicketPriority,
+			&t.Version,
+			&t.JobID,
+			&t.JobPriority,
+			&t.LocationName,
+			&t.SpecifiedLocationName,
+			&t.CreatedAt,
+			&t.TicketAgeDays,
+			&t.Deadline,
+			&t.DaysRemaining,
+			&t.RequestorName,
+			&t.RequestorDepartment,
+			&t.PicName,
+			&t.PicAreaName,
+			&t.CurrentStatus,
+			&t.CurrentStatusHexCode,
+			&t.CurrentSectionName,
+		)
+		if err != nil {
+			return nil, err
+		}
+		tickets = append(tickets, t)
+	}
+	return tickets, nil
 }
