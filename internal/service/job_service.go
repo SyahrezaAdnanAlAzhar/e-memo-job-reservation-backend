@@ -65,12 +65,16 @@ func (s *JobService) ReorderJobs(ctx context.Context, req dto.ReorderJobsRequest
 	if err != nil {
 		return errors.New("action performer not found")
 	}
-
 	if user.DepartmentID != req.DepartmentTargetID {
 		return errors.New("user can only reorder jobs within their own department")
 	}
 
-	validJobCount, err := s.jobRepo.CheckJobsInDepartment(getJobIDsFromItems(req.Items), req.DepartmentTargetID)
+	jobIDs := make([]int, len(req.Items))
+	for i, item := range req.Items {
+		jobIDs[i] = item.JobID
+	}
+
+	validJobCount, err := s.jobRepo.CheckJobsInDepartment(jobIDs, req.DepartmentTargetID)
 	if err != nil {
 		return err
 	}
@@ -86,36 +90,29 @@ func (s *JobService) ReorderJobs(ctx context.Context, req dto.ReorderJobsRequest
 
 	for i, item := range req.Items {
 		newPriority := i + 1
-
-		rowsAffected, _ := s.jobRepo.UpdatePriority(ctx, tx, item.JobID, item.Version, newPriority)
-		if err := tx.Commit(); err != nil {
+		rowsAffected, err := s.jobRepo.UpdatePriority(ctx, tx, item.JobID, item.Version, newPriority)
+		if err != nil {
 			return err
 		}
-
 		if rowsAffected == 0 {
 			return errors.New("data conflict: job has been modified by another user, please refresh")
 		}
+	}
 
-		payload := gin.H{
-			"department_target_id": req.DepartmentTargetID,
-			"message":              "Job priorities have been updated.",
-		}
-		message, err := websocket.NewMessage("JOB_PRIORITY_UPDATED", payload)
-		if err != nil {
-			log.Printf("CRITICAL: Failed to create websocket message for job reorder: %v", err)
-		} else {
-			s.hub.BroadcastMessage(message)
-		}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	payload := gin.H{
+		"department_target_id": req.DepartmentTargetID,
+		"message":              "Job priorities have been updated.",
+	}
+	message, err := websocket.NewMessage("JOB_PRIORITY_UPDATED", payload)
+	if err != nil {
+		log.Printf("CRITICAL: Failed to create websocket message for job reorder: %v", err)
+	} else {
+		s.hub.BroadcastMessage(message)
 	}
 
 	return nil
-}
-
-// Helper function
-func getJobIDsFromItems(items []dto.ReorderJobItem) []int {
-	ids := make([]int, len(items))
-	for i, item := range items {
-		ids[i] = item.JobID
-	}
-	return ids
 }

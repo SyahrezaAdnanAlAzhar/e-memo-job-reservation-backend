@@ -9,6 +9,7 @@ import (
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"github.com/lib/pq"
 )
 
 type TicketRepository struct {
@@ -272,4 +273,20 @@ func (r *TicketRepository) MoveTicketsToFallbackStatus(ctx context.Context, tx *
 	}
 
 	return nil
+}
+
+func (r *TicketRepository) CheckTicketsFromDepartment(ticketIDs []int, requestorDepartmentID int) (int, error) {
+	if len(ticketIDs) == 0 {
+		return 0, nil
+	}
+
+	query := `
+        SELECT COUNT(t.id) 
+        FROM ticket t
+        JOIN employee e ON t.requestor_npk = e.npk
+        WHERE t.id = ANY($1) AND e.department_id = $2`
+
+	var count int
+	err := r.DB.QueryRow(query, pq.Array(ticketIDs), requestorDepartmentID).Scan(&count)
+	return count, err
 }

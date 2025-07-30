@@ -131,12 +131,13 @@ func (h *TicketHandler) UpdateTicket(c *gin.Context) {
 
 // PUT REORDER
 func (h *TicketHandler) ReorderTickets(c *gin.Context) {
+	userNPK := c.GetString("user_npk")
 	var req dto.ReorderTicketsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	err := h.priorityService.ReorderTickets(c.Request.Context(), req)
+	err := h.priorityService.ReorderTickets(c.Request.Context(), req, userNPK)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reorder tickets"})
 		return
