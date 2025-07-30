@@ -69,6 +69,14 @@ func main() {
 	positionPermissionService := service.NewPositionPermissionService(positionPermissionRepo)
 	workflowService := service.NewWorkflowService(workflowRepo, workflowStepRepo, db)
 	specifiedLocationService := service.NewSpecifiedLocationService(specifiedLocationRepo)
+	ticketActionService := service.NewTicketActionService(&service.TicketActionServiceConfig{
+		TicketRepo:            ticketRepo,
+		JobRepo:               jobRepo,
+		EmployeeRepo:          employeeRepo,
+		TrackStatusTicketRepo: trackStatusTicketRepo,
+		StatusTransitionRepo:  statusTransitionRepo,
+		ActorRoleMappingRepo:  actorRoleMappingRepo,
+	})
 	employeePositionService := service.NewEmployeePositionService(
 		employeePositionRepo,
 		positionToWorkflowMappingRepo,
@@ -117,6 +125,7 @@ func main() {
 		CommandService:  ticketCommandService,
 		WorkflowService: ticketWorkflowService,
 		PriorityService: ticketPriorityService,
+		ActionService:   ticketActionService,
 	})
 
 	// HANDLER

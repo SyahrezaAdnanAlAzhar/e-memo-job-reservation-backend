@@ -18,6 +18,7 @@ type TicketHandler struct {
 	commandService  *service.TicketCommandService
 	workflowService *service.TicketWorkflowService
 	priorityService *service.TicketPriorityService
+	actionService   *service.TicketActionService
 }
 
 type TicketHandlerConfig struct {
@@ -25,6 +26,7 @@ type TicketHandlerConfig struct {
 	CommandService  *service.TicketCommandService
 	WorkflowService *service.TicketWorkflowService
 	PriorityService *service.TicketPriorityService
+	ActionService   *service.TicketActionService
 }
 
 func NewTicketHandler(cfg *TicketHandlerConfig) *TicketHandler {
@@ -33,6 +35,7 @@ func NewTicketHandler(cfg *TicketHandlerConfig) *TicketHandler {
 		commandService:  cfg.CommandService,
 		workflowService: cfg.WorkflowService,
 		priorityService: cfg.PriorityService,
+		actionService:   cfg.ActionService,
 	}
 }
 
@@ -200,4 +203,22 @@ func (h *TicketHandler) ExecuteAction(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Action '" + req.ActionName + "' executed successfully"})
+}
+
+// GET /tickets/:id/available-actions
+func (h *TicketHandler) GetAvailableActions(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	userNPK := c.GetString("user_npk")
+
+	actions, err := h.actionService.GetAvailableActions(c.Request.Context(), id, userNPK)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get available actions", "details": err.Error()})
+		return
+	}
+
+	if actions == nil {
+		c.JSON(http.StatusOK, []dto.ActionResponse{})
+		return
+	}
+	c.JSON(http.StatusOK, actions)
 }
