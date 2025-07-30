@@ -40,23 +40,21 @@ func (s *EmployeePositionService) CreateEmployeePosition(ctx context.Context, re
 	newPos, err := s.positionRepo.Create(ctx, tx, req)
 	if err != nil {
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" { // unique_violation
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			return nil, errors.New("position name already exists")
 		}
 		return nil, err
 	}
 
-	// Langkah 2: Buat mapping di tabel position_to_workflow_mapping
 	err = s.mappingRepo.CreateWorkflowMapping(ctx, tx, newPos.ID, req.WorkflowID)
 	if err != nil {
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23503" { // foreign_key_violation
+		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
 			return nil, errors.New("invalid workflow_id")
 		}
 		return nil, err
 	}
 
-	// Jika kedua langkah berhasil, commit transaksi
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
