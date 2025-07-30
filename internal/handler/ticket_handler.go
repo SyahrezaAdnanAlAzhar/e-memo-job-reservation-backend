@@ -67,28 +67,30 @@ func (h *TicketHandler) CreateTicket(c *gin.Context) {
 
 // GET ALL
 func (h *TicketHandler) GetAllTickets(c *gin.Context) {
-	filters := make(map[string]string)
-	for key, value := range c.Request.URL.Query() {
-		if len(value) > 0 {
-			filters[key] = value[0]
-		}
+	var filters dto.TicketFilter
+	if err := c.ShouldBindQuery(&filters); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid query parameters", "details": err.Error()})
+		return
 	}
 
 	tickets, err := h.queryService.GetAllTickets(filters)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve tickets", "details": err.Error()})
 		return
 	}
+
 	if tickets == nil {
-		c.JSON(http.StatusOK, []map[string]interface{}{})
+		c.JSON(http.StatusOK, []dto.TicketDetailResponse{})
 		return
 	}
+
 	c.JSON(http.StatusOK, tickets)
 }
 
 // GET BY ID
 func (h *TicketHandler) GetTicketByID(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
+
 	ticket, err := h.queryService.GetTicketByID(id)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -98,6 +100,7 @@ func (h *TicketHandler) GetTicketByID(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve ticket"})
 		return
 	}
+
 	c.JSON(http.StatusOK, ticket)
 }
 
@@ -119,6 +122,8 @@ func (h *TicketHandler) UpdateTicket(c *gin.Context) {
 		case "user is not authorized to edit this ticket":
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		case "ticket cannot be edited in its current state":
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		case "data conflict: ticket has been modified by another user, please refresh":
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update ticket", "details": err.Error()})

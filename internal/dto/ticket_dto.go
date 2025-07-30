@@ -16,6 +16,7 @@ type UpdateTicketRequest struct {
 	PhysicalLocationID  *int    `json:"physical_location_id"`
 	SpecifiedLocationID *int    `json:"specified_location_id"`
 	Deadline            *string `json:"deadline"`
+	Version             int     `json:"version" binding:"required,gte=1"`
 }
 
 type ReorderTicketsRequest struct {
@@ -76,4 +77,19 @@ type TicketDetailResponse struct {
 	CurrentStatus         *string    `json:"current_status"`
 	CurrentStatusHexCode  *string    `json:"current_status_hex_code"`
 	CurrentSectionName    *string    `json:"current_section_name"`
+}
+
+type TicketFilter struct {
+	// FILTER BY ID
+	SectionID          int    `form:"section_id"`
+	StatusID           int    `form:"status_id"`
+	DepartmentTargetID int    `form:"department_target_id"`
+	RequestorNPK       string `form:"requestor_npk"`
+	PicNPK             string `form:"pic_npk"`
+
+	// FILTER BY SEARCH QUERY
+	SearchQuery string `form:"search"`
+
+	// SORTING OPTION
+	SortBy string `form:"sort_by"`
 }

@@ -1,8 +1,7 @@
 package service
 
 import (
-	"errors"
-
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 )
 
@@ -17,21 +16,11 @@ func NewTicketQueryService(ticketRepo *repository.TicketRepository) *TicketQuery
 }
 
 // GET ALL
-func (s *TicketQueryService) GetAllTickets(filters map[string]string) ([]map[string]interface{}, error) {
-	allowedFilters := map[string]bool{
-		"department_target_id": true,
-		"current_status":       true,
-		"requestor_npk":        true,
-	}
-	for key := range filters {
-		if !allowedFilters[key] {
-			return nil, errors.New("invalid filter key: " + key)
-		}
-	}
-	return s.ticketRepo.FindAll(filters)
+func (s *TicketQueryService) GetAllTickets(filters dto.TicketFilter) ([]dto.TicketDetailResponse, error) {
+	return s.ticketRepo.FindAll(filters) 
 }
 
 // GET BY ID
-func (s *TicketQueryService) GetTicketByID(id int) (map[string]interface{}, error) {
+func (s *TicketQueryService) GetTicketByID(id int) (*dto.TicketDetailResponse, error) {
 	return s.ticketRepo.FindByID(id)
 }

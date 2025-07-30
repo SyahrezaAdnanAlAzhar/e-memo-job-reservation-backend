@@ -3,6 +3,8 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
@@ -87,12 +89,91 @@ func (r *TicketRepository) Create(ctx context.Context, tx *sql.Tx, ticket model.
 }
 
 // GET ALL
-func (r *TicketRepository) FindAll() ([]dto.TicketDetailResponse, error) {
-	// Untuk saat ini, kita hanya menjalankan query dasar tanpa filter.
-	// Nanti kita akan tambahkan logika WHERE dan ORDER BY di sini.
-	query := baseTicketQuery + " ORDER BY t.ticket_priority ASC"
+func (r *TicketRepository) FindAll(filters dto.TicketFilter) ([]dto.TicketDetailResponse, error) {
+	query := baseTicketQuery
 
-	rows, err := r.DB.Query(query)
+	var conditions []string
+	var args []interface{}
+	argID := 1
+
+	if filters.SectionID != 0 {
+		conditions = append(conditions, fmt.Sprintf("current_sst.id = $%d", argID))
+		args = append(args, filters.SectionID)
+		argID++
+	}
+
+	if filters.StatusID != 0 {
+		conditions = append(conditions, fmt.Sprintf("current_st.id = $%d", argID))
+		args = append(args, filters.StatusID)
+		argID++
+	}
+
+	if filters.DepartmentTargetID != 0 {
+		conditions = append(conditions, fmt.Sprintf("t.department_target_id = $%d", argID))
+		args = append(args, filters.DepartmentTargetID)
+		argID++
+	}
+
+	if filters.RequestorNPK != "" {
+		conditions = append(conditions, fmt.Sprintf("t.requestor_npk = $%d", argID))
+		args = append(args, filters.RequestorNPK)
+		argID++
+	}
+
+	if filters.PicNPK != "" {
+		conditions = append(conditions, fmt.Sprintf("j.pic_job_npk = $%d", argID))
+		args = append(args, filters.PicNPK)
+		argID++
+	}
+
+	if filters.SearchQuery != "" {
+		searchQuery := strings.ReplaceAll(strings.TrimSpace(filters.SearchQuery), " ", " | ")
+
+		conditions = append(conditions, fmt.Sprintf("t.description_tsv @@ to_tsquery('simple', $%d)", argID))
+		args = append(args, searchQuery)
+		argID++
+	}
+
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	orderByClause := " ORDER BY t.ticket_priority ASC"
+	if filters.SortBy != "" {
+		allowedSortColumns := map[string]string{
+			"priority":  "t.ticket_priority",
+			"deadline":  "t.deadline",
+			"age":       "ticket_age_days",
+			"status":    "current_st.name",
+			"requestor": "req_emp.name",
+			"pic":       "pic_emp.name",
+		}
+
+		var sortClauses []string
+		
+		sortParams := strings.Split(filters.SortBy, ",")
+
+		for _, param := range sortParams {
+			parts := strings.Split(strings.TrimSpace(param), "_")
+			if len(parts) != 2 {
+				continue
+			}
+
+			columnKey := parts[0]
+			direction := strings.ToUpper(parts[1])
+
+			if dbColumn, ok := allowedSortColumns[columnKey]; ok && (direction == "ASC" || direction == "DESC") {
+				sortClauses = append(sortClauses, dbColumn+" "+direction)
+			}
+		}
+
+		if len(sortClauses) > 0 {
+			orderByClause = " ORDER BY " + strings.Join(sortClauses, ", ")
+		}
+	}
+	query += orderByClause
+
+	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -134,22 +215,35 @@ func (r *TicketRepository) FindByIDAsStruct(ctx context.Context, id int) (*model
 }
 
 // UPDATE TICKET
-func (r *TicketRepository) Update(ctx context.Context, tx *sql.Tx, id int, req dto.UpdateTicketRequest) error {
+func (r *TicketRepository) Update(ctx context.Context, tx *sql.Tx, id int, req dto.UpdateTicketRequest) (int64, error) {
 	query := `
         UPDATE ticket 
-        SET department_target_id = $1, description = $2, physical_location_id = $3, specified_location_id = $4, deadline = $5, updated_at = NOW()
-        WHERE id = $5`
+        SET 
+            department_target_id = $1, 
+            description = $2, 
+            physical_location_id = $3, 
+            specified_location_id = $4, 
+            deadline = $5, 
+            version = version + 1, -- Naikkan versi secara atomik
+            updated_at = NOW()
+        WHERE id = $6 AND version = $7` 
 
 	deadline, _ := ParseDeadline(req.Deadline)
 
-	_, err := tx.ExecContext(ctx, query,
+	result, err := tx.ExecContext(ctx, query,
 		req.DepartmentTargetID,
 		req.Description,
 		toNullInt64(req.PhysicalLocationID),
 		toNullInt64(req.SpecifiedLocationID),
 		deadline,
-		id)
-	return err
+		id,
+		req.Version,
+	)
+	if err != nil {
+		return 0, err
+	}
+
+	return result.RowsAffected()
 }
 
 // REORDER
@@ -263,39 +357,6 @@ func (r *TicketRepository) GetLastPriority(ctx context.Context, tx *sql.Tx, depa
 		return 1, nil
 	}
 	return int(lastPriority.Int64) + 1, nil
-}
-
-// SCAN TO MAP
-func scanToMap(rows *sql.Rows) ([]map[string]interface{}, error) {
-	columns, err := rows.Columns()
-	if err != nil {
-		return nil, err
-	}
-
-	var results []map[string]interface{}
-	for rows.Next() {
-		values := make([]interface{}, len(columns))
-		valuePtrs := make([]interface{}, len(columns))
-		for i := range columns {
-			valuePtrs[i] = &values[i]
-		}
-
-		if err := rows.Scan(valuePtrs...); err != nil {
-			return nil, err
-		}
-
-		rowData := make(map[string]interface{})
-		for i, col := range columns {
-			val := values[i]
-			if b, ok := val.([]byte); ok {
-				rowData[col] = string(b)
-			} else {
-				rowData[col] = val
-			}
-		}
-		results = append(results, rowData)
-	}
-	return results, nil
 }
 
 func toNullInt64(val *int) sql.NullInt64 {

@@ -4,11 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log"
 	"time"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/websocket"
 )
 
 type TicketCommandService struct {
@@ -18,6 +20,8 @@ type TicketCommandService struct {
 	workflowRepo          *repository.WorkflowRepository
 	trackStatusTicketRepo *repository.TrackStatusTicketRepository
 	employeeRepo          *repository.EmployeeRepository
+	hub                   *websocket.Hub
+	queryService          *TicketQueryService
 }
 
 type TicketCommandServiceConfig struct {
@@ -27,6 +31,8 @@ type TicketCommandServiceConfig struct {
 	WorkflowRepo          *repository.WorkflowRepository
 	TrackStatusTicketRepo *repository.TrackStatusTicketRepository
 	EmployeeRepo          *repository.EmployeeRepository
+	Hub                   *websocket.Hub
+	QueryService          *TicketQueryService
 }
 
 func NewTicketCommandService(cfg *TicketCommandServiceConfig) *TicketCommandService {
@@ -37,6 +43,8 @@ func NewTicketCommandService(cfg *TicketCommandServiceConfig) *TicketCommandServ
 		workflowRepo:          cfg.WorkflowRepo,
 		trackStatusTicketRepo: cfg.TrackStatusTicketRepo,
 		employeeRepo:          cfg.EmployeeRepo,
+		hub:                   cfg.Hub,
+		queryService:          cfg.QueryService,
 	}
 }
 
@@ -83,7 +91,7 @@ func (s *TicketCommandService) CreateTicket(ctx context.Context, req dto.CreateT
 		PhysicalLocationID:  toNullInt64(req.PhysicalLocationID),
 		SpecifiedLocationID: toNullInt64(req.SpecifiedLocationID),
 		Description:         req.Description,
-		TicketPriority:      lastPriority,
+		TicketPriority:      lastPriority + 1,
 		Deadline:            deadline,
 	}
 
@@ -110,18 +118,23 @@ func (s *TicketCommandService) CreateTicket(ctx context.Context, req dto.CreateT
 		return nil, err
 	}
 
+	ticketDetail, err := s.queryService.GetTicketByID(createdTicket.ID)
+	if err != nil {
+		log.Printf("CRITICAL: Failed to fetch new ticket details for broadcast. TicketID: %d, Error: %v", createdTicket.ID, err)
+	} else {
+		message, err := websocket.NewMessage("TICKET_CREATED", ticketDetail)
+		if err != nil {
+			log.Printf("CRITICAL: Failed to create websocket message for new ticket: %v", err)
+		} else {
+			s.hub.BroadcastMessage(message)
+		}
+	}
+
 	return createdTicket, err
 }
 
 // UPDATE TICKET
 func (s *TicketCommandService) UpdateTicket(ctx context.Context, ticketID int, req dto.UpdateTicketRequest, userNPK string) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	// GET TICKET
 	originalTicket, err := s.ticketRepo.FindByIDAsStruct(ctx, ticketID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -130,18 +143,15 @@ func (s *TicketCommandService) UpdateTicket(ctx context.Context, ticketID int, r
 		return err
 	}
 
-	// VALIDATE: ONLY THIS TICKET REQUESTOR THAT CAN EDIT
 	if originalTicket.Requestor != userNPK {
 		return errors.New("user is not authorized to edit this ticket")
 	}
 
-	// GET CURRENT STATUS
 	_, currentStatusName, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
 	if err != nil {
 		return errors.New("could not retrieve current ticket status")
 	}
 
-	// CHECK THE TICKET ABLE TO EDIT OR NOT
 	canEdit := false
 	switch currentStatusName {
 	case "Ditolak":
@@ -166,29 +176,52 @@ func (s *TicketCommandService) UpdateTicket(ctx context.Context, ticketID int, r
 		}
 	}
 
-	// EXECUTE UPDATE
-	if err := s.ticketRepo.Update(ctx, tx, ticketID, req); err != nil {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
 
-	// GET USER POSITION
+	rowsAffected, err := s.ticketRepo.Update(ctx, tx, ticketID, req)
+	if err != nil {
+		return err 
+	}
+
+	if rowsAffected == 0 {
+		return errors.New("data conflict: ticket has been modified by another user, please refresh")
+	}
+
 	positionID, err := s.employeeRepo.GetEmployeePositionID(ctx, userNPK)
 	if err != nil {
 		return err
 	}
 
-	// GET INITAL STATUS
 	initialStatusID, err := s.workflowRepo.GetInitialStatusByPosition(ctx, positionID)
 	if err != nil {
 		return err
 	}
 
-	// CHANGE TICKET STATUS
 	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, initialStatusID); err != nil {
 		return err
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	ticketDetail, err := s.queryService.GetTicketByID(ticketID)
+	if err != nil {
+		log.Printf("CRITICAL: Failed to fetch updated ticket details for broadcast. TicketID: %d, Error: %v", ticketID, err)
+	} else {
+		message, err := websocket.NewMessage("TICKET_UPDATED", ticketDetail)
+		if err != nil {
+			log.Printf("CRITICAL: Failed to create websocket message for updated ticket: %v", err)
+		} else {
+			s.hub.BroadcastMessage(message)
+		}
+	}
+
+	return nil
 }
 
 // HELPER

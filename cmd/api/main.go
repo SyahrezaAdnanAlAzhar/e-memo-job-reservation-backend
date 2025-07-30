@@ -93,6 +93,8 @@ func main() {
 		WorkflowRepo:          workflowRepo,
 		TrackStatusTicketRepo: trackStatusTicketRepo,
 		EmployeeRepo:          employeeRepo,
+		Hub:                   hub,
+		QueryService:          ticketQueryService,
 	})
 
 	ticketWorkflowService := service.NewTicketWorkflowService(&service.TicketWorkflowServiceConfig{
