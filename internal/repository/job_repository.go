@@ -60,9 +60,18 @@ func (r *JobRepository) GetPicByTicketID(ctx context.Context, ticketID int) (str
 }
 
 // UPLOAD REPORT FILE
-func (r *JobRepository) UpdateReportFile(ctx context.Context, tx *sql.Tx, ticketID int, reportFilePath string) error {
-	query := "UPDATE job SET report_file = array_append(report_file, $1), updated_at = NOW() WHERE ticket_id = $2"
-	_, err := tx.ExecContext(ctx, query, reportFilePath, ticketID)
+func (r *JobRepository) UpdateReportFile(ctx context.Context, jobID int, reportFilePath string) error {
+	query := "UPDATE job SET report_file = array_append(report_file, $1), updated_at = NOW() WHERE id = $2"
+	
+	result, err := r.DB.ExecContext(ctx, query, reportFilePath, jobID)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
 	return err
 }
 
@@ -132,4 +141,22 @@ func (r *JobRepository) ForceUpdatePriority(ctx context.Context, tx *sql.Tx, job
 
 	_, err := tx.ExecContext(ctx, query, newPriority, jobID)
 	return err
+}
+
+func (r *JobRepository) AddReportFile(id int, filePath string) error {
+	// array_append adalah fungsi PostgreSQL yang aman untuk menambahkan item ke array.
+	// Ini juga akan secara otomatis membuat array jika kolomnya NULL.
+	query := "UPDATE job SET report_file = array_append(report_file, $1), updated_at = NOW() WHERE id = $2"
+
+	result, err := r.DB.Exec(query, filePath, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows // Job dengan ID tersebut tidak ditemukan
+	}
+
+	return nil
 }

@@ -119,6 +119,23 @@ func (s *JobService) ReorderJobs(ctx context.Context, req dto.ReorderJobsRequest
 	return nil
 }
 
+// ADD FILE REPORT
+func (s *JobService) UploadReport(ctx context.Context, jobID int, userNPK string, filePath string) error {
+	job, err := s.jobRepo.FindByID(jobID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.New("job not found")
+		}
+		return err
+	}
+
+	if !job.PicJob.Valid || job.PicJob.String != userNPK {
+		return errors.New("user is not the assigned PIC for this job")
+	}
+
+	return s.jobRepo.UpdateReportFile(ctx, jobID, filePath)
+}
+
 func (s *JobService) GetAvailableActions(ctx context.Context, jobID int, userNPK string) ([]dto.AvailableActionResponse, error) {
 	user, err := s.employeeRepo.FindByNPK(userNPK)
 	if err != nil {
