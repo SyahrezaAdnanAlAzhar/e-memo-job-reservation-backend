@@ -18,7 +18,7 @@ func NewAppUserRepository(db *sql.DB) *AppUserRepository {
 // GET BY USERNAME OR NPK
 func (r *AppUserRepository) FindByUsernameOrNPK(username string) (*model.AppUser, error) {
 	query := `
-        SELECT id, username, password_hash, user_type, employee_npk, employee_position_id
+        SELECT id, username, password, user_type, employee_npk, employee_position_id
         FROM app_user 
         WHERE (username = $1 OR employee_npk = $1) AND is_active = true`
 
@@ -80,7 +80,7 @@ func (r *AppUserRepository) GetUserDetailByID(userID int) (*dto.UserDetail, erro
 // GET BY ID
 func (r *AppUserRepository) FindByID(id int) (*model.AppUser, error) {
 	query := `
-        SELECT id, username, password_hash, user_type, employee_npk, employee_position_id
+        SELECT id, username, password, user_type, employee_npk, employee_position_id
         FROM app_user 
         WHERE id = $1`
 	row := r.DB.QueryRow(query, id)
