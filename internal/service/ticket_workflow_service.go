@@ -53,8 +53,7 @@ func NewTicketWorkflowService(cfg *TicketWorkflowServiceConfig) *TicketWorkflowS
 }
 
 // EXECUTE ACTION TO GET TO THE NEXT STATUS BASED ON STATE
-func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int, userNPK string, req dto.ExecuteActionRequest, filePath string) error {
-	// GET ALL DATA
+func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int, userNPK string, req dto.ExecuteActionRequest, filePath string, transition *model.StatusTransition) error {
 	user, err := s.employeeRepo.FindByNPK(userNPK)
 	if err != nil {
 		return errors.New("user not found")
@@ -70,34 +69,22 @@ func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int,
 		return errors.New("original requestor not found")
 	}
 
-	job, _ := s.jobRepo.GetPicByTicketID(ctx, ticketID)
+	jobPIC, _ := s.jobRepo.GetPicByTicketID(ctx, ticketID)
 
 	currentStatusID, _, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
 	if err != nil {
 		return errors.New("could not get current ticket status")
 	}
 
-	// ACTOR RESOLUTION
-	userContexts := s.determineUserContexts(user, ticket, requestor, job)
+	userContexts := s.determineUserContexts(user, ticket, requestor)
 	actorRoles, err := s.actorRoleMappingRepo.GetRolesForUserContext(user.Position.ID, userContexts)
 	if err != nil {
 		return err
 	}
-
-	if job != "" && user.NPK == job {
+	if jobPIC != "" && user.NPK == jobPIC {
 		actorRoles = append(actorRoles, "ASSIGNED_PIC")
 	}
 
-	// VALIDATE TRANSITION
-	transition, err := s.statusTransitionRepo.FindValidTransition(currentStatusID, req.ActionName)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return errors.New("action not allowed from the current status")
-		}
-		return err
-	}
-
-	// AUTHORIZATION
 	requiredRole, err := s.actorRoleRepo.GetRoleNameByID(transition.ActorRoleID)
 	if err != nil {
 		return err
@@ -114,7 +101,6 @@ func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int,
 		return errors.New("user does not have the required role for this action")
 	}
 
-	// INPUT VALIDATION
 	if transition.RequiresReason && req.Reason == "" {
 		return errors.New("reason is required for this action")
 	}
@@ -122,27 +108,31 @@ func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int,
 		return errors.New("file upload is required for this action")
 	}
 
-	// EXEC
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	// SAVE FILE
 	var filePaths pq.StringArray
 	if filePath != "" {
 		filePaths = pq.StringArray{filePath}
 	}
 
 	logEntry := model.TicketActionLog{
-		FilePath: filePaths,
+		TicketID:       int64(ticketID),
+		ActionID:       transition.ActionID,
+		PerformedByNpk: userNPK,
+		DetailsText:    sql.NullString{String: req.Reason, Valid: req.Reason != ""},
+		FilePath:       filePaths,
+		FromStatusID:   sql.NullInt32{Int32: int32(currentStatusID), Valid: true},
+		ToStatusID:     transition.ToStatusID,
 	}
+
 	if err := s.ticketActionLogRepo.Create(ctx, tx, logEntry); err != nil {
 		return err
 	}
 
-	// CHANGE STATUS TICKET
 	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, transition.ToStatusID); err != nil {
 		return err
 	}
@@ -150,8 +140,28 @@ func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int,
 	return tx.Commit()
 }
 
+func (s *TicketWorkflowService) ValidateAndGetTransition(ctx context.Context, ticketID int, actionName string) (*model.StatusTransition, error) {
+	currentStatusID, _, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("ticket not found or has no active status")
+		}
+		return nil, err
+	}
+
+	transition, err := s.statusTransitionRepo.FindValidTransition(currentStatusID, actionName)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("action not allowed from the current status")
+		}
+		return nil, err
+	}
+
+	return transition, nil
+}
+
 // HELPER FUNCTION
-func (s *TicketWorkflowService) determineUserContexts(user *model.Employee, ticket *model.Ticket, requestor *model.Employee, jobPIC string) []string {
+func (s *TicketWorkflowService) determineUserContexts(user *model.Employee, ticket *model.Ticket, requestor *model.Employee) []string {
 	var contexts []string
 	if user.NPK == ticket.Requestor {
 		contexts = append(contexts, "SELF")

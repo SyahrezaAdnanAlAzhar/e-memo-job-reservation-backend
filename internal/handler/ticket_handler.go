@@ -168,21 +168,37 @@ func (h *TicketHandler) ExecuteAction(c *gin.Context) {
 		return
 	}
 
-	var filePath string
-	file, err := c.FormFile("file")
-	if err == nil {
-		savedPath, saveErr := filehandler.SaveFile(c, file)
-		if saveErr != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save uploaded file"})
+	transition, err := h.workflowService.ValidateAndGetTransition(c.Request.Context(), id, req.ActionName)
+	if err != nil {
+		if err.Error() == "ticket not found or has no active status" {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
-		filePath = savedPath
-	} else if err != http.ErrMissingFile {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file upload", "details": err.Error()})
+		if err.Error() == "action not allowed from the current status" {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify transition", "details": err.Error()})
 		return
 	}
 
-	err = h.workflowService.ExecuteAction(c.Request.Context(), id, userNPK, req, filePath)
+	var filePath string
+	if transition.RequiresFile {
+		file, err := c.FormFile("file")
+		if err == nil {
+			savedPath, saveErr := filehandler.SaveFile(c, file)
+			if saveErr != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save uploaded file"})
+				return
+			}
+			filePath = savedPath
+		} else if err != http.ErrMissingFile {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file upload", "details": err.Error()})
+			return
+		}
+	}
+
+	err = h.workflowService.ExecuteAction(c.Request.Context(), id, userNPK, req, filePath, transition)
 
 	if err != nil {
 		if filePath != "" {
