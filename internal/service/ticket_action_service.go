@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
@@ -42,14 +43,23 @@ func NewTicketActionService(cfg *TicketActionServiceConfig) *TicketActionService
 func (s *TicketActionService) GetAvailableActions(ctx context.Context, ticketID int, userNPK string) ([]dto.ActionResponse, error) {
 	user, err := s.employeeRepo.FindByNPK(userNPK)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("user employee not found")
+		}
 		return nil, err
 	}
 	ticket, err := s.ticketRepo.FindByIDAsStruct(ctx, ticketID)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("ticket not found")
+		}
 		return nil, err
 	}
 	requestor, err := s.employeeRepo.FindByNPK(ticket.Requestor)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("requestor employee not found")
+		}
 		return nil, err
 	}
 	jobPIC, _ := s.jobRepo.GetPicByTicketID(ctx, ticketID)
@@ -57,6 +67,9 @@ func (s *TicketActionService) GetAvailableActions(ctx context.Context, ticketID 
 	userContexts := determineUserContexts(user, ticket, requestor, jobPIC)
 	userRoles, err := s.actorRoleMappingRepo.GetRolesForUserContext(user.Position.ID, userContexts)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("actor role mapping not found")
+		}
 		return nil, err
 	}
 	if jobPIC != "" && user.NPK == jobPIC {
@@ -69,6 +82,9 @@ func (s *TicketActionService) GetAvailableActions(ctx context.Context, ticketID 
 
 	currentStatusID, _, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("current status not found")
+		}
 		return nil, err
 	}
 
