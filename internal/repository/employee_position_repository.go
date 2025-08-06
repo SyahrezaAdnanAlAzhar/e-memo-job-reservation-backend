@@ -107,7 +107,7 @@ func (r *TicketRepository) CancelTicketsByPosition(ctx context.Context, tx *sql.
         WHERE finish_date IS NULL
         AND ticket_id IN (
             SELECT t.id FROM ticket t
-            JOIN employee e ON t.requestor_npk = e.npk
+            JOIN employee e ON t.requestor = e.npk
             WHERE e.employee_position_id = $1
         )`
     _, err := tx.ExecContext(ctx, finishQuery, positionID)
@@ -119,7 +119,7 @@ func (r *TicketRepository) CancelTicketsByPosition(ctx context.Context, tx *sql.
         INSERT INTO track_status_ticket (ticket_id, status_ticket_id, start_date)
         SELECT t.id, $1, NOW()
         FROM ticket t
-        JOIN employee e ON t.requestor_npk = e.npk
+        JOIN employee e ON t.requestor = e.npk
         WHERE e.employee_position_id = $2`
     _, err = tx.ExecContext(ctx, createQuery, cancelledStatusID, positionID)
     return err

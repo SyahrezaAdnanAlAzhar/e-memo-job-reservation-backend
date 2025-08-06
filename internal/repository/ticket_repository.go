@@ -114,9 +114,9 @@ func (r *TicketRepository) FindAll(filters dto.TicketFilter) ([]dto.TicketDetail
 		argID++
 	}
 
-	if filters.RequestorNPK != "" {
-		conditions = append(conditions, fmt.Sprintf("t.requestor_npk = $%d", argID))
-		args = append(args, filters.RequestorNPK)
+	if filters.Requestor != "" {
+		conditions = append(conditions, fmt.Sprintf("t.requestor = $%d", argID))
+		args = append(args, filters.Requestor)
 		argID++
 	}
 
@@ -150,7 +150,7 @@ func (r *TicketRepository) FindAll(filters dto.TicketFilter) ([]dto.TicketDetail
 		}
 
 		var sortClauses []string
-		
+
 		sortParams := strings.Split(filters.SortBy, ",")
 
 		for _, param := range sortParams {
@@ -203,7 +203,7 @@ func (r *TicketRepository) FindByID(id int) (*dto.TicketDetailResponse, error) {
 
 // GET BY ID AS STRUCT
 func (r *TicketRepository) FindByIDAsStruct(ctx context.Context, id int) (*model.Ticket, error) {
-	query := "SELECT id, requestor_npk, department_target_id, physical_location_id, specified_location_id, description, ticket_priority FROM ticket WHERE id = $1"
+	query := "SELECT id, requestor, department_target_id, physical_location_id, specified_location_id, description, ticket_priority FROM ticket WHERE id = $1"
 	row := r.DB.QueryRowContext(ctx, query, id)
 
 	var t model.Ticket
@@ -226,7 +226,7 @@ func (r *TicketRepository) Update(ctx context.Context, tx *sql.Tx, id int, req d
             deadline = $5, 
             version = version + 1, -- Naikkan versi secara atomik
             updated_at = NOW()
-        WHERE id = $6 AND version = $7` 
+        WHERE id = $6 AND version = $7`
 
 	deadline, _ := ParseDeadline(req.Deadline)
 
@@ -335,7 +335,7 @@ func (r *TicketRepository) CheckTicketsFromDepartment(ticketIDs []int, requestor
 	query := `
         SELECT COUNT(t.id) 
         FROM ticket t
-        JOIN employee e ON t.requestor_npk = e.npk
+        JOIN employee e ON t.requestor = e.npk
         WHERE t.id = ANY($1) AND e.department_id = $2`
 
 	var count int

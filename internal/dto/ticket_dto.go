@@ -84,7 +84,7 @@ type TicketFilter struct {
 	SectionID          int    `form:"section_id"`
 	StatusID           int    `form:"status_id"`
 	DepartmentTargetID int    `form:"department_target_id"`
-	RequestorNPK       string `form:"requestor_npk"`
+	Requestor       string `form:"requestor"`
 	PicNPK             string `form:"pic_npk"`
 
 	// FILTER BY SEARCH QUERY
