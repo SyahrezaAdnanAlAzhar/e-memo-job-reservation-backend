@@ -71,6 +71,52 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (*dto.Log
 	return loginResponse, nil
 }
 
+// REFRESH TOKEN
+func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenString string) (*dto.LoginResponse, error) {
+	claims, err := auth.ValidateToken(refreshTokenString, true)
+	if err != nil {
+		return nil, errors.New("invalid or expired refresh token")
+	}
+
+	err = s.authRepo.ValidateAndDelRefreshToken(ctx, claims.UserID, claims.TokenID)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := s.userRepo.FindByID(claims.UserID) 
+	if err != nil {
+		return nil, errors.New("user associated with token not found")
+	}
+
+	accessToken, newRefreshToken, err := auth.GenerateTokens(user, s.authRepo)
+	if err != nil {
+		return nil, err
+	}
+
+	userDetail, err := s.userRepo.GetUserDetailByID(user.ID)
+	if err != nil {
+		return nil, err
+	}
+	permissions, err := s.posPermRepo.FindPermissionsByPositionID(user.EmployeePositionID)
+	if err != nil {
+		return nil, err
+	}
+	var permissionNames []string
+	for _, p := range permissions {
+		permissionNames = append(permissionNames, p.Name)
+	}
+	userDetail.Permissions = permissionNames
+
+	loginResponse := &dto.LoginResponse{
+		AccessToken:  accessToken,
+		RefreshToken: newRefreshToken,
+		User:         *userDetail,
+	}
+
+	return loginResponse, nil
+}
+
+// LOG OUT
 func (s *AuthService) Logout(ctx context.Context, tokenString string) error {
 	claims, err := auth.ValidateToken(tokenString, false)
 	if err != nil {
@@ -79,7 +125,7 @@ func (s *AuthService) Logout(ctx context.Context, tokenString string) error {
 
 	remainingDuration := time.Until(claims.ExpiresAt.Time)
 	if remainingDuration <= 0 {
-		return nil
+		return nil 
 	}
 
 	err = s.authRepo.BlacklistToken(ctx, claims.TokenID, remainingDuration)
@@ -88,28 +134,4 @@ func (s *AuthService) Logout(ctx context.Context, tokenString string) error {
 	}
 
 	return s.authRepo.DeleteAllUserRefreshTokens(ctx, claims.UserID)
-}
-
-func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenString string) (string, string, error) {
-	claims, err := auth.ValidateToken(refreshTokenString, true)
-	if err != nil {
-		return "", "", errors.New("invalid or expired refresh token")
-	}
-
-	err = s.authRepo.ValidateAndDelRefreshToken(ctx, claims.UserID, claims.TokenID)
-	if err != nil {
-		return "", "", err
-	}
-
-	user, err := s.userRepo.FindByID(claims.UserID)
-	if err != nil {
-		return "", "", errors.New("user associated with token not found")
-	}
-
-	accessToken, newRefreshToken, err := auth.GenerateTokens(user, s.authRepo)
-	if err != nil {
-		return "", "", err
-	}
-
-	return accessToken, newRefreshToken, nil
 }

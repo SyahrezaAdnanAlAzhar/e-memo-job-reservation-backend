@@ -76,3 +76,18 @@ func (r *AppUserRepository) GetUserDetailByID(userID int) (*dto.UserDetail, erro
 
 	return &userDetail, nil
 }
+
+// GET BY ID
+func (r *AppUserRepository) FindByID(id int) (*model.AppUser, error) {
+	query := `
+        SELECT id, username, password_hash, user_type, employee_npk, employee_position_id
+        FROM app_user 
+        WHERE id = $1`
+	row := r.DB.QueryRow(query, id)
+	var user model.AppUser
+	err := row.Scan(
+		&user.ID, &user.Username, &user.PasswordHash, &user.UserType,
+		&user.EmployeeNPK, &user.EmployeePositionID,
+	)
+	return &user, err
+}
