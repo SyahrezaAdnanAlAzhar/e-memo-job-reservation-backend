@@ -120,3 +120,30 @@ func (h *JobHandler) ReorderJobs(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Job priorities updated successfully"})
 }
+
+// GET /jobs/:id/available-actions
+func (h *JobHandler) GetAvailableActions(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid job ID format"})
+		return
+	}
+	userNPK := c.GetString("user_npk")
+
+	actions, err := h.service.GetAvailableActions(c.Request.Context(), id, userNPK)
+	if err != nil {
+		if err.Error() == "job not found" || err.Error() == "user not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve available actions", "details": err.Error()})
+		return
+	}
+
+	if actions == nil {
+		c.JSON(http.StatusOK, []dto.AvailableActionResponse{})
+		return
+	}
+
+	c.JSON(http.StatusOK, actions)
+}
