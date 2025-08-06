@@ -46,6 +46,7 @@ func main() {
 	statusTicketRepo := repository.NewStatusTicketRepository(db)
 	ticketRepo := repository.NewTicketRepository(db)
 	jobRepo := repository.NewJobRepository(db)
+	jobQueryRepo := repository.NewJobQueryRepository(db)
 	workflowRepo := repository.NewWorkflowRepository(db)
 	trackStatusTicketRepo := repository.NewTrackStatusTicketRepository(db)
 	positionPermissionRepo := repository.NewPositionPermissionRepository(db)
@@ -66,6 +67,7 @@ func main() {
 	sectionStatusTicketService := service.NewSectionStatusTicketService(sectionStatusTicketRepo, statusTicketRepo, ticketRepo, db)
 	statusTicketService := service.NewStatusTicketService(statusTicketRepo)
 	jobService := service.NewJobService(jobRepo, employeeRepo, db, hub)
+	jobQueryService := service.NewJobQueryService(jobQueryRepo)
 	positionPermissionService := service.NewPositionPermissionService(positionPermissionRepo)
 	workflowService := service.NewWorkflowService(workflowRepo, workflowStepRepo, db)
 	specifiedLocationService := service.NewSpecifiedLocationService(specifiedLocationRepo)
@@ -144,7 +146,7 @@ func main() {
 		WorkflowHandler:            handler.NewWorkflowHandler(workflowService),
 		SpecifiedLocationHandler:   handler.NewSpecifiedLocationHandler(specifiedLocationService),
 		RejectedTicketHandler:      handler.NewRejectedTicketHandler(rejectedTicketService),
-		JobHandler:                 handler.NewJobHandler(jobService),
+		JobHandler:                 handler.NewJobHandler(jobService, jobQueryService),
 		TicketHandler:              ticketHandler,
 	}
 

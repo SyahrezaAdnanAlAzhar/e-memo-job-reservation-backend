@@ -10,11 +10,34 @@ import (
 )
 
 type JobHandler struct {
-	service *service.JobService
+	service      *service.JobService
+	queryService *service.JobQueryService
 }
 
-func NewJobHandler(service *service.JobService) *JobHandler {
-	return &JobHandler{service: service}
+func NewJobHandler(service *service.JobService, queryService *service.JobQueryService) *JobHandler {
+	return &JobHandler{service: service, queryService: queryService}
+}
+
+// GET /jobs
+func (h *JobHandler) GetAllJobs(c *gin.Context) {
+	var filters dto.JobFilter
+	if err := c.ShouldBindQuery(&filters); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid query parameters", "details": err.Error()})
+		return
+	}
+
+	jobs, err := h.queryService.GetAllJobs(filters)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve jobs", "details": err.Error()})
+		return
+	}
+
+	if jobs == nil {
+		c.JSON(http.StatusOK, []dto.JobDetailResponse{})
+		return
+	}
+
+	c.JSON(http.StatusOK, jobs)
 }
 
 // PUT /jobs/:id/assign
