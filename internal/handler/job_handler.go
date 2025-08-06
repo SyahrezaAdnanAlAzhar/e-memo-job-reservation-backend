@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"net/http"
 	"strconv"
 
@@ -38,6 +39,27 @@ func (h *JobHandler) GetAllJobs(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, jobs)
+}
+
+// GET /jobs/:id
+func (h *JobHandler) GetJobByID(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid job ID format"})
+		return
+	}
+
+	job, err := h.queryService.GetJobByID(id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve job", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, job)
 }
 
 // PUT /jobs/:id/assign
