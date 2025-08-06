@@ -147,7 +147,7 @@ func (s *JobService) GetAvailableActions(ctx context.Context, jobID int, userNPK
 		return nil, errors.New("job not found")
 	}
 
-	allPermissions, err := s.posPermRepo.FindPermissionsByPositionID(user.EmployeePositionID)
+	allPermissions, err := s.posPermRepo.FindPermissionsByPositionID(user.Position.ID)
 	if err != nil {
 		return nil, err
 	}

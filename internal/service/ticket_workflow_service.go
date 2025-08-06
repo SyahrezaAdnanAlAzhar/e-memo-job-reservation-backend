@@ -79,7 +79,7 @@ func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int,
 
 	// ACTOR RESOLUTION
 	userContexts := s.determineUserContexts(user, ticket, requestor, job)
-	actorRoles, err := s.actorRoleMappingRepo.GetRolesForUserContext(user.EmployeePositionID, userContexts)
+	actorRoles, err := s.actorRoleMappingRepo.GetRolesForUserContext(user.Position.ID, userContexts)
 	if err != nil {
 		return err
 	}

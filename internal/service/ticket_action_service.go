@@ -54,7 +54,7 @@ func (s *TicketActionService) GetAvailableActions(ctx context.Context, ticketID 
 	jobPIC, _ := s.jobRepo.GetPicByTicketID(ctx, ticketID)
 
 	userContexts := determineUserContexts(user, ticket, requestor, jobPIC)
-	userRoles, err := s.actorRoleMappingRepo.GetRolesForUserContext(user.EmployeePositionID, userContexts)
+	userRoles, err := s.actorRoleMappingRepo.GetRolesForUserContext(user.Position.ID, userContexts)
 	if err != nil {
 		return nil, err
 	}

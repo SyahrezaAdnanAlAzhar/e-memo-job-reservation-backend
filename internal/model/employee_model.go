@@ -8,7 +8,6 @@ type Employee struct {
 	AreaID             sql.NullInt64 `json:"area_id"`
 	Name               string        `json:"name"`
 	IsActive           bool          `json:"is_active"`
-	EmployeePositionID int           `json:"employee_position_id"`
 	Position           Position      `json:"position"`
 }
 
