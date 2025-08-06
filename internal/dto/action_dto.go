@@ -7,3 +7,8 @@ type ActionResponse struct {
 	ReasonLabel    *string `json:"reason_label"`
 	RequiresFile   bool    `json:"requires_file"`
 }
+
+type TransitionDetail struct {
+	RequiredActorRole string
+	Action            ActionResponse
+}

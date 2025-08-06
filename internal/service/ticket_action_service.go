@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
@@ -73,6 +74,9 @@ func (s *TicketActionService) GetAvailableActions(ctx context.Context, ticketID 
 
 	possibleTransitions, err := s.statusTransitionRepo.FindPossibleTransitionsWithDetails(currentStatusID)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return []dto.ActionResponse{}, nil
+		}
 		return nil, err
 	}
 

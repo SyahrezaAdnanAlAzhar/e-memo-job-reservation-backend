@@ -47,7 +47,6 @@ func (r *StatusTransitionRepository) FindPossibleTransitionsWithDetails(fromStat
         SELECT 
             ar.name as required_actor_role,
             a.name as action_name,
-            a.display_name,
             a.hex_code,
             st.require_reason,
             st.reason_label,
