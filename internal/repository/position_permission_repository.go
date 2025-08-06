@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 )
@@ -92,7 +93,7 @@ func (r *PositionPermissionRepository) Delete(posID, permID int) error {
 // GET PERMISSION BY POSITION TOKEN
 func (r *PositionPermissionRepository) CheckPermission(positionID int, permissionName string) (bool, error) {
 	var exists bool
-	
+
 	query := `
         SELECT EXISTS (
             SELECT 1
@@ -103,11 +104,38 @@ func (r *PositionPermissionRepository) CheckPermission(positionID int, permissio
               AND pp.is_active = true
               AND ap.is_active = true
         )`
-		
+
 	err := r.DB.QueryRow(query, positionID, permissionName).Scan(&exists)
 	if err != nil {
 		return false, err
 	}
-	
+
 	return exists, nil
+}
+
+// GET ALL ACTIVE PERMISSION BY POSITION
+func (r *PositionPermissionRepository) FindPermissionsByPositionID(positionID int) ([]dto.AvailableActionResponse, error) {
+	query := `
+        SELECT ap.name
+        FROM position_permission pp
+        JOIN access_permission ap ON pp.access_permission_id = ap.id
+        WHERE pp.employee_position_id = $1
+          AND pp.is_active = true
+          AND ap.is_active = true`
+
+	rows, err := r.DB.Query(query, positionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var actions []dto.AvailableActionResponse
+	for rows.Next() {
+		var a dto.AvailableActionResponse
+		if err := rows.Scan(&a.Name); err != nil {
+			return nil, err
+		}
+		actions = append(actions, a)
+	}
+	return actions, nil
 }

@@ -2,7 +2,6 @@ package dto
 
 type ActionResponse struct {
 	ActionName     string  `json:"action_name"`
-	DisplayName    string  `json:"display_name"`
 	HexCode        *string `json:"hex_code"`
 	RequiresReason bool    `json:"requires_reason"`
 	ReasonLabel    *string `json:"reason_label"`

@@ -50,3 +50,7 @@ type JobFilter struct {
 	SearchQuery          string `form:"search"`
 	SortBy               string `form:"sort_by"`
 }
+
+type AvailableActionResponse struct {
+	Name        string `json:"name"`
+}

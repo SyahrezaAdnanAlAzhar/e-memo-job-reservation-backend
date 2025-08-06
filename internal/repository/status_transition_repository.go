@@ -69,7 +69,6 @@ func (r *StatusTransitionRepository) FindPossibleTransitionsWithDetails(fromStat
 		err := rows.Scan(
 			&t.RequiredActorRole,
 			&t.ActionDetail.ActionName,
-			&t.ActionDetail.DisplayName,
 			&t.ActionDetail.HexCode,
 			&t.ActionDetail.RequiresReason,
 			&t.ActionDetail.ReasonLabel,
