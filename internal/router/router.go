@@ -184,5 +184,6 @@ func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllRepositor
 		jobRoutes.GET("/:id/available-actions", h.JobHandler.GetAvailableActions)
 		jobRoutes.PUT("/:id/assign", auth.RequirePermission("JOB_ASSIGN_PIC", r.PositionPermissionRepo), h.JobHandler.AssignPIC)
 		jobRoutes.PUT("/reorder", auth.RequirePermission("JOB_PRIORITY_MANAGE", r.PositionPermissionRepo), h.JobHandler.ReorderJobs)
+		jobRoutes.POST("/:id/report", h.JobHandler.UploadReport)
 	}
 }
