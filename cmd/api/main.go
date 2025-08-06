@@ -59,7 +59,7 @@ func main() {
 	ticketActionLogRepo := repository.NewTicketActionLogRepository(db)
 
 	// SERVICE
-	authService := service.NewAuthService(authRepo, appUserRepo)
+	authService := service.NewAuthService(authRepo, appUserRepo, positionPermissionRepo)
 	departmentService := service.NewDepartmentService(departmentRepo)
 	areaService := service.NewAreaService(areaRepo)
 	physicalLocationService := service.NewPhysicalLocationService(physicalLocationRepo)

@@ -7,49 +7,68 @@ import (
 	"time"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/auth"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
-	authRepo *repository.AuthRepository
-	userRepo *repository.AppUserRepository
+	authRepo    *repository.AuthRepository
+	userRepo    *repository.AppUserRepository
+	posPermRepo *repository.PositionPermissionRepository
 }
 
-func NewAuthService(authRepo *repository.AuthRepository, userRepo *repository.AppUserRepository) *AuthService {
+func NewAuthService(authRepo *repository.AuthRepository, userRepo *repository.AppUserRepository, posPermRepo *repository.PositionPermissionRepository) *AuthService {
 	return &AuthService{
-		authRepo: authRepo,
-		userRepo: userRepo,
+		authRepo:    authRepo,
+		userRepo:    userRepo,
+		posPermRepo: posPermRepo,
 	}
 }
 
 // LOGIN
-func (s *AuthService) LoginByNPK(ctx context.Context, npkOrPassword string) (string, string, error) {
-	user, err := s.userRepo.FindByNPK(npkOrPassword)
-
+func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (*dto.LoginResponse, error) {
+	user, err := s.userRepo.FindByUsernameOrNPK(req.Username)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			masterUser, masterErr := s.userRepo.FindByUsername("master_user")
-			if masterErr != nil {
-				return "", "", errors.New("invalid credentials")
-			}
-			if err := bcrypt.CompareHashAndPassword([]byte(masterUser.PasswordHash), []byte(npkOrPassword)); err != nil {
-				return "", "", errors.New("invalid credentials")
-			}
-			user = masterUser
-		} else {
-			return "", "", err
+			return nil, errors.New("invalid credentials")
 		}
+		return nil, err
 	}
 
-	if user.UserType == "employee" {
-		err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(npkOrPassword))
-		if err != nil {
-			return "", "", errors.New("invalid credentials")
-		}
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password))
+	if err != nil {
+		return nil, errors.New("invalid credentials")
 	}
 
-	return auth.GenerateTokens(user, s.authRepo)
+	accessToken, refreshToken, err := auth.GenerateTokens(user, s.authRepo)
+	if err != nil {
+		return nil, err
+	}
+
+	userDetail, err := s.userRepo.GetUserDetailByID(user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	permissions, err := s.posPermRepo.FindPermissionsByPositionID(user.EmployeePositionID)
+	if err != nil {
+		return nil, err
+	}
+
+	var permissionNames []string
+	for _, p := range permissions {
+		permissionNames = append(permissionNames, p.Name)
+	}
+	userDetail.Permissions = permissionNames
+
+	loginResponse := &dto.LoginResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		User:         *userDetail,
+	}
+
+	return loginResponse, nil
 }
 
 func (s *AuthService) Logout(ctx context.Context, tokenString string) error {
