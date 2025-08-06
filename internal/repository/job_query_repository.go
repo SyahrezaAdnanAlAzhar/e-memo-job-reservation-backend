@@ -123,6 +123,28 @@ func (r *JobQueryRepository) FindAll(filters dto.JobFilter) ([]dto.JobDetailResp
 	return scanJobDetails(rows)
 }
 
+// GET BY ID
+func (r *JobQueryRepository) FindByID(id int) (*dto.JobDetailResponse, error) {
+	query := baseJobQuery + " WHERE j.id = $1"
+
+	rows, err := r.DB.Query(query, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	jobs, err := scanJobDetails(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(jobs) == 0 {
+		return nil, sql.ErrNoRows
+	}
+
+	return &jobs[0], nil
+}
+
 func scanJobDetails(rows *sql.Rows) ([]dto.JobDetailResponse, error) {
 	var jobs []dto.JobDetailResponse
 	for rows.Next() {
