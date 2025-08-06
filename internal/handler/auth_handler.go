@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
 	"github.com/gin-gonic/gin"
 )
@@ -26,48 +27,42 @@ type RefreshRequest struct {
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
-	var req LoginRequest
+	var req dto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request, NPK is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Username and password are required"})
 		return
 	}
 
-	accessToken, refreshToken, err := h.Service.LoginByNPK(c.Request.Context(), req.NPK)
+	loginResponse, err := h.Service.Login(c.Request.Context(), req)
 	if err != nil {
 		if err.Error() == "invalid credentials" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid NPK or password"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid username or password"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to login"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to login", "details": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
-	})
+	c.JSON(http.StatusOK, loginResponse)
 }
 
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
-	var req RefreshRequest
+	var req dto.RefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Refresh token is required"})
 		return
 	}
 
-	accessToken, newRefreshToken, err := h.Service.RefreshToken(c.Request.Context(), req.RefreshToken)
+	loginResponse, err := h.Service.RefreshToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
-		if err.Error() == "invalid or expired refresh token" || err.Error() == "token not found or already used" || err.Error() == "token-user mismatch" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
+		if strings.Contains(err.Error(), "invalid") || strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired refresh token"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process refresh token"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"access_token":  accessToken,
-		"refresh_token": newRefreshToken,
-	})
+	c.JSON(http.StatusOK, loginResponse)
 }
 
 func (h *AuthHandler) Logout(c *gin.Context) {

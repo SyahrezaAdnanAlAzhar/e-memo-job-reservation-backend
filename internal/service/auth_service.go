@@ -8,21 +8,24 @@ import (
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/auth"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
-	authRepo    *repository.AuthRepository
-	userRepo    *repository.AppUserRepository
-	posPermRepo *repository.PositionPermissionRepository
+	authRepo     *repository.AuthRepository
+	userRepo     *repository.AppUserRepository
+	posPermRepo  *repository.PositionPermissionRepository
+	employeeRepo *repository.EmployeeRepository
 }
 
-func NewAuthService(authRepo *repository.AuthRepository, userRepo *repository.AppUserRepository, posPermRepo *repository.PositionPermissionRepository) *AuthService {
+func NewAuthService(authRepo *repository.AuthRepository, userRepo *repository.AppUserRepository, posPermRepo *repository.PositionPermissionRepository, employeeRepo *repository.EmployeeRepository) *AuthService {
 	return &AuthService{
-		authRepo:    authRepo,
-		userRepo:    userRepo,
-		posPermRepo: posPermRepo,
+		authRepo:     authRepo,
+		userRepo:     userRepo,
+		posPermRepo:  posPermRepo,
+		employeeRepo: employeeRepo,
 	}
 }
 
@@ -41,7 +44,15 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (*dto.Log
 		return nil, errors.New("invalid credentials")
 	}
 
-	accessToken, refreshToken, err := auth.GenerateTokens(user, s.authRepo)
+	var employee *model.Employee
+	if user.EmployeeNPK.Valid {
+		employee, err = s.employeeRepo.FindByNPK(user.EmployeeNPK.String)
+		if err != nil {
+			return nil, errors.New("employee data associated with user not found")
+		}
+	}
+
+	accessToken, refreshToken, err := auth.GenerateTokens(user, employee, s.authRepo)
 	if err != nil {
 		return nil, err
 	}
@@ -83,12 +94,20 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenString strin
 		return nil, err
 	}
 
-	user, err := s.userRepo.FindByID(claims.UserID) 
+	user, err := s.userRepo.FindByID(claims.UserID)
 	if err != nil {
 		return nil, errors.New("user associated with token not found")
 	}
 
-	accessToken, newRefreshToken, err := auth.GenerateTokens(user, s.authRepo)
+	var employee *model.Employee
+	if user.EmployeeNPK.Valid {
+		employee, err = s.employeeRepo.FindByNPK(user.EmployeeNPK.String)
+		if err != nil {
+			return nil, errors.New("employee data associated with user not found")
+		}
+	}
+
+	accessToken, newRefreshToken, err := auth.GenerateTokens(user, employee, s.authRepo)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +144,7 @@ func (s *AuthService) Logout(ctx context.Context, tokenString string) error {
 
 	remainingDuration := time.Until(claims.ExpiresAt.Time)
 	if remainingDuration <= 0 {
-		return nil 
+		return nil
 	}
 
 	err = s.authRepo.BlacklistToken(ctx, claims.TokenID, remainingDuration)

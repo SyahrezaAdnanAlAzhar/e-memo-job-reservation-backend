@@ -2,8 +2,9 @@ package auth
 
 import (
 	"net/http"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	"strings"
+
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	"github.com/gin-gonic/gin"
 )
 
@@ -54,6 +55,12 @@ func (m *AuthMiddleware) JWTMiddleware() gin.HandlerFunc {
 		c.Set("user_position_id", claims.EmployeePositionID)
 		if claims.EmployeeNPK != nil {
 			c.Set("user_npk", *claims.EmployeeNPK)
+		}
+		if claims.DepartmentID != nil {
+			c.Set("user_department_id", *claims.DepartmentID)
+		}
+		if claims.AreaID != nil {
+			c.Set("user_area_id", *claims.AreaID)
 		}
 
 		c.Next()

@@ -18,6 +18,8 @@ type Claims struct {
 	UserType           string  `json:"typ"`
 	EmployeeNPK        *string `json:"npk,omitempty"`
 	EmployeePositionID int     `json:"pos_id"`
+	DepartmentID       *int    `json:"dept_id,omitempty"`
+	AreaID             *int    `json:"area_id,omitempty"`
 	TokenID            string  `json:"jti"`
 	jwt.RegisteredClaims
 }
@@ -26,7 +28,7 @@ type TokenStorer interface {
 	StoreRefreshToken(ctx context.Context, userID int, tokenID string, expiresIn time.Duration) error
 }
 
-func GenerateTokens(user *model.AppUser, tokenStore TokenStorer) (accessToken string, refreshToken string, err error) {
+func GenerateTokens(user *model.AppUser, employee *model.Employee, tokenStore TokenStorer) (accessToken string, refreshToken string, err error) {
 	// GENERATE ACCESS TOKEN
 	accessLifespanStr := os.Getenv("ACCESS_TOKEN_LIFESPAN")
 	accessDuration, err := time.ParseDuration(accessLifespanStr)
@@ -37,6 +39,16 @@ func GenerateTokens(user *model.AppUser, tokenStore TokenStorer) (accessToken st
 	}
 
 	var npkClaim *string
+	var deptIDClaim, areaIDClaim *int
+	if employee != nil {
+		npkClaim = &employee.NPK
+		deptIDClaim = &employee.DepartmentID
+		if employee.AreaID.Valid {
+			areaID := int(employee.AreaID.Int64)
+			areaIDClaim = &areaID
+		}
+	}
+
 	if user.EmployeeNPK.Valid {
 		npkClaim = &user.EmployeeNPK.String
 	}
@@ -46,6 +58,8 @@ func GenerateTokens(user *model.AppUser, tokenStore TokenStorer) (accessToken st
 		UserType:           user.UserType,
 		EmployeeNPK:        npkClaim,
 		EmployeePositionID: user.EmployeePositionID,
+		DepartmentID:       deptIDClaim,
+		AreaID:             areaIDClaim,
 		TokenID:            uuid.New().String(),
 		RegisteredClaims:   jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(accessDuration))},
 	}
@@ -65,8 +79,6 @@ func GenerateTokens(user *model.AppUser, tokenStore TokenStorer) (accessToken st
 
 	refreshClaims := &Claims{
 		UserID:             user.ID,
-		UserType:           user.UserType,
-		EmployeeNPK:        npkClaim,
 		EmployeePositionID: user.EmployeePositionID,
 		TokenID:            uuid.New().String(),
 		RegisteredClaims:   jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(refreshDuration))},
