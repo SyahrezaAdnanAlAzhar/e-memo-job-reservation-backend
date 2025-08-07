@@ -67,7 +67,7 @@ func main() {
 	sectionStatusTicketService := service.NewSectionStatusTicketService(sectionStatusTicketRepo, statusTicketRepo, ticketRepo, db)
 	statusTicketService := service.NewStatusTicketService(statusTicketRepo)
 	jobService := service.NewJobService(jobRepo, employeeRepo, positionPermissionRepo, db, hub)
-	jobQueryService := service.NewJobQueryService(jobQueryRepo)
+	jobQueryService := service.NewJobQueryService(jobQueryRepo, employeeRepo, positionPermissionRepo)
 	positionPermissionService := service.NewPositionPermissionService(positionPermissionRepo)
 	workflowService := service.NewWorkflowService(workflowRepo, workflowStepRepo, db)
 	specifiedLocationService := service.NewSpecifiedLocationService(specifiedLocationRepo)

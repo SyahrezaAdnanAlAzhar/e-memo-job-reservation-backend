@@ -13,12 +13,12 @@ import (
 )
 
 type JobHandler struct {
-	service      *service.JobService
-	queryService *service.JobQueryService
+	commandService *service.JobService
+	queryService   *service.JobQueryService
 }
 
-func NewJobHandler(service *service.JobService, queryService *service.JobQueryService) *JobHandler {
-	return &JobHandler{service: service, queryService: queryService}
+func NewJobHandler(commandService *service.JobService, queryService *service.JobQueryService) *JobHandler {
+	return &JobHandler{commandService: commandService, queryService: queryService}
 }
 
 // GET /jobs
@@ -79,7 +79,7 @@ func (h *JobHandler) AssignPIC(c *gin.Context) {
 		return
 	}
 
-	err = h.service.AssignPIC(c.Request.Context(), id, req, userNPK)
+	err = h.commandService.AssignPIC(c.Request.Context(), id, req, userNPK)
 	if err != nil {
 		switch err.Error() {
 		case "job not found", "action performer not found", "new PIC employee data not found":
@@ -107,7 +107,7 @@ func (h *JobHandler) ReorderJobs(c *gin.Context) {
 		return
 	}
 
-	err := h.service.ReorderJobs(c.Request.Context(), req, userNPK)
+	err := h.commandService.ReorderJobs(c.Request.Context(), req, userNPK)
 	if err != nil {
 		switch err.Error() {
 		case "user can only reorder jobs within their own department", "one or more job IDs do not belong to the specified department":
@@ -132,7 +132,7 @@ func (h *JobHandler) GetAvailableActions(c *gin.Context) {
 	}
 	userNPK := c.GetString("user_npk")
 
-	actions, err := h.service.GetAvailableActions(c.Request.Context(), id, userNPK)
+	actions, err := h.queryService.GetAvailableActions(c.Request.Context(), id, userNPK)
 	if err != nil {
 		if err.Error() == "job not found" || err.Error() == "user not found" {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -171,7 +171,7 @@ func (h *JobHandler) UploadReport(c *gin.Context) {
 		return
 	}
 
-	err = h.service.UploadReport(c.Request.Context(), id, userNPK, filePath)
+	err = h.commandService.UploadReport(c.Request.Context(), id, userNPK, filePath)
 	if err != nil {
 		os.Remove(filePath)
 
