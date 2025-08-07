@@ -3,12 +3,10 @@ package handler
 import (
 	"database/sql"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/filehandler"
 	"github.com/gin-gonic/gin"
 )
 
@@ -148,47 +146,4 @@ func (h *JobHandler) GetAvailableActions(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, actions)
-}
-
-// POST /jobs/:id/report
-func (h *JobHandler) UploadReport(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid job ID format"})
-		return
-	}
-	userNPK := c.GetString("user_npk")
-
-	file, err := c.FormFile("report_file")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "report_file is required in the form data"})
-		return
-	}
-
-	filePath, err := filehandler.SaveFile(c, file)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save uploaded file"})
-		return
-	}
-
-	err = h.commandService.UploadReport(c.Request.Context(), id, userNPK, filePath)
-	if err != nil {
-		os.Remove(filePath)
-
-		if err.Error() == "user is not the assigned PIC for this job" {
-			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
-			return
-		}
-		if err.Error() == "job not found" {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process report upload", "details": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message":   "Report file uploaded successfully",
-		"file_path": filePath,
-	})
 }

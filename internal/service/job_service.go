@@ -120,20 +120,3 @@ func (s *JobService) ReorderJobs(ctx context.Context, req dto.ReorderJobsRequest
 
 	return nil
 }
-
-// ADD FILE REPORT
-func (s *JobService) UploadReport(ctx context.Context, jobID int, userNPK string, filePath string) error {
-	job, err := s.jobCommandRepo.FindByID(jobID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return errors.New("job not found")
-		}
-		return err
-	}
-
-	if !job.PicJob.Valid || job.PicJob.String != userNPK {
-		return errors.New("user is not the assigned PIC for this job")
-	}
-
-	return s.jobCommandRepo.UpdateReportFile(ctx, jobID, filePath)
-}

@@ -59,22 +59,6 @@ func (r *JobRepository) GetPicByTicketID(ctx context.Context, ticketID int) (str
 	return picNpk.String, nil
 }
 
-// UPLOAD REPORT FILE
-func (r *JobRepository) UpdateReportFile(ctx context.Context, jobID int, reportFilePath string) error {
-	query := "UPDATE job SET report_file = array_append(report_file, $1), updated_at = NOW() WHERE id = $2"
-
-	result, err := r.DB.ExecContext(ctx, query, reportFilePath, jobID)
-	if err != nil {
-		return err
-	}
-
-	rowsAffected, _ := result.RowsAffected()
-	if rowsAffected == 0 {
-		return sql.ErrNoRows
-	}
-	return err
-}
-
 // AssignPIC
 func (r *JobRepository) AssignPIC(id int, picNpk string) error {
 	query := "UPDATE job SET pic_job = $1, updated_at = NOW() WHERE id = $2"
