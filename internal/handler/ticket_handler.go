@@ -198,7 +198,7 @@ func (h *TicketHandler) ExecuteAction(c *gin.Context) {
 		}
 	}
 
-	err = h.workflowService.ExecuteAction(c.Request.Context(), id, userNPK, req, filePath, transition)
+	err = h.workflowService.ExecuteAction(c.Request.Context(), id, userNPK, req, filePath)
 
 	if err != nil {
 		if filePath != "" {

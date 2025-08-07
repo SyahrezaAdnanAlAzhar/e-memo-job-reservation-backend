@@ -5,6 +5,7 @@ import (
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"github.com/lib/pq"
 )
 
 type StatusTransitionRepository struct {
@@ -79,4 +80,34 @@ func (r *StatusTransitionRepository) FindPossibleTransitionsWithDetails(fromStat
 		transitions = append(transitions, t)
 	}
 	return transitions, nil
+}
+
+func (r *StatusTransitionRepository) FindAvailableTransitionsForRoles(fromStatusID int, roleIDs []int) ([]dto.ActionResponse, error) {
+	if len(roleIDs) == 0 {
+		return []dto.ActionResponse{}, nil
+	}
+
+	query := `
+        SELECT a.name as action_name, a.hex_code
+        FROM status_transition st
+        JOIN action a ON st.action_id = a.id
+        WHERE st.from_status_id = $1
+          AND st.actor_role_id = ANY($2)
+          AND st.is_active = true`
+
+	rows, err := r.DB.Query(query, fromStatusID, pq.Array(roleIDs))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var actions []dto.ActionResponse
+	for rows.Next() {
+		var a dto.ActionResponse
+		if err := rows.Scan(&a.ActionName, &a.HexCode); err != nil {
+			return nil, err
+		}
+		actions = append(actions, a)
+	}
+	return actions, nil
 }

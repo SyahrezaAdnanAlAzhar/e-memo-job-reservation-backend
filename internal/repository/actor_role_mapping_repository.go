@@ -50,3 +50,40 @@ func (r *ActorRoleMappingRepository) GetRolesForUserContext(positionID int, cont
 	}
 	return roles, nil
 }
+
+func (r *ActorRoleMappingRepository) GetRoleIDsForUserContext(positionID int, contexts []string) ([]int, error) {
+	if len(contexts) == 0 {
+		return []int{}, nil
+	}
+
+	placeholders := make([]string, len(contexts))
+	args := make([]interface{}, len(contexts)+1)
+	args[0] = positionID
+	for i, context := range contexts {
+		placeholders[i] = fmt.Sprintf("$%d", i+2)
+		args[i+1] = context
+	}
+
+	query := fmt.Sprintf(`
+        SELECT actor_role_id
+        FROM actor_role_mapping
+        WHERE employee_position_id = $1
+          AND context IN (%s)`, strings.Join(placeholders, ","))
+
+	rows, err := r.DB.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var roleIDs []int
+	for rows.Next() {
+		var roleID int
+		if err := rows.Scan(&roleID); err != nil {
+			return nil, err
+		}
+		roleIDs = append(roleIDs, roleID)
+	}
+	
+	return roleIDs, nil
+}

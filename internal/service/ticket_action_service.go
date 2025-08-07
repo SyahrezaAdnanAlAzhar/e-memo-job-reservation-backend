@@ -48,6 +48,7 @@ func (s *TicketActionService) GetAvailableActions(ctx context.Context, ticketID 
 		}
 		return nil, err
 	}
+
 	ticket, err := s.ticketRepo.FindByIDAsStruct(ctx, ticketID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -55,6 +56,7 @@ func (s *TicketActionService) GetAvailableActions(ctx context.Context, ticketID 
 		}
 		return nil, err
 	}
+
 	requestor, err := s.employeeRepo.FindByNPK(ticket.Requestor)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -62,22 +64,17 @@ func (s *TicketActionService) GetAvailableActions(ctx context.Context, ticketID 
 		}
 		return nil, err
 	}
-	jobPIC, _ := s.jobRepo.GetPicByTicketID(ctx, ticketID)
 
-	userContexts := determineUserContexts(user, ticket, requestor, jobPIC)
-	userRoles, err := s.actorRoleMappingRepo.GetRolesForUserContext(user.Position.ID, userContexts)
+	job, _ := s.jobRepo.FindByTicketID(ctx, ticketID)
+
+	userContexts := determineUserContexts(user, ticket, requestor, job)
+
+	userRoleIDs, err := s.actorRoleMappingRepo.GetRoleIDsForUserContext(user.Position.ID, userContexts)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.New("actor role mapping not found")
 		}
 		return nil, err
-	}
-	if jobPIC != "" && user.NPK == jobPIC {
-		userRoles = append(userRoles, "ASSIGNED_PIC")
-	}
-	userRolesMap := make(map[string]bool)
-	for _, role := range userRoles {
-		userRolesMap[role] = true
 	}
 
 	currentStatusID, _, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
@@ -88,25 +85,15 @@ func (s *TicketActionService) GetAvailableActions(ctx context.Context, ticketID 
 		return nil, err
 	}
 
-	possibleTransitions, err := s.statusTransitionRepo.FindPossibleTransitionsWithDetails(currentStatusID)
+	availableActions, err := s.statusTransitionRepo.FindAvailableTransitionsForRoles(currentStatusID, userRoleIDs)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return []dto.ActionResponse{}, nil
-		}
 		return nil, err
-	}
-
-	var availableActions []dto.ActionResponse
-	for _, transition := range possibleTransitions {
-		if _, ok := userRolesMap[transition.RequiredActorRole]; ok {
-			availableActions = append(availableActions, transition.ActionDetail)
-		}
 	}
 
 	return availableActions, nil
 }
 
-func determineUserContexts(user *model.Employee, ticket *model.Ticket, requestor *model.Employee, jobPIC string) []string {
+func determineUserContexts(user *model.Employee, ticket *model.Ticket, requestor *model.Employee, job *model.Job) []string {
 	var contexts []string
 	if user.NPK == ticket.Requestor {
 		contexts = append(contexts, "SELF")
@@ -116,6 +103,9 @@ func determineUserContexts(user *model.Employee, ticket *model.Ticket, requestor
 	}
 	if user.DepartmentID == ticket.DepartmentTargetID {
 		contexts = append(contexts, "TARGET_DEPT")
+	}
+	if job != nil && job.PicJob.Valid && user.NPK == job.PicJob.String {
+		contexts = append(contexts, "ASSIGNED")
 	}
 	return contexts
 }

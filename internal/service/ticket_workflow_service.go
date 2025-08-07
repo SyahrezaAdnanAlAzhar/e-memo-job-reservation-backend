@@ -53,7 +53,7 @@ func NewTicketWorkflowService(cfg *TicketWorkflowServiceConfig) *TicketWorkflowS
 }
 
 // EXECUTE ACTION TO GET TO THE NEXT STATUS BASED ON STATE
-func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int, userNPK string, req dto.ExecuteActionRequest, filePath string, transition *model.StatusTransition) error {
+func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int, userNPK string, req dto.ExecuteActionRequest, filePath string) error {
 	user, err := s.employeeRepo.FindByNPK(userNPK)
 	if err != nil {
 		return errors.New("user not found")
@@ -69,20 +69,25 @@ func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int,
 		return errors.New("original requestor not found")
 	}
 
-	jobPIC, _ := s.jobRepo.GetPicByTicketID(ctx, ticketID)
+	job, _ := s.jobRepo.FindByTicketID(ctx, ticketID)
 
 	currentStatusID, _, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
 	if err != nil {
 		return errors.New("could not get current ticket status")
 	}
 
-	userContexts := s.determineUserContexts(user, ticket, requestor)
+	transition, err := s.statusTransitionRepo.FindValidTransition(currentStatusID, req.ActionName)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.New("action not allowed from the current status")
+		}
+		return err
+	}
+
+	userContexts := s.determineUserContexts(user, ticket, requestor, job)
 	actorRoles, err := s.actorRoleMappingRepo.GetRolesForUserContext(user.Position.ID, userContexts)
 	if err != nil {
 		return err
-	}
-	if jobPIC != "" && user.NPK == jobPIC {
-		actorRoles = append(actorRoles, "ASSIGNED_PIC")
 	}
 
 	requiredRole, err := s.actorRoleRepo.GetRoleNameByID(transition.ActorRoleID)
@@ -161,7 +166,7 @@ func (s *TicketWorkflowService) ValidateAndGetTransition(ctx context.Context, ti
 }
 
 // HELPER FUNCTION
-func (s *TicketWorkflowService) determineUserContexts(user *model.Employee, ticket *model.Ticket, requestor *model.Employee) []string {
+func (s *TicketWorkflowService) determineUserContexts(user *model.Employee, ticket *model.Ticket, requestor *model.Employee, job *model.Job) []string {
 	var contexts []string
 	if user.NPK == ticket.Requestor {
 		contexts = append(contexts, "SELF")
@@ -171,6 +176,9 @@ func (s *TicketWorkflowService) determineUserContexts(user *model.Employee, tick
 	}
 	if user.DepartmentID == ticket.DepartmentTargetID {
 		contexts = append(contexts, "TARGET_DEPT")
+	}
+	if job != nil && job.PicJob.Valid && user.NPK == job.PicJob.String {
+		contexts = append(contexts, "ASSIGNED")
 	}
 	return contexts
 }
