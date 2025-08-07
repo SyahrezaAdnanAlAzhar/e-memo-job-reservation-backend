@@ -27,7 +27,7 @@ const baseJobQuery = `
         (t.deadline::date - NOW()::date) as days_remaining
     FROM job j
     JOIN ticket t ON j.ticket_id = t.id
-    JOIN department dept ON t.department_target_id = dept.id -- Join ke department via ticket
+    JOIN department dept ON t.department_target_id = dept.id
     JOIN employee req_emp ON t.requestor = req_emp.npk
     LEFT JOIN employee pic_emp ON j.pic_job = pic_emp.npk
     LEFT JOIN (

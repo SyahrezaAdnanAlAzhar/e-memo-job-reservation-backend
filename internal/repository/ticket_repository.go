@@ -121,7 +121,7 @@ func (r *TicketRepository) FindAll(filters dto.TicketFilter) ([]dto.TicketDetail
 	}
 
 	if filters.PicNPK != "" {
-		conditions = append(conditions, fmt.Sprintf("j.pic_job_npk = $%d", argID))
+		conditions = append(conditions, fmt.Sprintf("j.pic_job = $%d", argID))
 		args = append(args, filters.PicNPK)
 		argID++
 	}

@@ -13,20 +13,22 @@ import (
 )
 
 type JobService struct {
-	jobRepo      *repository.JobRepository
-	employeeRepo *repository.EmployeeRepository
-	posPermRepo  *repository.PositionPermissionRepository
-	db           *sql.DB
-	hub          *websocket.Hub
+	jobCommandRepo *repository.JobRepository
+	jobQueryRepo   *repository.JobQueryRepository
+	employeeRepo   *repository.EmployeeRepository
+	posPermRepo    *repository.PositionPermissionRepository
+	db             *sql.DB
+	hub            *websocket.Hub
 }
 
-func NewJobService(jobRepo *repository.JobRepository, employeeRepo *repository.EmployeeRepository, posPermRepo *repository.PositionPermissionRepository, db *sql.DB, hub *websocket.Hub) *JobService {
+func NewJobService(jobCommandRepo *repository.JobRepository, jobQueryRepo *repository.JobQueryRepository, employeeRepo *repository.EmployeeRepository, posPermRepo *repository.PositionPermissionRepository, db *sql.DB, hub *websocket.Hub) *JobService {
 	return &JobService{
-		jobRepo:      jobRepo,
-		employeeRepo: employeeRepo,
-		posPermRepo:  posPermRepo,
-		db:           db,
-		hub:          hub,
+		jobCommandRepo: jobCommandRepo,
+		jobQueryRepo:   jobQueryRepo,
+		employeeRepo:   employeeRepo,
+		posPermRepo:    posPermRepo,
+		db:             db,
+		hub:            hub,
 	}
 }
 
@@ -37,7 +39,7 @@ func (s *JobService) AssignPIC(ctx context.Context, jobID int, req dto.AssignPIC
 		return errors.New("action performer not found")
 	}
 
-	job, err := s.jobRepo.FindByID(jobID)
+	job, err := s.jobQueryRepo.FindByID(jobID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errors.New("job not found")
@@ -45,7 +47,7 @@ func (s *JobService) AssignPIC(ctx context.Context, jobID int, req dto.AssignPIC
 		return err
 	}
 
-	newPIC, err := s.employeeRepo.FindByNPK(req.PicJobNPK)
+	newPIC, err := s.employeeRepo.FindByNPK(req.PicJob)
 	if err != nil {
 		return errors.New("new PIC employee data not found")
 	}
@@ -58,7 +60,7 @@ func (s *JobService) AssignPIC(ctx context.Context, jobID int, req dto.AssignPIC
 		return errors.New("new PIC must be from the same department as the job")
 	}
 
-	return s.jobRepo.AssignPIC(jobID, req.PicJobNPK)
+	return s.jobCommandRepo.AssignPIC(jobID, req.PicJob)
 }
 
 // ReorderJobs
@@ -76,7 +78,7 @@ func (s *JobService) ReorderJobs(ctx context.Context, req dto.ReorderJobsRequest
 		jobIDs[i] = item.JobID
 	}
 
-	validJobCount, err := s.jobRepo.CheckJobsInDepartment(jobIDs, req.DepartmentTargetID)
+	validJobCount, err := s.jobCommandRepo.CheckJobsInDepartment(jobIDs, req.DepartmentTargetID)
 	if err != nil {
 		return err
 	}
@@ -92,7 +94,7 @@ func (s *JobService) ReorderJobs(ctx context.Context, req dto.ReorderJobsRequest
 
 	for i, item := range req.Items {
 		newPriority := i + 1
-		rowsAffected, err := s.jobRepo.UpdatePriority(ctx, tx, item.JobID, item.Version, newPriority)
+		rowsAffected, err := s.jobCommandRepo.UpdatePriority(ctx, tx, item.JobID, item.Version, newPriority)
 		if err != nil {
 			return err
 		}
@@ -121,7 +123,7 @@ func (s *JobService) ReorderJobs(ctx context.Context, req dto.ReorderJobsRequest
 
 // ADD FILE REPORT
 func (s *JobService) UploadReport(ctx context.Context, jobID int, userNPK string, filePath string) error {
-	job, err := s.jobRepo.FindByID(jobID)
+	job, err := s.jobCommandRepo.FindByID(jobID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errors.New("job not found")
@@ -133,5 +135,5 @@ func (s *JobService) UploadReport(ctx context.Context, jobID int, userNPK string
 		return errors.New("user is not the assigned PIC for this job")
 	}
 
-	return s.jobRepo.UpdateReportFile(ctx, jobID, filePath)
+	return s.jobCommandRepo.UpdateReportFile(ctx, jobID, filePath)
 }

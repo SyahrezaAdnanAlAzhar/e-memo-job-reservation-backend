@@ -27,7 +27,7 @@ func (r *JobRepository) Create(ctx context.Context, tx *sql.Tx, ticketID int, in
 // CHECK THE JOB ALREADY GET ASSIGN OR NOT
 func (r *JobRepository) IsJobAssigned(ctx context.Context, ticketID int) (bool, error) {
 	var isAssigned bool
-	query := "SELECT (pic_job_npk IS NOT NULL) FROM job WHERE ticket_id = $1"
+	query := "SELECT (pic_job IS NOT NULL) FROM job WHERE ticket_id = $1"
 
 	err := r.DB.QueryRowContext(ctx, query, ticketID).Scan(&isAssigned)
 	if err != nil {
@@ -42,7 +42,7 @@ func (r *JobRepository) IsJobAssigned(ctx context.Context, ticketID int) (bool, 
 // GET PIC
 func (r *JobRepository) GetPicByTicketID(ctx context.Context, ticketID int) (string, error) {
 	var picNpk sql.NullString
-	query := "SELECT pic_job_npk FROM job WHERE ticket_id = $1"
+	query := "SELECT pic_job FROM job WHERE ticket_id = $1"
 
 	err := r.DB.QueryRowContext(ctx, query, ticketID).Scan(&picNpk)
 	if err != nil {
@@ -62,7 +62,7 @@ func (r *JobRepository) GetPicByTicketID(ctx context.Context, ticketID int) (str
 // UPLOAD REPORT FILE
 func (r *JobRepository) UpdateReportFile(ctx context.Context, jobID int, reportFilePath string) error {
 	query := "UPDATE job SET report_file = array_append(report_file, $1), updated_at = NOW() WHERE id = $2"
-	
+
 	result, err := r.DB.ExecContext(ctx, query, reportFilePath, jobID)
 	if err != nil {
 		return err
@@ -75,25 +75,9 @@ func (r *JobRepository) UpdateReportFile(ctx context.Context, jobID int, reportF
 	return err
 }
 
-// FindByID
-func (r *JobRepository) FindByID(id int) (*model.Job, error) {
-	query := `
-        SELECT id, ticket_id, pic_job_npk, assigned_department_id, job_priority, report_file, created_at, updated_at 
-        FROM job WHERE id = $1`
-
-	row := r.DB.QueryRow(query, id)
-
-	var j model.Job
-	err := row.Scan(
-		&j.ID, &j.TicketID, &j.PicJob, &j.AssignedDepartmentID,
-		&j.JobPriority, &j.ReportFile, &j.CreatedAt, &j.UpdatedAt,
-	)
-	return &j, err
-}
-
 // AssignPIC
 func (r *JobRepository) AssignPIC(id int, picNpk string) error {
-	query := "UPDATE job SET pic_job_npk = $1, updated_at = NOW() WHERE id = $2"
+	query := "UPDATE job SET pic_job = $1, updated_at = NOW() WHERE id = $2"
 	result, err := r.DB.Exec(query, picNpk, id)
 	if err != nil {
 		return err
@@ -126,7 +110,11 @@ func (r *JobRepository) CheckJobsInDepartment(jobIDs []int, departmentID int) (i
 		return 0, nil
 	}
 
-	query := "SELECT COUNT(id) FROM job WHERE id = ANY($1) AND assigned_department_id = $2"
+	query := `
+        SELECT COUNT(j.id) 
+        FROM job j
+        JOIN ticket t ON j.ticket_id = t.id
+        WHERE j.id = ANY($1) AND t.department_target_id = $2`
 
 	var count int
 	err := r.DB.QueryRow(query, pq.Array(jobIDs), departmentID).Scan(&count)
@@ -162,24 +150,33 @@ func (r *JobRepository) AddReportFile(id int, filePath string) error {
 // GET JOB BY TICKET ID
 func (r *JobRepository) FindByTicketID(ctx context.Context, ticketID int) (*model.Job, error) {
 	query := `
-        SELECT 
-            j.id, j.ticket_id, j.pic_job, 
-            t.department_target_id as assigned_department_id,
-            j.job_priority, j.report_file, j.version, j.created_at, j.updated_at 
-        FROM job j
-        JOIN ticket t ON j.ticket_id = t.id
-        WHERE j.ticket_id = $1`
-	
+        SELECT id, ticket_id, pic_job, job_priority, report_file, version, created_at, updated_at 
+        FROM job
+        WHERE ticket_id = $1`
+
 	row := r.DB.QueryRowContext(ctx, query, ticketID)
 
 	var j model.Job
 	err := row.Scan(
-		&j.ID, &j.TicketID, &j.PicJob, &j.AssignedDepartmentID,
-		&j.JobPriority, &j.ReportFile, &j.Version, &j.CreatedAt, &j.UpdatedAt,
+		&j.ID, &j.TicketID, &j.PicJob, &j.JobPriority, &j.ReportFile, &j.Version, &j.CreatedAt, &j.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	return &j, nil
+}
+
+func (r *JobRepository) FindByID(id int) (*model.Job, error) {
+	query := `
+        SELECT id, ticket_id, pic_job, job_priority, report_file, version, created_at, updated_at 
+        FROM job WHERE id = $1`
+
+	row := r.DB.QueryRow(query, id)
+
+	var j model.Job
+	err := row.Scan(
+		&j.ID, &j.TicketID, &j.PicJob, &j.JobPriority, &j.ReportFile, &j.Version, &j.CreatedAt, &j.UpdatedAt,
+	)
+	return &j, err
 }

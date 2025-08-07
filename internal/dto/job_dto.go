@@ -3,7 +3,7 @@ package dto
 import "time"
 
 type AssignPICRequest struct {
-	PicJobNPK string `json:"pic_job_npk" binding:"required"`
+	PicJob string `json:"pic_job" binding:"required"`
 }
 
 type ReorderJobsRequest struct {
