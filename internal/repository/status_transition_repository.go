@@ -136,8 +136,8 @@ func (r *StatusTransitionRepository) FindAvailableTransitionsForRoles(fromStatus
 func (r *StatusTransitionRepository) GetTransitionDetails(fromStatusID int, actionName string) (*model.StatusTransition, error) {
 	query := `
         SELECT 
-            id, from_status_id, to_status_id, action_id, 
-            actor_role_id, require_reason, reason_label, require_file
+            st.id, st.from_status_id, st.to_status_id, st.action_id, 
+            st.actor_role_id, st.require_reason, st.reason_label, st.require_file
         FROM status_transition st
         JOIN action a ON st.action_id = a.id
         WHERE st.from_status_id = $1 AND a.name = $2 AND st.is_active = true
