@@ -4,10 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"log"
+	"mime/multipart"
+	"os"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/filehandler"
+	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
 )
 
@@ -53,30 +59,39 @@ func NewTicketWorkflowService(cfg *TicketWorkflowServiceConfig) *TicketWorkflowS
 }
 
 // EXECUTE ACTION TO GET TO THE NEXT STATUS BASED ON STATE
-func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int, userNPK string, req dto.ExecuteActionRequest, filePath string) error {
+func (s *TicketWorkflowService) ExecuteAction(c *gin.Context, ticketID int, userNPK string, req dto.ExecuteActionRequest, file *multipart.FileHeader) error {
+	log.Printf("--- START ExecuteAction for Ticket %d by User %s ---", ticketID, userNPK)
+	ctx := c.Request.Context()
+
 	user, err := s.employeeRepo.FindByNPK(userNPK)
 	if err != nil {
 		return errors.New("user not found")
 	}
+	log.Printf("Action Performer: %+v", user)
 
 	ticket, err := s.ticketRepo.FindByIDAsStruct(ctx, ticketID)
 	if err != nil {
 		return errors.New("ticket not found")
 	}
+	log.Printf("Target Ticket: %+v", ticket)
 
 	requestor, err := s.employeeRepo.FindByNPK(ticket.Requestor)
 	if err != nil {
 		return errors.New("original requestor not found")
 	}
+	log.Printf("Original Requestor: %+v", requestor)
 
 	job, _ := s.jobRepo.FindByTicketID(ctx, ticketID)
 
-	currentStatusID, _, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
+	currentStatusID, currentStatusName, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
 	if err != nil {
 		return errors.New("could not get current ticket status")
 	}
+	log.Printf("Current Status: ID=%d, Name=%s", currentStatusID, currentStatusName)
 
-	transition, err := s.statusTransitionRepo.FindValidTransition(currentStatusID, req.ActionName)
+	log.Printf("DEBUG: Executing action '%s' for ticket %d. Current status is '%s' (ID: %d)", req.ActionName, ticketID, currentStatusName, currentStatusID)
+
+	toStatusID, allowedRoleIDs, err := s.statusTransitionRepo.FindValidTransition(currentStatusID, req.ActionName)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errors.New("action not allowed from the current status")
@@ -85,20 +100,24 @@ func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int,
 	}
 
 	userContexts := s.determineUserContexts(user, ticket, requestor, job)
-	actorRoles, err := s.actorRoleMappingRepo.GetRolesForUserContext(user.Position.ID, userContexts)
+	userRoleIDs, err := s.actorRoleMappingRepo.GetRoleIDsForUserContext(user.Position.ID, userContexts)
+	log.Printf("User Contexts: %v", userContexts)
+
 	if err != nil {
 		return err
 	}
 
-	requiredRole, err := s.actorRoleRepo.GetRoleNameByID(transition.ActorRoleID)
-	if err != nil {
-		return err
-	}
+	log.Printf("Resolved Actor Roles: %v", userRoleIDs)
 
 	isAuthorized := false
-	for _, role := range actorRoles {
-		if role == requiredRole {
-			isAuthorized = true
+	for _, userRoleID := range userRoleIDs {
+		for _, allowedRoleID := range allowedRoleIDs {
+			if userRoleID == allowedRoleID {
+				isAuthorized = true
+				break
+			}
+		}
+		if isAuthorized {
 			break
 		}
 	}
@@ -106,15 +125,34 @@ func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int,
 		return errors.New("user does not have the required role for this action")
 	}
 
-	if transition.RequiresReason && req.Reason == "" {
-		return errors.New("reason is required for this action")
+	log.Println("Authorization successful.")
+
+	transitionDetails, err := s.statusTransitionRepo.GetTransitionDetails(currentStatusID, req.ActionName)
+	if err != nil {
+		return errors.New("could not retrieve transition details")
 	}
-	if transition.RequiresFile && filePath == "" {
-		return errors.New("file upload is required for this action")
+
+	if transitionDetails.RequiresReason && req.Reason == "" {
+		errorMsg := "reason is required for this action"
+		if transitionDetails.ReasonLabel.Valid {
+			errorMsg = fmt.Sprintf("%s is required", transitionDetails.ReasonLabel.String)
+		}
+		return errors.New(errorMsg)
+	}
+	var filePath string
+	if transitionDetails.RequiresFile && file != nil {
+		savedPath, saveErr := filehandler.SaveFile(c, file)
+		if saveErr != nil {
+			return errors.New("failed to save uploaded file")
+		}
+		filePath = savedPath
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
+		if filePath != "" {
+			os.Remove(filePath)
+		}
 		return err
 	}
 	defer tx.Rollback()
@@ -126,43 +164,45 @@ func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int,
 
 	logEntry := model.TicketActionLog{
 		TicketID:       int64(ticketID),
-		ActionID:       transition.ActionID,
+		ActionID:       transitionDetails.ActionID,
 		PerformedByNpk: userNPK,
 		DetailsText:    sql.NullString{String: req.Reason, Valid: req.Reason != ""},
 		FilePath:       filePaths,
 		FromStatusID:   sql.NullInt32{Int32: int32(currentStatusID), Valid: true},
-		ToStatusID:     transition.ToStatusID,
+		ToStatusID:     transitionDetails.ToStatusID,
 	}
 
 	if err := s.ticketActionLogRepo.Create(ctx, tx, logEntry); err != nil {
+		if filePath != "" {
+			os.Remove(filePath)
+		}
 		return err
 	}
 
-	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, transition.ToStatusID); err != nil {
+	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, toStatusID); err != nil {
+		if filePath != "" {
+			os.Remove(filePath)
+		}
 		return err
 	}
 
 	return tx.Commit()
 }
 
-func (s *TicketWorkflowService) ValidateAndGetTransition(ctx context.Context, ticketID int, actionName string) (*model.StatusTransition, error) {
-	currentStatusID, _, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
+func (s *TicketWorkflowService) ValidateAndGetTransition(ctx context.Context, currentStatusID int, actionName string) (toStatusID int, allowedRoleIDs []int, err error) {
+	toStatusID, allowedRoleIDs, err = s.statusTransitionRepo.FindValidTransition(currentStatusID, actionName)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, errors.New("ticket not found or has no active status")
+			return 0, nil, errors.New("action not allowed from the current status")
 		}
-		return nil, err
+		return 0, nil, err
 	}
 
-	transition, err := s.statusTransitionRepo.FindValidTransition(currentStatusID, actionName)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, errors.New("action not allowed from the current status")
-		}
-		return nil, err
+	if len(allowedRoleIDs) == 0 {
+		return 0, nil, errors.New("no roles are configured to perform this action")
 	}
 
-	return transition, nil
+	return toStatusID, allowedRoleIDs, nil
 }
 
 // HELPER FUNCTION

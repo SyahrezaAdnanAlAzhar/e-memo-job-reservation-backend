@@ -3,12 +3,10 @@ package handler
 import (
 	"database/sql"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/filehandler"
 
 	"github.com/gin-gonic/gin"
 )
@@ -168,43 +166,15 @@ func (h *TicketHandler) ExecuteAction(c *gin.Context) {
 		return
 	}
 
-	transition, err := h.workflowService.ValidateAndGetTransition(c.Request.Context(), id, req.ActionName)
-	if err != nil {
-		if err.Error() == "ticket not found or has no active status" {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
-		if err.Error() == "action not allowed from the current status" {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify transition", "details": err.Error()})
+	file, err := c.FormFile("file")
+	if err != nil && err != http.ErrMissingFile {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file upload", "details": err.Error()})
 		return
 	}
 
-	var filePath string
-	if transition.RequiresFile {
-		file, err := c.FormFile("file")
-		if err == nil {
-			savedPath, saveErr := filehandler.SaveFile(c, file)
-			if saveErr != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save uploaded file"})
-				return
-			}
-			filePath = savedPath
-		} else if err != http.ErrMissingFile {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file upload", "details": err.Error()})
-			return
-		}
-	}
-
-	err = h.workflowService.ExecuteAction(c.Request.Context(), id, userNPK, req, filePath)
+	err = h.workflowService.ExecuteAction(c, id, userNPK, req, file)
 
 	if err != nil {
-		if filePath != "" {
-			os.Remove(filePath)
-		}
-
 		switch err.Error() {
 		case "ticket not found", "user not found", "original requestor not found":
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})

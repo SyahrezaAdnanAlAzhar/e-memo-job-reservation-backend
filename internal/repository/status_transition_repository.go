@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
@@ -21,26 +22,46 @@ type TransitionDetail struct {
 	ActionDetail      dto.ActionResponse
 }
 
-func (r *StatusTransitionRepository) FindValidTransition(fromStatusID int, actionName string) (*model.StatusTransition, error) {
+func (r *StatusTransitionRepository) FindValidTransition(fromStatusID int, actionName string) (int, []int, error) {
 	query := `
         SELECT 
-            st.id, st.from_status_id, st.to_status_id, st.action_id, 
-            st.actor_role_id, st.require_reason, st.reason_label, st.require_file
+            st.to_status_id,
+            st.actor_role_id
         FROM status_transition st
         JOIN action a ON st.action_id = a.id
         WHERE st.from_status_id = $1 AND a.name = $2 AND st.is_active = true`
 
-	row := r.DB.QueryRow(query, fromStatusID, actionName)
-
-	var transition model.StatusTransition
-	err := row.Scan(
-		&transition.ID, &transition.FromStatusID, &transition.ToStatusID, &transition.ActionID,
-		&transition.ActorRoleID, &transition.RequiresReason, &transition.ReasonLabel, &transition.RequiresFile,
-	)
+	rows, err := r.DB.Query(query, fromStatusID, actionName)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
-	return &transition, nil
+	defer rows.Close()
+
+	var toStatusID int
+	var allowedRoleIDs []int
+	isToStatusSet := false
+
+	for rows.Next() {
+		var currentToStatusID, currentActorRoleID int
+		if err := rows.Scan(&currentToStatusID, &currentActorRoleID); err != nil {
+			return 0, nil, err
+		}
+
+		if !isToStatusSet {
+			toStatusID = currentToStatusID
+			isToStatusSet = true
+		} else if toStatusID != currentToStatusID {
+			return 0, nil, fmt.Errorf("data inconsistency: action '%s' from status %d leads to multiple different to_statuses", actionName, fromStatusID)
+		}
+
+		allowedRoleIDs = append(allowedRoleIDs, currentActorRoleID)
+	}
+
+	if !isToStatusSet {
+		return 0, nil, sql.ErrNoRows
+	}
+
+	return toStatusID, allowedRoleIDs, nil
 }
 
 func (r *StatusTransitionRepository) FindPossibleTransitionsWithDetails(fromStatusID int) ([]TransitionDetail, error) {
@@ -110,4 +131,27 @@ func (r *StatusTransitionRepository) FindAvailableTransitionsForRoles(fromStatus
 		actions = append(actions, a)
 	}
 	return actions, nil
+}
+
+func (r *StatusTransitionRepository) GetTransitionDetails(fromStatusID int, actionName string) (*model.StatusTransition, error) {
+	query := `
+        SELECT 
+            id, from_status_id, to_status_id, action_id, 
+            actor_role_id, require_reason, reason_label, require_file
+        FROM status_transition st
+        JOIN action a ON st.action_id = a.id
+        WHERE st.from_status_id = $1 AND a.name = $2 AND st.is_active = true
+        LIMIT 1`
+
+	row := r.DB.QueryRow(query, fromStatusID, actionName)
+
+	var transition model.StatusTransition
+	err := row.Scan(
+		&transition.ID, &transition.FromStatusID, &transition.ToStatusID, &transition.ActionID,
+		&transition.ActorRoleID, &transition.RequiresReason, &transition.ReasonLabel, &transition.RequiresFile,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &transition, nil
 }
