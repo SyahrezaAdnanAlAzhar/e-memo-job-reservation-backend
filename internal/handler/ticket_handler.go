@@ -3,10 +3,12 @@ package handler
 import (
 	"database/sql"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/filehandler"
 
 	"github.com/gin-gonic/gin"
 )
@@ -52,8 +54,25 @@ func (h *TicketHandler) CreateTicket(c *gin.Context) {
 		return
 	}
 
-	createdTicket, err := h.commandService.CreateTicket(c.Request.Context(), req, requestorNPK)
+	var filePaths []string
+	form, err := c.MultipartForm()
+	if err == nil {
+		files := form.File["support_files"]
+		if len(files) > 0 {
+			savedPaths, saveErr := filehandler.SaveFiles(c, files)
+			if saveErr != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save uploaded files"})
+				return
+			}
+			filePaths = savedPaths
+		}
+	}
+
+	createdTicket, err := h.commandService.CreateTicket(c.Request.Context(), req, requestorNPK, filePaths)
 	if err != nil {
+		for _, p := range filePaths {
+			os.Remove(p)
+		}
 		switch err.Error() {
 		case "requestor not found", "no workflow defined for this user's position":
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -166,15 +185,26 @@ func (h *TicketHandler) ExecuteAction(c *gin.Context) {
 		return
 	}
 
-	file, err := c.FormFile("file")
-	if err != nil && err != http.ErrMissingFile {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file upload", "details": err.Error()})
-		return
+	var filePaths []string
+	form, err := c.MultipartForm()
+	if err == nil {
+		files := form.File["files"]
+		if len(files) > 0 {
+			savedPaths, saveErr := filehandler.SaveFiles(c, files)
+			if saveErr != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save uploaded files"})
+				return
+			}
+			filePaths = savedPaths
+		}
 	}
 
-	err = h.workflowService.ExecuteAction(c, id, userNPK, req, file)
+	err = h.workflowService.ExecuteAction(c, id, userNPK, req, filePaths)
 
 	if err != nil {
+		for _, p := range filePaths {
+			os.Remove(p)
+		}
 		switch err.Error() {
 		case "ticket not found", "user not found", "original requestor not found":
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})

@@ -6,13 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"mime/multipart"
-	"os"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/filehandler"
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
 )
@@ -59,7 +56,7 @@ func NewTicketWorkflowService(cfg *TicketWorkflowServiceConfig) *TicketWorkflowS
 }
 
 // EXECUTE ACTION TO GET TO THE NEXT STATUS BASED ON STATE
-func (s *TicketWorkflowService) ExecuteAction(c *gin.Context, ticketID int, userNPK string, req dto.ExecuteActionRequest, file *multipart.FileHeader) error {
+func (s *TicketWorkflowService) ExecuteAction(c *gin.Context, ticketID int, userNPK string, req dto.ExecuteActionRequest, filePaths []string) error {
 	log.Printf("--- START ExecuteAction for Ticket %d by User %s ---", ticketID, userNPK)
 	ctx := c.Request.Context()
 
@@ -139,50 +136,28 @@ func (s *TicketWorkflowService) ExecuteAction(c *gin.Context, ticketID int, user
 		}
 		return errors.New(errorMsg)
 	}
-	var filePath string
-	if transitionDetails.RequiresFile && file != nil {
-		savedPath, saveErr := filehandler.SaveFile(c, file)
-		if saveErr != nil {
-			return errors.New("failed to save uploaded file")
-		}
-		filePath = savedPath
-	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		if filePath != "" {
-			os.Remove(filePath)
-		}
 		return err
 	}
 	defer tx.Rollback()
-
-	var filePaths pq.StringArray
-	if filePath != "" {
-		filePaths = pq.StringArray{filePath}
-	}
 
 	logEntry := model.TicketActionLog{
 		TicketID:       int64(ticketID),
 		ActionID:       transitionDetails.ActionID,
 		PerformedByNpk: userNPK,
 		DetailsText:    sql.NullString{String: req.Reason, Valid: req.Reason != ""},
-		FilePath:       filePaths,
+		FilePath:       pq.StringArray(filePaths),
 		FromStatusID:   sql.NullInt32{Int32: int32(currentStatusID), Valid: true},
 		ToStatusID:     transitionDetails.ToStatusID,
 	}
 
 	if err := s.ticketActionLogRepo.Create(ctx, tx, logEntry); err != nil {
-		if filePath != "" {
-			os.Remove(filePath)
-		}
 		return err
 	}
 
 	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, toStatusID); err != nil {
-		if filePath != "" {
-			os.Remove(filePath)
-		}
 		return err
 	}
 

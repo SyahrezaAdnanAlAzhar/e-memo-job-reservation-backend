@@ -11,6 +11,7 @@ import (
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/websocket"
+	"github.com/lib/pq"
 )
 
 type TicketCommandService struct {
@@ -49,7 +50,7 @@ func NewTicketCommandService(cfg *TicketCommandServiceConfig) *TicketCommandServ
 }
 
 // CREATE TICKET
-func (s *TicketCommandService) CreateTicket(ctx context.Context, req dto.CreateTicketRequest, requestor string) (*model.Ticket, error) {
+func (s *TicketCommandService) CreateTicket(ctx context.Context, req dto.CreateTicketRequest, requestor string, supportFiles []string) (*model.Ticket, error) {
 	// GET EMPLOYEE DATA (TO GET THE POSITION)
 	positionID, err := s.employeeRepo.GetEmployeePositionID(ctx, requestor)
 	if err != nil {
@@ -93,6 +94,7 @@ func (s *TicketCommandService) CreateTicket(ctx context.Context, req dto.CreateT
 		Description:         req.Description,
 		TicketPriority:      lastPriority + 1,
 		Deadline:            deadline,
+		SupportFile:         pq.StringArray(supportFiles),
 	}
 
 	// INSERT DATA TO TICKET TABLE
@@ -184,7 +186,7 @@ func (s *TicketCommandService) UpdateTicket(ctx context.Context, ticketID int, r
 
 	rowsAffected, err := s.ticketRepo.Update(ctx, tx, ticketID, req)
 	if err != nil {
-		return err 
+		return err
 	}
 
 	if rowsAffected == 0 {
