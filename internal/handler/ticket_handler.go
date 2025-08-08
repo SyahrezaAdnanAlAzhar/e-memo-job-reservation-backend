@@ -126,32 +126,39 @@ func (h *TicketHandler) GetTicketByID(c *gin.Context) {
 
 // PUT UPDATE
 func (h *TicketHandler) UpdateTicket(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID format"})
+		return
+	}
+	userNPK := c.GetString("user_npk")
 	var req dto.UpdateTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	userNPK := c.GetString("user_npk")
-	err := h.commandService.UpdateTicket(c.Request.Context(), id, req, userNPK)
+	err = h.commandService.UpdateTicket(c.Request.Context(), id, req, userNPK)
+
 	if err != nil {
 		switch err.Error() {
-		case "ticket not found":
+		case "ticket not found", "user not found", "original requestor not found":
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		case "user is not authorized to edit this ticket":
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
-		case "ticket cannot be edited in its current state":
+		case "ticket can only be edited if status is 'Ditolak'":
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		case "data conflict: ticket has been modified by another user, please refresh":
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		case "invalid deadline format, please use YYYY-MM-DD":
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update ticket", "details": err.Error()})
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Ticket updated and resubmitted for approval"})
+	c.JSON(http.StatusOK, gin.H{"message": "Ticket data updated successfully. Please use the 'Revisi' action to continue the workflow."})
 }
 
 // PUT REORDER

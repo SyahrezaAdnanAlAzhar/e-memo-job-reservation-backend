@@ -177,13 +177,6 @@ func (s *TicketCommandService) UpdateTicket(ctx context.Context, ticketID int, r
 		return errors.New("original requestor not found")
 	}
 
-	isOriginalRequestor := user.NPK == originalTicket.Requestor
-	isSameDeptApprover := user.DepartmentID == requestor.DepartmentID && (user.Position.Name == "Head of Department" || user.Position.Name == "Section")
-
-	if !isOriginalRequestor && !isSameDeptApprover {
-		return errors.New("user is not authorized to edit this ticket")
-	}
-
 	currentStatusID, currentStatusName, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
 	if err != nil {
 		return errors.New("could not retrieve current ticket status")
