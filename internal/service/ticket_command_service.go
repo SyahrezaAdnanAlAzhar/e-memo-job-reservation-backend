@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
@@ -21,6 +22,10 @@ type TicketCommandService struct {
 	workflowRepo          *repository.WorkflowRepository
 	trackStatusTicketRepo *repository.TrackStatusTicketRepository
 	employeeRepo          *repository.EmployeeRepository
+	departmentRepo        *repository.DepartmentRepository
+	actorRoleMappingRepo  *repository.ActorRoleMappingRepository
+	actorRoleRepo         *repository.ActorRoleRepository
+	statusTransitionRepo  *repository.StatusTransitionRepository
 	hub                   *websocket.Hub
 	queryService          *TicketQueryService
 }
@@ -32,6 +37,10 @@ type TicketCommandServiceConfig struct {
 	WorkflowRepo          *repository.WorkflowRepository
 	TrackStatusTicketRepo *repository.TrackStatusTicketRepository
 	EmployeeRepo          *repository.EmployeeRepository
+	DepartmentRepo        *repository.DepartmentRepository
+	ActorRoleMappingRepo  *repository.ActorRoleMappingRepository
+	ActorRoleRepo         *repository.ActorRoleRepository
+	StatusTransitionRepo  *repository.StatusTransitionRepository
 	Hub                   *websocket.Hub
 	QueryService          *TicketQueryService
 }
@@ -44,6 +53,10 @@ func NewTicketCommandService(cfg *TicketCommandServiceConfig) *TicketCommandServ
 		workflowRepo:          cfg.WorkflowRepo,
 		trackStatusTicketRepo: cfg.TrackStatusTicketRepo,
 		employeeRepo:          cfg.EmployeeRepo,
+		departmentRepo:        cfg.DepartmentRepo,
+		actorRoleMappingRepo:  cfg.ActorRoleMappingRepo,
+		actorRoleRepo:         cfg.ActorRoleRepo,
+		statusTransitionRepo:  cfg.StatusTransitionRepo,
 		hub:                   cfg.Hub,
 		queryService:          cfg.QueryService,
 	}
@@ -51,6 +64,15 @@ func NewTicketCommandService(cfg *TicketCommandServiceConfig) *TicketCommandServ
 
 // CREATE TICKET
 func (s *TicketCommandService) CreateTicket(ctx context.Context, req dto.CreateTicketRequest, requestor string, supportFiles []string) (*model.Ticket, error) {
+	// VALIDATE DEPARTMENT
+	canReceive, err := s.departmentRepo.IsReceiver(req.DepartmentTargetID)
+	if err != nil {
+		return nil, err // "department not found or is not active"
+	}
+	if !canReceive {
+		return nil, errors.New("selected target department cannot receive jobs")
+	}
+
 	// GET EMPLOYEE DATA (TO GET THE POSITION)
 	positionID, err := s.employeeRepo.GetEmployeePositionID(ctx, requestor)
 	if err != nil {
@@ -92,7 +114,7 @@ func (s *TicketCommandService) CreateTicket(ctx context.Context, req dto.CreateT
 		PhysicalLocationID:  toNullInt64(req.PhysicalLocationID),
 		SpecifiedLocationID: toNullInt64(req.SpecifiedLocationID),
 		Description:         req.Description,
-		TicketPriority:      lastPriority + 1,
+		TicketPriority:      lastPriority,
 		Deadline:            deadline,
 		SupportFile:         pq.StringArray(supportFiles),
 	}
@@ -145,37 +167,51 @@ func (s *TicketCommandService) UpdateTicket(ctx context.Context, ticketID int, r
 		return err
 	}
 
-	if originalTicket.Requestor != userNPK {
+	user, err := s.employeeRepo.FindByNPK(userNPK)
+	if err != nil {
+		return errors.New("user not found")
+	}
+
+	requestor, err := s.employeeRepo.FindByNPK(originalTicket.Requestor)
+	if err != nil {
+		return errors.New("original requestor not found")
+	}
+
+	isOriginalRequestor := user.NPK == originalTicket.Requestor
+	isSameDeptApprover := user.DepartmentID == requestor.DepartmentID && (user.Position.Name == "Head of Department" || user.Position.Name == "Section")
+
+	if !isOriginalRequestor && !isSameDeptApprover {
 		return errors.New("user is not authorized to edit this ticket")
 	}
 
-	_, currentStatusName, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
+	currentStatusID, currentStatusName, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
 	if err != nil {
 		return errors.New("could not retrieve current ticket status")
 	}
 
-	canEdit := false
-	switch currentStatusName {
-	case "Ditolak":
-		canEdit = true
-	case "Menunggu Job":
-		isAssigned, err := s.jobRepo.IsJobAssigned(ctx, ticketID)
-		if err != nil {
-			return errors.New("could not verify job assignment status")
-		}
-		if !isAssigned {
-			canEdit = true
-		}
+	if currentStatusName != "Ditolak" && currentStatusName != "Dibatalkan" {
+		return errors.New("ticket can only be edited if status is 'Ditolak'")
 	}
 
-	if !canEdit {
-		return errors.New("ticket cannot be edited in its current state")
+	userContexts := determineUserContexts(user, originalTicket, requestor, nil)
+
+	actorRoles, err := s.actorRoleMappingRepo.GetRolesForUserContext(user.Position.ID, userContexts)
+	if err != nil {
+		return err
 	}
 
-	if req.Deadline != nil {
-		if _, err := time.Parse("2006-01-02", *req.Deadline); err != nil {
-			return errors.New("invalid deadline format, please use YYYY-MM-DD")
-		}
+	actorRoleIDs, err := s.actorRoleRepo.GetRoleIDsByNames(actorRoles)
+	if err != nil {
+		return err
+	}
+
+	isAuthorized, err := s.statusTransitionRepo.HasAvailableActionsForRoles(currentStatusID, actorRoleIDs)
+	if err != nil {
+		return err
+	}
+
+	if !isAuthorized {
+		return errors.New("user is not authorized to edit this ticket")
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -186,36 +222,26 @@ func (s *TicketCommandService) UpdateTicket(ctx context.Context, ticketID int, r
 
 	rowsAffected, err := s.ticketRepo.Update(ctx, tx, ticketID, req)
 	if err != nil {
+		if strings.Contains(err.Error(), "invalid") {
+			return errors.New("invalid deadline format, please use YYYY-MM-DD")
+		}
 		return err
 	}
-
 	if rowsAffected == 0 {
 		return errors.New("data conflict: ticket has been modified by another user, please refresh")
 	}
 
-	positionID, err := s.employeeRepo.GetEmployeePositionID(ctx, userNPK)
+	if req.Deadline != nil {
+		if _, err := time.Parse("2006-01-02", *req.Deadline); err != nil {
+			return errors.New("invalid deadline format, please use YYYY-MM-DD")
+		}
+	}
+
+	updatedTicketDetail, err := s.queryService.GetTicketByID(ticketID)
 	if err != nil {
-		return err
-	}
-
-	initialStatusID, err := s.workflowRepo.GetInitialStatusByPosition(ctx, positionID)
-	if err != nil {
-		return err
-	}
-
-	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, initialStatusID); err != nil {
-		return err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	ticketDetail, err := s.queryService.GetTicketByID(ticketID)
-	if err != nil {
-		log.Printf("CRITICAL: Failed to fetch updated ticket details for broadcast. TicketID: %d, Error: %v", ticketID, err)
+		log.Printf("CRITICAL: Failed to fetch updated ticket for broadcast after update. TicketID: %d, Error: %v", ticketID, err)
 	} else {
-		message, err := websocket.NewMessage("TICKET_UPDATED", ticketDetail)
+		message, err := websocket.NewMessage("TICKET_UPDATED", updatedTicketDetail)
 		if err != nil {
 			log.Printf("CRITICAL: Failed to create websocket message for updated ticket: %v", err)
 		} else {
@@ -223,7 +249,7 @@ func (s *TicketCommandService) UpdateTicket(ctx context.Context, ticketID int, r
 		}
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 // HELPER

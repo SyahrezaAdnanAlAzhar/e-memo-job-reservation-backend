@@ -177,3 +177,19 @@ func (r *DepartmentRepository) UpdateActiveStatus(id int, isActive bool) error {
 	}
 	return nil
 }
+
+// CHECK IS RECEIVE JOB OR NOT
+func (r *DepartmentRepository) IsReceiver(departmentID int) (bool, error) {
+	var canReceiveJob bool
+	query := "SELECT receive_job FROM department WHERE id = $1 AND is_active = true"
+	
+	err := r.DB.QueryRow(query, departmentID).Scan(&canReceiveJob)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, errors.New("department not found or is not active")
+		}
+		return false, err
+	}
+	
+	return canReceiveJob, nil
+}

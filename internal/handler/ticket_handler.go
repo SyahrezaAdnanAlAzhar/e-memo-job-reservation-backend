@@ -43,7 +43,7 @@ func NewTicketHandler(cfg *TicketHandlerConfig) *TicketHandler {
 func (h *TicketHandler) CreateTicket(c *gin.Context) {
 	var req dto.CreateTicketRequest
 
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
 		return
 	}

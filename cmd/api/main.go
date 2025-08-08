@@ -103,6 +103,10 @@ func main() {
 		WorkflowRepo:          workflowRepo,
 		TrackStatusTicketRepo: trackStatusTicketRepo,
 		EmployeeRepo:          employeeRepo,
+		DepartmentRepo:        departmentRepo,
+		ActorRoleMappingRepo:  actorRoleMappingRepo,
+		ActorRoleRepo:         actorRoleRepo,
+		StatusTransitionRepo:  statusTransitionRepo,
 		Hub:                   hub,
 		QueryService:          ticketQueryService,
 	})

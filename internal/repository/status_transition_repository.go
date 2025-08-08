@@ -155,3 +155,21 @@ func (r *StatusTransitionRepository) GetTransitionDetails(fromStatusID int, acti
 	}
 	return &transition, nil
 }
+
+func (r *StatusTransitionRepository) HasAvailableActionsForRoles(fromStatusID int, actorRoleIDs []int) (bool, error) {
+	if len(actorRoleIDs) == 0 {
+		return false, nil
+	}
+
+	var exists bool
+	query := `
+        SELECT EXISTS (
+            SELECT 1 FROM status_transition
+            WHERE from_status_id = $1
+              AND actor_role_id = ANY($2)
+              AND is_active = true
+        )`
+
+	err := r.DB.QueryRow(query, fromStatusID, pq.Array(actorRoleIDs)).Scan(&exists)
+	return exists, err
+}

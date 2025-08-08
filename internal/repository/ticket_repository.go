@@ -228,11 +228,14 @@ func (r *TicketRepository) Update(ctx context.Context, tx *sql.Tx, id int, req d
             physical_location_id = $3, 
             specified_location_id = $4, 
             deadline = $5, 
-            version = version + 1, -- Naikkan versi secara atomik
+            version = version + 1,
             updated_at = NOW()
         WHERE id = $6 AND version = $7`
 
-	deadline, _ := ParseDeadline(req.Deadline)
+	deadline, err := ParseDeadline(req.Deadline)
+	if err != nil {
+		return 0, err
+	}
 
 	result, err := tx.ExecContext(ctx, query,
 		req.DepartmentTargetID,
