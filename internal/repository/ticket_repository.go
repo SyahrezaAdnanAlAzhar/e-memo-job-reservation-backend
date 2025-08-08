@@ -66,8 +66,11 @@ const baseTicketQuery = `
 // CREATE TICKET
 func (r *TicketRepository) Create(ctx context.Context, tx *sql.Tx, ticket model.Ticket) (*model.Ticket, error) {
 	query := `
-        INSERT INTO ticket (requestor, department_target_id, physical_location_id, specified_location_id, description, ticket_priority, deadline)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO ticket (
+            requestor, department_target_id, physical_location_id, 
+            specified_location_id, description, ticket_priority, deadline, support_file
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id, created_at, updated_at`
 
 	row := tx.QueryRowContext(ctx, query,
@@ -78,6 +81,7 @@ func (r *TicketRepository) Create(ctx context.Context, tx *sql.Tx, ticket model.
 		ticket.Description,
 		ticket.TicketPriority,
 		ticket.Deadline,
+		ticket.SupportFile,
 	)
 
 	var newTicket model.Ticket = ticket
