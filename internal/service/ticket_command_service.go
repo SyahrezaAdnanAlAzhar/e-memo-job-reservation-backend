@@ -177,13 +177,9 @@ func (s *TicketCommandService) UpdateTicket(ctx context.Context, ticketID int, r
 		return errors.New("original requestor not found")
 	}
 
-	currentStatusID, currentStatusName, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
+	currentStatusID, _, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
 	if err != nil {
 		return errors.New("could not retrieve current ticket status")
-	}
-
-	if currentStatusName != "Ditolak" && currentStatusName != "Dibatalkan" {
-		return errors.New("ticket can only be edited if status is 'Ditolak'")
 	}
 
 	userContexts := determineUserContexts(user, originalTicket, requestor, nil)
@@ -193,14 +189,31 @@ func (s *TicketCommandService) UpdateTicket(ctx context.Context, ticketID int, r
 		return err
 	}
 
-	actorRoleIDs, err := s.actorRoleRepo.GetRoleIDsByNames(actorRoles)
+	userActorRoleIDs, err := s.actorRoleRepo.GetRoleIDsByNames(actorRoles)
 	if err != nil {
 		return err
 	}
 
-	isAuthorized, err := s.statusTransitionRepo.HasAvailableActionsForRoles(currentStatusID, actorRoleIDs)
+	_, allowedRoleIDsForRevise, err := s.statusTransitionRepo.FindValidTransition(currentStatusID, "Revisi")
+
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.New("ticket cannot be edited in its current state")
+		}
 		return err
+	}
+
+	isAuthorized := false
+	for _, userRoleID := range userActorRoleIDs {
+		for _, allowedRoleID := range allowedRoleIDsForRevise {
+			if userRoleID == allowedRoleID {
+				isAuthorized = true
+				break
+			}
+		}
+		if isAuthorized {
+			break
+		}
 	}
 
 	if !isAuthorized {
