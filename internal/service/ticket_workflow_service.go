@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
@@ -57,36 +56,29 @@ func NewTicketWorkflowService(cfg *TicketWorkflowServiceConfig) *TicketWorkflowS
 
 // EXECUTE ACTION TO GET TO THE NEXT STATUS BASED ON STATE
 func (s *TicketWorkflowService) ExecuteAction(c *gin.Context, ticketID int, userNPK string, req dto.ExecuteActionRequest, filePaths []string) error {
-	log.Printf("--- START ExecuteAction for Ticket %d by User %s ---", ticketID, userNPK)
 	ctx := c.Request.Context()
 
 	user, err := s.employeeRepo.FindByNPK(userNPK)
 	if err != nil {
 		return errors.New("user not found")
 	}
-	log.Printf("Action Performer: %+v", user)
 
 	ticket, err := s.ticketRepo.FindByIDAsStruct(ctx, ticketID)
 	if err != nil {
 		return errors.New("ticket not found")
 	}
-	log.Printf("Target Ticket: %+v", ticket)
 
 	requestor, err := s.employeeRepo.FindByNPK(ticket.Requestor)
 	if err != nil {
 		return errors.New("original requestor not found")
 	}
-	log.Printf("Original Requestor: %+v", requestor)
 
 	job, _ := s.jobRepo.FindByTicketID(ctx, ticketID)
 
-	currentStatusID, currentStatusName, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
+	currentStatusID, _, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
 	if err != nil {
 		return errors.New("could not get current ticket status")
 	}
-	log.Printf("Current Status: ID=%d, Name=%s", currentStatusID, currentStatusName)
-
-	log.Printf("DEBUG: Executing action '%s' for ticket %d. Current status is '%s' (ID: %d)", req.ActionName, ticketID, currentStatusName, currentStatusID)
 
 	toStatusID, allowedRoleIDs, err := s.statusTransitionRepo.FindValidTransition(currentStatusID, req.ActionName)
 	if err != nil {
@@ -98,13 +90,10 @@ func (s *TicketWorkflowService) ExecuteAction(c *gin.Context, ticketID int, user
 
 	userContexts := s.determineUserContexts(user, ticket, requestor, job)
 	userRoleIDs, err := s.actorRoleMappingRepo.GetRoleIDsForUserContext(user.Position.ID, userContexts)
-	log.Printf("User Contexts: %v", userContexts)
 
 	if err != nil {
 		return err
 	}
-
-	log.Printf("Resolved Actor Roles: %v", userRoleIDs)
 
 	isAuthorized := false
 	for _, userRoleID := range userRoleIDs {
@@ -121,8 +110,6 @@ func (s *TicketWorkflowService) ExecuteAction(c *gin.Context, ticketID int, user
 	if !isAuthorized {
 		return errors.New("user does not have the required role for this action")
 	}
-
-	log.Println("Authorization successful.")
 
 	transitionDetails, err := s.statusTransitionRepo.GetTransitionDetails(currentStatusID, req.ActionName)
 	if err != nil {
