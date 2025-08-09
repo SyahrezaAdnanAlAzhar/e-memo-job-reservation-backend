@@ -450,3 +450,35 @@ func (r *TicketRepository) AddSupportFiles(ctx context.Context, ticketID int, fi
 
 	return nil
 }
+
+func (r *TicketRepository) RemoveSupportFiles(ctx context.Context, ticketID int, filePathsToRemove []string) error {
+	if len(filePathsToRemove) == 0 {
+		return nil
+	}
+
+	query := `
+        UPDATE ticket
+        SET 
+            support_file = (
+                SELECT array_agg(elem)
+                FROM unnest(support_file) AS elem
+                WHERE elem <> ALL($1)
+            ),
+            updated_at = NOW()
+        WHERE id = $2`
+
+	result, err := r.DB.ExecContext(ctx, query, pq.Array(filePathsToRemove), ticketID)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}

@@ -93,3 +93,7 @@ type TicketFilter struct {
 	// SORTING OPTION
 	SortBy string `form:"sort_by"`
 }
+
+type DeleteFilesRequest struct {
+	FilePathsToDelete []string `json:"file_paths_to_delete" binding:"required,min=1"`
+}

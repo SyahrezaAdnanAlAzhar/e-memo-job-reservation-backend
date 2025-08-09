@@ -355,6 +355,97 @@ func (s *TicketCommandService) AddSupportFiles(ctx context.Context, c *gin.Conte
 	return nil
 }
 
+func (s *TicketCommandService) RemoveSupportFiles(ctx context.Context, ticketID int, userNPK string, req dto.DeleteFilesRequest) error {
+	originalTicket, err := s.ticketRepo.FindByIDAsStruct(ctx, ticketID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.New("ticket not found")
+		}
+		return err
+	}
+
+	user, err := s.employeeRepo.FindByNPK(userNPK)
+	if err != nil {
+		return errors.New("user not found")
+	}
+
+	requestor, err := s.employeeRepo.FindByNPK(originalTicket.Requestor)
+	if err != nil {
+		return errors.New("original requestor not found")
+	}
+
+	currentStatusID, _, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
+	if err != nil {
+		return errors.New("could not retrieve current ticket status")
+	}
+
+	userContexts := determineUserContexts(user, originalTicket, requestor, nil)
+
+	actorRoles, err := s.actorRoleMappingRepo.GetRolesForUserContext(user.Position.ID, userContexts)
+	if err != nil {
+		return err
+	}
+
+	userActorRoleIDs, err := s.actorRoleRepo.GetRoleIDsByNames(actorRoles)
+	if err != nil {
+		return err
+	}
+
+	_, allowedRoleIDsForRevise, err := s.statusTransitionRepo.FindValidTransition(currentStatusID, "Revisi")
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.New("ticket cannot be edited in its current state")
+		}
+		return err
+	}
+
+	isAuthorized := false
+	for _, userRoleID := range userActorRoleIDs {
+		for _, allowedRoleID := range allowedRoleIDsForRevise {
+			if userRoleID == allowedRoleID {
+				isAuthorized = true
+				break
+			}
+		}
+		if isAuthorized {
+			break
+		}
+	}
+
+	if !isAuthorized {
+		return errors.New("user is not authorized to edit this ticket")
+	}
+
+	if err := s.ticketRepo.RemoveSupportFiles(ctx, ticketID, req.FilePathsToDelete); err != nil {
+		if err == sql.ErrNoRows {
+			return errors.New("ticket not found")
+		}
+		return err
+	}
+
+	for _, filePath := range req.FilePathsToDelete {
+		err := os.Remove(filePath)
+		if err != nil {
+			log.Printf("WARNING: Failed to delete file from storage, but DB record was removed. File path: %s, Error: %v", filePath, err)
+		}
+	}
+
+	updatedTicketDetail, err := s.queryService.GetTicketByID(ticketID)
+	if err != nil {
+		log.Printf("CRITICAL: Failed to fetch updated ticket for broadcast after removing files. TicketID: %d, Error: %v", ticketID, err)
+	} else {
+		message, err := websocket.NewMessage("TICKET_UPDATED", updatedTicketDetail)
+		if err != nil {
+			log.Printf("CRITICAL: Failed to create websocket message for removed ticket files: %v", err)
+		} else {
+			s.hub.BroadcastMessage(message)
+		}
+	}
+
+	return nil
+}
+
 // HELPER
 // CONVERTER
 func toNullInt64(val *int) sql.NullInt64 {
