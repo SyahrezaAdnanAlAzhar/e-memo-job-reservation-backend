@@ -175,6 +175,7 @@ func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllRepositor
 		ticketRoutes.PUT("/reorder", auth.RequirePermission("TICKET_PRIORITY_MANAGE", r.PositionPermissionRepo), h.TicketHandler.ReorderTickets)
 		ticketRoutes.POST("/:id/action", h.TicketHandler.ExecuteAction)
 		ticketRoutes.GET("/:id/available-actions", h.TicketHandler.GetAvailableActions)
+		ticketRoutes.POST("/:id/files", h.TicketHandler.AddSupportFiles)
 	}
 
 	jobRoutes := group.Group("/jobs")

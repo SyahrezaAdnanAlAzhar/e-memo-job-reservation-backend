@@ -245,3 +245,43 @@ func (h *TicketHandler) GetAvailableActions(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, actions)
 }
+
+// POST /tickets/:id/files
+func (h *TicketHandler) AddSupportFiles(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID format"})
+		return
+	}
+	userNPK := c.GetString("user_npk")
+
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid form data", "details": err.Error()})
+		return
+	}
+	
+	files := form.File["files"]
+
+	if len(files) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "At least one file must be uploaded"})
+		return
+	}
+
+	err = h.commandService.AddSupportFiles(c.Request.Context(), c, id, userNPK, files)
+	if err != nil {
+		switch err.Error() {
+		case "ticket not found":
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case "user is not authorized to add files to this ticket":
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		case "failed to save one or more files":
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add support files", "details": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Files uploaded and added to ticket successfully"})
+}
