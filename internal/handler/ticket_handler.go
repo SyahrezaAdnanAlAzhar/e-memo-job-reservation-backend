@@ -285,3 +285,34 @@ func (h *TicketHandler) AddSupportFiles(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Files uploaded and added to ticket successfully"})
 }
+
+// DELETE /tickets/:id/files
+func (h *TicketHandler) RemoveSupportFiles(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID format"})
+		return
+	}
+	userNPK := c.GetString("user_npk")
+
+	var req dto.DeleteFilesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
+	}
+
+	err = h.commandService.RemoveSupportFiles(c.Request.Context(), id, userNPK, req)
+	if err != nil {
+		switch err.Error() {
+		case "ticket not found":
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case "user is not authorized to remove files from this ticket":
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove support files", "details": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Selected files removed successfully"})
+}
