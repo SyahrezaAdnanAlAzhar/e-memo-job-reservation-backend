@@ -2,6 +2,7 @@ package filehandler
 
 import (
 	"fmt"
+	"log"
 	"mime/multipart"
 	"os"
 	"path/filepath"
@@ -21,17 +22,21 @@ func SaveFiles(c *gin.Context, files []*multipart.FileHeader) ([]string, error) 
 		return nil, err
 	}
 
-	var filePaths []string
+	var savedFilePaths []string
 	for _, file := range files {
 		extension := filepath.Ext(file.Filename)
 		newFileName := fmt.Sprintf("%d-%s%s", time.Now().UnixNano(), uuid.New().String(), extension)
 		filePath := filepath.Join(storagePath, newFileName)
 
 		if err := c.SaveUploadedFile(file, filePath); err != nil {
+			log.Printf("Error saving file %s, rolling back saved files...", file.Filename)
+			for _, savedPath := range savedFilePaths {
+				os.Remove(savedPath)
+			}
 			return nil, err
 		}
-		filePaths = append(filePaths, filePath)
+		savedFilePaths = append(savedFilePaths, filePath)
 	}
 
-	return filePaths, nil
+	return savedFilePaths, nil
 }

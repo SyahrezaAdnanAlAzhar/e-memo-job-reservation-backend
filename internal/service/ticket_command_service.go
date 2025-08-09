@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+	"mime/multipart"
+	"os"
 	"strings"
 	"time"
 
@@ -12,6 +14,8 @@ import (
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/websocket"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/filehandler"
+	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
 )
 
@@ -256,6 +260,99 @@ func (s *TicketCommandService) UpdateTicket(ctx context.Context, ticketID int, r
 	}
 
 	return tx.Commit()
+}
+
+func (s *TicketCommandService) AddSupportFiles(ctx context.Context, c *gin.Context, ticketID int, userNPK string, files []*multipart.FileHeader) error {
+	originalTicket, err := s.ticketRepo.FindByIDAsStruct(ctx, ticketID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.New("ticket not found")
+		}
+		return err
+	}
+
+	user, err := s.employeeRepo.FindByNPK(userNPK)
+	if err != nil {
+		return errors.New("user not found")
+	}
+
+	requestor, err := s.employeeRepo.FindByNPK(originalTicket.Requestor)
+	if err != nil {
+		return errors.New("original requestor not found")
+	}
+
+	currentStatusID, _, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
+	if err != nil {
+		return errors.New("could not retrieve current ticket status")
+	}
+
+	userContexts := determineUserContexts(user, originalTicket, requestor, nil)
+
+	actorRoles, err := s.actorRoleMappingRepo.GetRolesForUserContext(user.Position.ID, userContexts)
+	if err != nil {
+		return err
+	}
+
+	userActorRoleIDs, err := s.actorRoleRepo.GetRoleIDsByNames(actorRoles)
+	if err != nil {
+		return err
+	}
+
+	_, allowedRoleIDsForRevise, err := s.statusTransitionRepo.FindValidTransition(currentStatusID, "Revisi")
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.New("ticket cannot be edited in its current state")
+		}
+		return err
+	}
+
+	isAuthorized := false
+	for _, userRoleID := range userActorRoleIDs {
+		for _, allowedRoleID := range allowedRoleIDsForRevise {
+			if userRoleID == allowedRoleID {
+				isAuthorized = true
+				break
+			}
+		}
+		if isAuthorized {
+			break
+		}
+	}
+
+	if !isAuthorized {
+		return errors.New("user is not authorized to edit this ticket")
+	}
+
+	savedFilePaths, err := filehandler.SaveFiles(c, files)
+	if err != nil {
+		return errors.New("failed to save one or more files")
+	}
+
+	if len(savedFilePaths) == 0 {
+		return nil
+	}
+
+	if err := s.ticketRepo.AddSupportFiles(ctx, ticketID, savedFilePaths); err != nil {
+		for _, savedPath := range savedFilePaths {
+			os.Remove(savedPath)
+		}
+		return err
+	}
+
+	updatedTicketDetail, err := s.queryService.GetTicketByID(ticketID)
+	if err != nil {
+		log.Printf("CRITICAL: Failed to fetch updated ticket for broadcast after adding files. TicketID: %d, Error: %v", ticketID, err)
+	} else {
+		message, err := websocket.NewMessage("TICKET_UPDATED", updatedTicketDetail)
+		if err != nil {
+			log.Printf("CRITICAL: Failed to create websocket message for updated ticket files: %v", err)
+		} else {
+			s.hub.BroadcastMessage(message)
+		}
+	}
+
+	return nil
 }
 
 // HELPER
