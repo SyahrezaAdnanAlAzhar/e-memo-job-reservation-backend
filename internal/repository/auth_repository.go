@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -62,4 +63,31 @@ func (r *AuthRepository) IsTokenBlacklisted(ctx context.Context, tokenID string)
 func (r *AuthRepository) DeleteAllUserRefreshTokens(ctx context.Context, userID int) error {
 	key := fmt.Sprintf("refresh_tokens:%d", userID)
 	return r.RDB.Del(ctx, key).Err()
+}
+
+// STORE WEB SOCKET TICKET
+// Key: "ws_ticket:<ticket>", Value: UserID
+func (r *AuthRepository) StoreWebSocketTicket(ctx context.Context, ticket string, userID int, expiresIn time.Duration) error {
+	key := "ws_ticket:" + ticket
+	return r.RDB.Set(ctx, key, userID, expiresIn).Err()
+}
+
+// VALIDATE AND DEL WEB SOCKET TICKET
+func (r *AuthRepository) ValidateAndDelWebSocketTicket(ctx context.Context, ticket string) (userID int, err error) {
+	key := "ws_ticket:" + ticket
+
+	result, err := r.RDB.GetDel(ctx, key).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return 0, errors.New("invalid or expired websocket ticket")
+		}
+		return 0, err
+	}
+
+	userID, err = strconv.Atoi(result)
+	if err != nil {
+		return 0, errors.New("invalid user ID format in websocket ticket")
+	}
+
+	return userID, nil
 }

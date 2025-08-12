@@ -10,6 +10,7 @@ import (
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -153,4 +154,17 @@ func (s *AuthService) Logout(ctx context.Context, tokenString string) error {
 	}
 
 	return s.authRepo.DeleteAllUserRefreshTokens(ctx, claims.UserID)
+}
+
+func (s *AuthService) GenerateWebSocketTicket(ctx context.Context, userID int) (string, error) {
+	ticket := uuid.New().String()
+
+	expiresIn := 15 * time.Second
+
+	err := s.authRepo.StoreWebSocketTicket(ctx, ticket, userID, expiresIn)
+	if err != nil {
+		return "", err
+	}
+
+	return ticket, nil
 }
