@@ -86,3 +86,22 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Successfully logged out"})
 }
+
+// POST/auth/ws-ticket
+func (h *AuthHandler) GenerateWebSocketTicket(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
+		return
+	}
+
+	ticket, err := h.Service.GenerateWebSocketTicket(c.Request.Context(), userID.(int))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate WebSocket ticket", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ticket": ticket,
+	})
+}
