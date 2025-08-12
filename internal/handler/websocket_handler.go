@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	ws "github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/websocket"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -16,38 +17,41 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
 		allowedOrigins := strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
-
 		origin := r.Header.Get("Origin")
 		for _, allowed := range allowedOrigins {
 			if origin == allowed {
 				return true
 			}
 		}
-		log.Printf("WebSocket connection from origin '%s' rejected", origin)
 		return false
 	},
 }
 
 type WebSocketHandler struct {
-	hub *ws.Hub
+	hub      *ws.Hub
+	authRepo *repository.AuthRepository
 }
 
-func NewWebSocketHandler(hub *ws.Hub) *WebSocketHandler {
-	return &WebSocketHandler{hub: hub}
+func NewWebSocketHandler(hub *ws.Hub, authRepo *repository.AuthRepository) *WebSocketHandler {
+	return &WebSocketHandler{hub: hub, authRepo: authRepo}
 }
 
 // HANDLE WEBSOCKET REQUEST FROM CLIENT
 func (h *WebSocketHandler) ServeWs(c *gin.Context) {
-	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
-	if err != nil {
-		log.Println(err)
+	ticket := c.Query("ticket")
+	if ticket == "" {
 		return
 	}
 
-	userID, exists := c.Get("user_id")
-	if !exists {
-		log.Println("Error: user_id not found in context for WebSocket connection")
-		conn.Close()
+	userID, err := h.authRepo.ValidateAndDelWebSocketTicket(c.Request.Context(), ticket)
+	if err != nil {
+		log.Printf("WebSocket connection rejected: %v", err)
+		return
+	}
+
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		log.Printf("Failed to upgrade WebSocket connection: %v", err)
 		return
 	}
 
@@ -55,7 +59,7 @@ func (h *WebSocketHandler) ServeWs(c *gin.Context) {
 		Hub:    h.hub,
 		Conn:   conn,
 		Send:   make(chan []byte, 256),
-		UserID: userID.(int),
+		UserID: userID,
 	}
 	client.Hub.Register <- client
 

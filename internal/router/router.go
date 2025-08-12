@@ -38,6 +38,7 @@ func SetupRouter(h *AllHandlers, r *AllRepositories, authMiddleware *auth.AuthMi
 	{
 		public.POST("/login", h.AuthHandler.Login)
 		public.POST("/refresh", h.AuthHandler.RefreshToken)
+		public.GET("/ws", wsHandler.ServeWs)
 	}
 
 	private := api.Group("")
@@ -46,8 +47,6 @@ func SetupRouter(h *AllHandlers, r *AllRepositories, authMiddleware *auth.AuthMi
 		private.POST("/logout", h.AuthHandler.Logout)
 
 		private.POST("/auth/ws-ticket", h.AuthHandler.GenerateWebSocketTicket)
-
-		private.GET("/ws", wsHandler.ServeWs)
 
 		setupMasterDataRoutes(private, h, r)
 

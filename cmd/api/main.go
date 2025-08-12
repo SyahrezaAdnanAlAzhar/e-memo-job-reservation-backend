@@ -135,7 +135,7 @@ func main() {
 	})
 
 	// HANDLER
-	wsHandler := handler.NewWebSocketHandler(hub)
+	wsHandler := handler.NewWebSocketHandler(hub, authRepo)
 
 	allHandlers := &router.AllHandlers{
 		AuthHandler:                handler.NewAuthHandler(authService),
