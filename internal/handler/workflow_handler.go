@@ -7,6 +7,7 @@ import (
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,54 +24,55 @@ func NewWorkflowHandler(service *service.WorkflowService) *WorkflowHandler {
 func (h *WorkflowHandler) CreateWorkflow(c *gin.Context) {
 	var req dto.CreateWorkflowRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
 	newWorkflow, err := h.service.CreateWorkflowWithSteps(c.Request.Context(), req)
 	if err != nil {
-		if err.Error() == "workflow name already exists" || err.Error() == "cannot add the same status twice to a workflow" {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		switch err.Error() {
+		case "workflow name already exists", "cannot add the same status twice to a workflow":
+			util.ErrorResponse(c, http.StatusConflict, err.Error(), nil)
+			return
+		case "one or more status_ticket_ids are invalid":
+			util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
+			return
+		default:
+			util.ErrorResponse(c, http.StatusInternalServerError, "Failed to create workflow", nil)
 			return
 		}
-		if err.Error() == "one or more status_ticket_ids are invalid" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create workflow"})
-		return
 	}
-	c.JSON(http.StatusCreated, newWorkflow)
+	util.SuccessResponse(c, http.StatusCreated, newWorkflow)
 }
 
-//POST /workflow/step
+// POST /workflow/step
 func (h *WorkflowHandler) AddWorkflowStep(c *gin.Context) {
 	var req dto.AddWorkflowStepRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
 	_, err := h.service.AddWorkflowStep(c.Request.Context(), req)
 	if err != nil {
 		if err.Error() == "status ticket is already in this workflow" {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusConflict, err.Error(), nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add workflow step", "details": err.Error()})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to add workflow step", err.Error())
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"message": "Workflow step added successfully"})
+	util.SuccessResponse(c, http.StatusCreated, gin.H{"message": "Workflow step added successfully"})
 }
 
 // GET ALL
 func (h *WorkflowHandler) GetAllWorkflows(c *gin.Context) {
 	workflows, err := h.service.GetAllWorkflows()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve workflows"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve workflows", nil)
 		return
 	}
-	c.JSON(http.StatusOK, workflows)
+	util.SuccessResponse(c, http.StatusOK, workflows)
 }
 
 func (h *WorkflowHandler) GetAllWorkflowSteps(c *gin.Context) {
@@ -78,24 +80,24 @@ func (h *WorkflowHandler) GetAllWorkflowSteps(c *gin.Context) {
 	if workflowIDStr != "" {
 		workflowID, err := strconv.Atoi(workflowIDStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid workflow_id format"})
+			util.ErrorResponse(c, http.StatusBadRequest, "Invalid workflow_id format", nil)
 			return
 		}
 		steps, err := h.service.GetWorkflowStepsByWorkflowID(workflowID)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve workflow steps"})
+			util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve workflow steps", nil)
 			return
 		}
-		c.JSON(http.StatusOK, steps)
+		util.SuccessResponse(c, http.StatusOK, steps)
 		return
 	}
 
 	steps, err := h.service.GetAllWorkflowSteps()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve all workflow steps"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve all workflow steps", nil)
 		return
 	}
-	c.JSON(http.StatusOK, steps)
+	util.SuccessResponse(c, http.StatusOK, steps)
 }
 
 // GET BY ID
@@ -104,13 +106,13 @@ func (h *WorkflowHandler) GetWorkflowByID(c *gin.Context) {
 	workflow, err := h.service.GetWorkflowByID(id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Workflow not found"})
+			util.ErrorResponse(c, http.StatusNotFound, "Workflow not found", nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve workflow"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve workflow", nil)
 		return
 	}
-	c.JSON(http.StatusOK, workflow)
+	util.SuccessResponse(c, http.StatusOK, workflow)
 }
 
 func (h *WorkflowHandler) GetWorkflowStepByID(c *gin.Context) {
@@ -118,13 +120,13 @@ func (h *WorkflowHandler) GetWorkflowStepByID(c *gin.Context) {
 	step, err := h.service.GetWorkflowStepByID(id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Workflow step not found"})
+			util.ErrorResponse(c, http.StatusNotFound, "Workflow step not found", nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve workflow step"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve workflow step", nil)
 		return
 	}
-	c.JSON(http.StatusOK, step)
+	util.SuccessResponse(c, http.StatusOK, step)
 }
 
 // UPDATE WORKFLOW NAME
@@ -132,23 +134,24 @@ func (h *WorkflowHandler) UpdateWorkflow(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var req dto.UpdateWorkflowRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 	updatedWorkflow, err := h.service.UpdateWorkflowName(id, req)
 	if err != nil {
-		if err.Error() == "workflow name already exists" {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		switch err.Error() {
+		case "workflow name already exists":
+			util.ErrorResponse(c, http.StatusConflict, err.Error(), nil)
+			return
+		case sql.ErrNoRows.Error():
+			util.ErrorResponse(c, http.StatusNotFound, "Workflow not found", nil)
+			return
+		default:
+			util.ErrorResponse(c, http.StatusInternalServerError, "Failed to update workflow", nil)
 			return
 		}
-		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Workflow not found"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update workflow"})
-		return
 	}
-	c.JSON(http.StatusOK, updatedWorkflow)
+	util.SuccessResponse(c, http.StatusOK, updatedWorkflow)
 }
 
 // DELETE WORKFLOW
@@ -156,10 +159,10 @@ func (h *WorkflowHandler) DeleteWorkflow(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	if err := h.service.DeleteWorkflow(id); err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Workflow not found"})
+			util.ErrorResponse(c, http.StatusNotFound, "Workflow not found", nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete workflow"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete workflow", nil)
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -170,10 +173,10 @@ func (h *WorkflowHandler) DeleteWorkflowStep(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	if err := h.service.DeleteWorkflowStep(id); err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Workflow step not found or sequence is not 0"})
+			util.ErrorResponse(c, http.StatusNotFound, "Workflow step not found or sequence is not 0", nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete workflow step"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete workflow step", nil)
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -184,18 +187,18 @@ func (h *WorkflowHandler) UpdateWorkflowActiveStatus(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var req dto.UpdateWorkflowStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 	if err := h.service.UpdateWorkflowActiveStatus(c.Request.Context(), id, req); err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Workflow not found"})
+			util.ErrorResponse(c, http.StatusNotFound, "Workflow not found", nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update workflow status"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to update workflow status", nil)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Workflow and its steps status updated successfully"})
+	util.SuccessResponse(c, http.StatusOK, gin.H{"message": "Workflow and its steps status updated successfully"})
 }
 
 // CHANGE WORKFLOW STEP STATUS
@@ -203,16 +206,16 @@ func (h *WorkflowHandler) UpdateWorkflowStepActiveStatus(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var req dto.UpdateWorkflowStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 	if err := h.service.UpdateWorkflowStepActiveStatus(id, req); err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Workflow step not found"})
+			util.ErrorResponse(c, http.StatusNotFound, "Workflow step not found", nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update workflow step status"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to update workflow step status", nil)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Workflow step status updated successfully"})
+	util.SuccessResponse(c, http.StatusOK, gin.H{"message": "Workflow step status updated successfully"})
 }

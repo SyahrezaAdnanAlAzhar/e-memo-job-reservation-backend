@@ -7,6 +7,7 @@ import (
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/util"
 	"github.com/gin-gonic/gin"
 )
 
@@ -29,52 +30,52 @@ type RefreshRequest struct {
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req dto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Username and password are required"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Username and password are required", nil)
 		return
 	}
 
 	loginResponse, err := h.Service.Login(c.Request.Context(), req)
 	if err != nil {
 		if err.Error() == "invalid credentials" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid username or password"})
+			util.ErrorResponse(c, http.StatusUnauthorized, "Invalid username or password", nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to login", "details": err.Error()})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to login", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, loginResponse)
+	util.SuccessResponse(c, http.StatusOK, loginResponse)
 }
 
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	var req dto.RefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Refresh token is required"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Refresh token is required", nil)
 		return
 	}
 
 	loginResponse, err := h.Service.RefreshToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
 		if strings.Contains(err.Error(), "invalid") || strings.Contains(err.Error(), "not found") {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired refresh token"})
+			util.ErrorResponse(c, http.StatusUnauthorized, "Invalid or expired refresh token", nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process refresh token"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to process refresh token", nil)
 		return
 	}
-	c.JSON(http.StatusOK, loginResponse)
+	util.SuccessResponse(c, http.StatusOK, loginResponse)
 }
 
 func (h *AuthHandler) Logout(c *gin.Context) {
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Authorization header is required"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Authorization header is required", nil)
 		return
 	}
 
 	parts := strings.Split(authHeader, " ")
 	if len(parts) != 2 || parts[0] != "Bearer" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid token format"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid token format", nil)
 		return
 	}
 	tokenString := parts[1]
@@ -82,26 +83,25 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	err := h.Service.Logout(c.Request.Context(), tokenString)
 	if err != nil {
 		log.Printf("Error during logout process: %v", err)
+		// logout failure usually not blocking response, so proceed
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Successfully logged out"})
+	util.SuccessResponse(c, http.StatusOK, gin.H{"message": "Successfully logged out"})
 }
 
-// POST/auth/ws-ticket
+// POST /auth/ws-ticket
 func (h *AuthHandler) GenerateWebSocketTicket(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
+		util.ErrorResponse(c, http.StatusUnauthorized, "User ID not found in token", nil)
 		return
 	}
 
 	ticket, err := h.Service.GenerateWebSocketTicket(c.Request.Context(), userID.(int))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate WebSocket ticket", "details": err.Error()})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to generate WebSocket ticket", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"ticket": ticket,
-	})
+	util.SuccessResponse(c, http.StatusOK, gin.H{"ticket": ticket})
 }

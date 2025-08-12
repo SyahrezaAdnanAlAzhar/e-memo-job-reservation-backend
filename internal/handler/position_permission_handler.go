@@ -2,10 +2,12 @@ package handler
 
 import (
 	"database/sql"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
 	"net/http"
 	"strconv"
+
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,78 +20,93 @@ func NewPositionPermissionHandler(service *service.PositionPermissionService) *P
 	return &PositionPermissionHandler{service: service}
 }
 
-
 // POST /position-permissions
 func (h *PositionPermissionHandler) CreatePositionPermission(c *gin.Context) {
 	var req dto.CreatePositionPermissionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
 	newPerm, err := h.service.CreatePositionPermission(req)
 	if err != nil {
-		if err.Error() == "invalid employee_position_id or access_permission_id" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
+		switch err.Error() {
+		case "invalid employee_position_id or access_permission_id":
+			util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
+		case "this permission is already assigned to the position":
+			util.ErrorResponse(c, http.StatusConflict, err.Error(), nil)
+		default:
+			util.ErrorResponse(c, http.StatusInternalServerError, "Failed to create position permission", nil)
 		}
-		if err.Error() == "this permission is already assigned to the position" {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create position permission"})
 		return
 	}
-	c.JSON(http.StatusCreated, newPerm)
+	util.SuccessResponse(c, http.StatusCreated, newPerm)
 }
 
 // GET /position-permissions
 func (h *PositionPermissionHandler) GetAllPositionPermissions(c *gin.Context) {
 	permissions, err := h.service.GetAllPositionPermissions()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve position permissions"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve position permissions", nil)
 		return
 	}
+
 	if permissions == nil {
-		c.JSON(http.StatusOK, []gin.H{})
+		util.SuccessResponse(c, http.StatusOK, []gin.H{})
 		return
 	}
-	c.JSON(http.StatusOK, permissions)
+	util.SuccessResponse(c, http.StatusOK, permissions)
 }
 
 // PATCH /position-permissions/positions/:posId/permissions/:permId/status
 func (h *PositionPermissionHandler) UpdatePositionPermissionActiveStatus(c *gin.Context) {
-	posID, _ := strconv.Atoi(c.Param("posId"))
-	permID, _ := strconv.Atoi(c.Param("permId"))
+	posID, err := strconv.Atoi(c.Param("posId"))
+	if err != nil {
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid position ID format", nil)
+		return
+	}
+	permID, err := strconv.Atoi(c.Param("permId"))
+	if err != nil {
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid permission ID format", nil)
+		return
+	}
 
 	var req dto.UpdatePositionPermissionStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
 	if err := h.service.UpdatePositionPermissionActiveStatus(posID, permID, req); err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Position permission not found"})
+			util.ErrorResponse(c, http.StatusNotFound, "Position permission not found", nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update status"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to update status", nil)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Position permission status updated successfully"})
+	util.SuccessResponse(c, http.StatusOK, gin.H{"message": "Position permission status updated successfully"})
 }
 
 // DELETE /api/v1/position-permissions/positions/:posId/permissions/:permId
 func (h *PositionPermissionHandler) DeletePositionPermission(c *gin.Context) {
-	posID, _ := strconv.Atoi(c.Param("posId"))
-	permID, _ := strconv.Atoi(c.Param("permId"))
+	posID, err := strconv.Atoi(c.Param("posId"))
+	if err != nil {
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid position ID format", nil)
+		return
+	}
+	permID, err := strconv.Atoi(c.Param("permId"))
+	if err != nil {
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid permission ID format", nil)
+		return
+	}
 
 	if err := h.service.DeletePositionPermission(posID, permID); err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Position permission not found"})
+			util.ErrorResponse(c, http.StatusNotFound, "Position permission not found", nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete position permission"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete position permission", nil)
 		return
 	}
 	c.Status(http.StatusNoContent)

@@ -7,6 +7,7 @@ import (
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/util"
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,57 +24,57 @@ func NewJobHandler(commandService *service.JobService, queryService *service.Job
 func (h *JobHandler) GetAllJobs(c *gin.Context) {
 	var filters dto.JobFilter
 	if err := c.ShouldBindQuery(&filters); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid query parameters", "details": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid query parameters", err.Error())
 		return
 	}
 
 	jobs, err := h.queryService.GetAllJobs(filters)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve jobs", "details": err.Error()})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve jobs", err.Error())
 		return
 	}
 
 	if jobs == nil {
-		c.JSON(http.StatusOK, []dto.JobDetailResponse{})
+		util.SuccessResponse(c, http.StatusOK, []dto.JobDetailResponse{})
 		return
 	}
 
-	c.JSON(http.StatusOK, jobs)
+	util.SuccessResponse(c, http.StatusOK, jobs)
 }
 
 // GET /jobs/:id
 func (h *JobHandler) GetJobByID(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid job ID format"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid job ID format", nil)
 		return
 	}
 
 	job, err := h.queryService.GetJobByID(id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
+			util.ErrorResponse(c, http.StatusNotFound, "Job not found", nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve job", "details": err.Error()})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve job", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, job)
+	util.SuccessResponse(c, http.StatusOK, job)
 }
 
 // PUT /jobs/:id/assign
 func (h *JobHandler) AssignPIC(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid job ID format"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid job ID format", nil)
 		return
 	}
 	userNPK := c.GetString("user_npk")
 
 	var req dto.AssignPICRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
@@ -81,18 +82,18 @@ func (h *JobHandler) AssignPIC(c *gin.Context) {
 	if err != nil {
 		switch err.Error() {
 		case "job not found", "action performer not found", "new PIC employee data not found":
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusNotFound, err.Error(), nil)
 		case "user is not authorized to assign PIC for this job's department":
-			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusForbidden, err.Error(), nil)
 		case "new PIC must be from the same department as the job":
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign PIC", "details": err.Error()})
+			util.ErrorResponse(c, http.StatusInternalServerError, "Failed to assign PIC", err.Error())
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "PIC assigned successfully"})
+	util.SuccessResponse(c, http.StatusOK, gin.H{"message": "PIC assigned successfully"})
 }
 
 // PUT /jobs/reorder
@@ -101,7 +102,7 @@ func (h *JobHandler) ReorderJobs(c *gin.Context) {
 
 	var req dto.ReorderJobsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
@@ -109,23 +110,23 @@ func (h *JobHandler) ReorderJobs(c *gin.Context) {
 	if err != nil {
 		switch err.Error() {
 		case "user can only reorder jobs within their own department", "one or more job IDs do not belong to the specified department":
-			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusForbidden, err.Error(), nil)
 		case "action performer not found":
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusNotFound, err.Error(), nil)
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reorder jobs", "details": err.Error()})
+			util.ErrorResponse(c, http.StatusInternalServerError, "Failed to reorder jobs", err.Error())
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Job priorities updated successfully"})
+	util.SuccessResponse(c, http.StatusOK, gin.H{"message": "Job priorities updated successfully"})
 }
 
 // GET /jobs/:id/available-actions
 func (h *JobHandler) GetAvailableActions(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid job ID format"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid job ID format", nil)
 		return
 	}
 	userNPK := c.GetString("user_npk")
@@ -133,17 +134,17 @@ func (h *JobHandler) GetAvailableActions(c *gin.Context) {
 	actions, err := h.queryService.GetAvailableActions(c.Request.Context(), id, userNPK)
 	if err != nil {
 		if err.Error() == "job not found" || err.Error() == "user not found" {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusNotFound, err.Error(), nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve available actions", "details": err.Error()})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve available actions", err.Error())
 		return
 	}
 
 	if actions == nil {
-		c.JSON(http.StatusOK, []dto.AvailableActionResponse{})
+		util.SuccessResponse(c, http.StatusOK, []dto.AvailableActionResponse{})
 		return
 	}
 
-	c.JSON(http.StatusOK, actions)
+	util.SuccessResponse(c, http.StatusOK, actions)
 }

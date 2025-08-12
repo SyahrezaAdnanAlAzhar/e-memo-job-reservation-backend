@@ -2,12 +2,14 @@ package handler
 
 import (
 	"database/sql"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"net/http"
 	"strconv"
+
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -24,100 +26,101 @@ func NewAccessPermissionHandler(service *service.AccessPermissionService) *Acces
 func (h *AccessPermissionHandler) CreateAccessPermission(c *gin.Context) {
 	var req dto.CreateAccessPermissionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
 	newPermission, err := h.service.CreateAccessPermission(req)
 	if err != nil {
 		if err.Error() == "permission name already exists" {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusConflict, err.Error(), nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create permission"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to create permission", nil)
 		return
 	}
-	c.JSON(http.StatusCreated, newPermission)
+
+	util.SuccessResponse(c, http.StatusCreated, newPermission)
 }
 
 // GET /access-permissions
 func (h *AccessPermissionHandler) GetAllAccessPermissions(c *gin.Context) {
 	permissions, err := h.service.GetAllAccessPermissions()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve permissions"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve permissions", nil)
 		return
 	}
 	if permissions == nil {
-		c.JSON(http.StatusOK, []model.AccessPermission{})
+		util.SuccessResponse(c, http.StatusOK, []model.AccessPermission{})
 		return
 	}
-	c.JSON(http.StatusOK, permissions)
+	util.SuccessResponse(c, http.StatusOK, permissions)
 }
 
 // GET /access-permissions/:id
 func (h *AccessPermissionHandler) GetAccessPermissionByID(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid ID format", nil)
 		return
 	}
 
 	permission, err := h.service.GetAccessPermissionByID(id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Permission not found"})
+			util.ErrorResponse(c, http.StatusNotFound, "Permission not found", nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve permission"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve permission", nil)
 		return
 	}
-	c.JSON(http.StatusOK, permission)
+	util.SuccessResponse(c, http.StatusOK, permission)
 }
 
 // PUT /access-permissions/:id
 func (h *AccessPermissionHandler) UpdateAccessPermission(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid ID format", nil)
 		return
 	}
 
 	var req dto.UpdateAccessPermissionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
 	updatedPermission, err := h.service.UpdateAccessPermission(id, req)
 	if err != nil {
 		if err.Error() == "permission name already exists" {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusConflict, err.Error(), nil)
 			return
 		}
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Permission not found"})
+			util.ErrorResponse(c, http.StatusNotFound, "Permission not found", nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update permission"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to update permission", nil)
 		return
 	}
-	c.JSON(http.StatusOK, updatedPermission)
+	util.SuccessResponse(c, http.StatusOK, updatedPermission)
 }
 
 // DELETE /access-permissions/:id
 func (h *AccessPermissionHandler) DeleteAccessPermission(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid ID format", nil)
 		return
 	}
 
 	if err := h.service.DeleteAccessPermission(id); err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Permission not found"})
+			util.ErrorResponse(c, http.StatusNotFound, "Permission not found", nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete permission"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete permission", nil)
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -127,23 +130,23 @@ func (h *AccessPermissionHandler) DeleteAccessPermission(c *gin.Context) {
 func (h *AccessPermissionHandler) UpdateAccessPermissionActiveStatus(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid ID format", nil)
 		return
 	}
 
 	var req repository.UpdateAccessPermissionStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
 	if err := h.service.UpdateAccessPermissionActiveStatus(id, req); err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Permission not found"})
+			util.ErrorResponse(c, http.StatusNotFound, "Permission not found", nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update status"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to update status", nil)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Permission status updated successfully"})
+	util.SuccessResponse(c, http.StatusOK, gin.H{"message": "Permission status updated successfully"})
 }

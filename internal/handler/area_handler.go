@@ -5,10 +5,11 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/util"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,22 +26,21 @@ func (h *AreaHandler) CreateArea(c *gin.Context) {
 	var req dto.CreateAreaRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
 	newArea, err := h.service.CreateArea(req)
 	if err != nil {
 		if err.Error() == "area name already exists in this department" {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusConflict, err.Error(), nil)
 			return
 		}
-
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create area"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to create area", nil)
 		return
 	}
 
-	c.JSON(http.StatusCreated, newArea)
+	util.SuccessResponse(c, http.StatusCreated, newArea)
 }
 
 // GET /area
@@ -57,55 +57,54 @@ func (h *AreaHandler) GetAllAreas(c *gin.Context) {
 
 	areas, err := h.service.GetAllAreas(filters)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve areas"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve areas", nil)
 		return
 	}
 
 	if areas == nil {
-		c.JSON(http.StatusOK, []model.Area{})
+		util.SuccessResponse(c, http.StatusOK, []model.Area{})
 		return
 	}
 
-	c.JSON(http.StatusOK, areas)
+	util.SuccessResponse(c, http.StatusOK, areas)
 }
 
 // GET /area/:id
 func (h *AreaHandler) GetAreaByID(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid area ID format"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid area ID format", nil)
 		return
 	}
 
 	area, err := h.service.GetAreaByID(id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Area not found"})
+			util.ErrorResponse(c, http.StatusNotFound, "Area not found", nil)
 			return
 		}
-
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve area"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve area", nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, area)
+	util.SuccessResponse(c, http.StatusOK, area)
 }
 
 // DELETE /area/:id
 func (h *AreaHandler) DeleteArea(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid area ID format"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid area ID format", nil)
 		return
 	}
 
 	err = h.service.DeleteArea(id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Area not found or already deleted"})
+			util.ErrorResponse(c, http.StatusNotFound, "Area not found or already deleted", nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete area"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete area", nil)
 		return
 	}
 
@@ -116,56 +115,56 @@ func (h *AreaHandler) DeleteArea(c *gin.Context) {
 func (h *AreaHandler) UpdateArea(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid area ID format"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid area ID format", nil)
 		return
 	}
 
 	var req dto.UpdateAreaRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
 	updatedArea, err := h.service.UpdateArea(id, req)
 	if err != nil {
 		if err.Error() == "area name already exists in this department" {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusConflict, err.Error(), nil)
 			return
 		}
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Area not found"})
+			util.ErrorResponse(c, http.StatusNotFound, "Area not found", nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update area"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to update area", nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, updatedArea)
+	util.SuccessResponse(c, http.StatusOK, updatedArea)
 }
 
 // PATCH /area/:id/status
 func (h *AreaHandler) UpdateAreaActiveStatus(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid area ID format"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid area ID format", nil)
 		return
 	}
 
 	var req repository.UpdateAreaStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
 	err = h.service.UpdateAreaActiveStatus(id, req)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Area not found"})
+			util.ErrorResponse(c, http.StatusNotFound, "Area not found", nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update area status"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to update area status", nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Area status updated successfully"})
+	util.SuccessResponse(c, http.StatusOK, gin.H{"message": "Area status updated successfully"})
 }

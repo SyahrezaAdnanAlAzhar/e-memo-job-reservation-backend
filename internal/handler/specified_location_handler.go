@@ -2,10 +2,12 @@ package handler
 
 import (
 	"database/sql"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
 	"net/http"
 	"strconv"
+
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,116 +24,115 @@ func NewSpecifiedLocationHandler(service *service.SpecifiedLocationService) *Spe
 func (h *SpecifiedLocationHandler) CreateSpecifiedLocation(c *gin.Context) {
 	var req dto.CreateSpecifiedLocationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
 	newLoc, err := h.service.CreateSpecifiedLocation(req)
 	if err != nil {
-		if err.Error() == "invalid physical_location_id" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
+		switch err.Error() {
+		case "invalid physical_location_id":
+			util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
+		case "location name already exists in this physical location":
+			util.ErrorResponse(c, http.StatusConflict, err.Error(), nil)
+		default:
+			util.ErrorResponse(c, http.StatusInternalServerError, "Failed to create specified location", nil)
 		}
-		if err.Error() == "location name already exists in this physical location" {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create specified location"})
 		return
 	}
-	c.JSON(http.StatusCreated, newLoc)
+	util.SuccessResponse(c, http.StatusCreated, newLoc)
 }
 
 // GET /specified-location
 func (h *SpecifiedLocationHandler) GetAllSpecifiedLocations(c *gin.Context) {
-	physicalLocationIDStr := c.Query("physical_location_id")
-	if physicalLocationIDStr != "" {
-		physicalLocationID, err := strconv.Atoi(physicalLocationIDStr)
+	if physicalLocationIDStr := c.Query("physical_location_id"); physicalLocationIDStr != "" {
+		id, err := strconv.Atoi(physicalLocationIDStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid physical_location_id format"})
+			util.ErrorResponse(c, http.StatusBadRequest, "Invalid physical_location_id format", nil)
 			return
 		}
-		locations, err := h.service.GetSpecifiedLocationsByPhysicalLocationID(physicalLocationID)
+		locations, err := h.service.GetSpecifiedLocationsByPhysicalLocationID(id)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve specified locations"})
+			util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve specified locations", nil)
 			return
 		}
-		c.JSON(http.StatusOK, locations)
+		util.SuccessResponse(c, http.StatusOK, locations)
 		return
 	}
 
 	locations, err := h.service.GetAllSpecifiedLocations()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve all specified locations"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve all specified locations", nil)
 		return
 	}
-	c.JSON(http.StatusOK, locations)
+	util.SuccessResponse(c, http.StatusOK, locations)
 }
 
 // GET /specified-location/:id
 func (h *SpecifiedLocationHandler) GetSpecifiedLocationByID(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid ID format", nil)
 		return
 	}
 
 	location, err := h.service.GetSpecifiedLocationByID(id)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Specified location not found"})
-			return
+		switch err {
+		case sql.ErrNoRows:
+			util.ErrorResponse(c, http.StatusNotFound, "Specified location not found", nil)
+		default:
+			util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve specified location", nil)
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve specified location"})
 		return
 	}
-	c.JSON(http.StatusOK, location)
+	util.SuccessResponse(c, http.StatusOK, location)
 }
 
 // PUT /specified-location/:id
 func (h *SpecifiedLocationHandler) UpdateSpecifiedLocation(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid ID format", nil)
 		return
 	}
 
 	var req dto.UpdateSpecifiedLocationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
 	updatedLoc, err := h.service.UpdateSpecifiedLocation(id, req)
 	if err != nil {
-		if err.Error() == "location name already exists in this physical location" {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
-			return
+		switch err.Error() {
+		case "location name already exists in this physical location":
+			util.ErrorResponse(c, http.StatusConflict, err.Error(), nil)
+		case sql.ErrNoRows.Error():
+			util.ErrorResponse(c, http.StatusNotFound, "Specified location not found", nil)
+		default:
+			util.ErrorResponse(c, http.StatusInternalServerError, "Failed to update specified location", nil)
 		}
-		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Specified location not found"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update specified location"})
 		return
 	}
-	c.JSON(http.StatusOK, updatedLoc)
+	util.SuccessResponse(c, http.StatusOK, updatedLoc)
 }
 
 // DELETE /specified-location/:id
 func (h *SpecifiedLocationHandler) DeleteSpecifiedLocation(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid ID format", nil)
 		return
 	}
 
 	if err := h.service.DeleteSpecifiedLocation(id); err != nil {
-		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Specified location not found"})
-			return
+		switch err {
+		case sql.ErrNoRows:
+			util.ErrorResponse(c, http.StatusNotFound, "Specified location not found", nil)
+		default:
+			util.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete specified location", nil)
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete specified location"})
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -141,23 +142,24 @@ func (h *SpecifiedLocationHandler) DeleteSpecifiedLocation(c *gin.Context) {
 func (h *SpecifiedLocationHandler) UpdateSpecifiedLocationActiveStatus(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid ID format", nil)
 		return
 	}
 
 	var req dto.UpdateSpecifiedLocationStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
 	if err := h.service.UpdateSpecifiedLocationActiveStatus(id, req); err != nil {
-		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Specified location not found"})
-			return
+		switch err {
+		case sql.ErrNoRows:
+			util.ErrorResponse(c, http.StatusNotFound, "Specified location not found", nil)
+		default:
+			util.ErrorResponse(c, http.StatusInternalServerError, "Failed to update status", nil)
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update status"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Specified location status updated successfully"})
+	util.SuccessResponse(c, http.StatusOK, gin.H{"message": "Specified location status updated successfully"})
 }

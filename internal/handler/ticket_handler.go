@@ -8,6 +8,7 @@ import (
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/util"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/filehandler"
 
 	"github.com/gin-gonic/gin"
@@ -44,13 +45,13 @@ func (h *TicketHandler) CreateTicket(c *gin.Context) {
 	var req dto.CreateTicketRequest
 
 	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err.Error())
 		return
 	}
 
 	requestorNPK := c.GetString("user_npk")
 	if requestorNPK == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User NPK not found in token"})
+		util.ErrorResponse(c, http.StatusUnauthorized, "User NPK not found in token", nil)
 		return
 	}
 
@@ -61,7 +62,7 @@ func (h *TicketHandler) CreateTicket(c *gin.Context) {
 		if len(files) > 0 {
 			savedPaths, saveErr := filehandler.SaveFiles(c, files)
 			if saveErr != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save uploaded files"})
+				util.ErrorResponse(c, http.StatusInternalServerError, "Failed to save uploaded files", nil)
 				return
 			}
 			filePaths = savedPaths
@@ -75,36 +76,36 @@ func (h *TicketHandler) CreateTicket(c *gin.Context) {
 		}
 		switch err.Error() {
 		case "requestor not found", "no workflow defined for this user's position":
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create ticket", "details": err.Error()})
+			util.ErrorResponse(c, http.StatusInternalServerError, "Failed to create ticket", err.Error())
 		}
 		return
 	}
 
-	c.JSON(http.StatusCreated, createdTicket)
+	util.SuccessResponse(c, http.StatusCreated, createdTicket)
 }
 
 // GET ALL
 func (h *TicketHandler) GetAllTickets(c *gin.Context) {
 	var filters dto.TicketFilter
 	if err := c.ShouldBindQuery(&filters); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid query parameters", "details": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid query parameters", err.Error())
 		return
 	}
 
 	tickets, err := h.queryService.GetAllTickets(filters)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve tickets", "details": err.Error()})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tickets", err.Error())
 		return
 	}
 
 	if tickets == nil {
-		c.JSON(http.StatusOK, []dto.TicketDetailResponse{})
+		util.SuccessResponse(c, http.StatusOK, []dto.TicketDetailResponse{})
 		return
 	}
 
-	c.JSON(http.StatusOK, tickets)
+	util.SuccessResponse(c, http.StatusOK, tickets)
 }
 
 // GET BY ID
@@ -114,51 +115,50 @@ func (h *TicketHandler) GetTicketByID(c *gin.Context) {
 	ticket, err := h.queryService.GetTicketByID(id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+			util.ErrorResponse(c, http.StatusNotFound, "Ticket not found", nil)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve ticket"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve ticket", nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, ticket)
+	util.SuccessResponse(c, http.StatusOK, ticket)
 }
 
 // PUT UPDATE
 func (h *TicketHandler) UpdateTicket(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID format"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid ticket ID format", nil)
 		return
 	}
 	userNPK := c.GetString("user_npk")
 	var req dto.UpdateTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
 	err = h.commandService.UpdateTicket(c.Request.Context(), id, req, userNPK)
-
 	if err != nil {
 		switch err.Error() {
 		case "ticket not found", "user not found", "original requestor not found":
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusNotFound, err.Error(), nil)
 		case "user is not authorized to edit this ticket":
-			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusForbidden, err.Error(), nil)
 		case "ticket can only be edited if status is 'Ditolak'":
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusConflict, err.Error(), nil)
 		case "data conflict: ticket has been modified by another user, please refresh":
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusConflict, err.Error(), nil)
 		case "invalid deadline format, please use YYYY-MM-DD":
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update ticket", "details": err.Error()})
+			util.ErrorResponse(c, http.StatusInternalServerError, "Failed to update ticket", err.Error())
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Ticket data updated successfully. Please use the 'Revisi' action to continue the workflow."})
+	util.SuccessResponse(c, http.StatusOK, gin.H{"message": "Ticket data updated successfully. Please use the 'Revisi' action to continue the workflow."})
 }
 
 // PUT REORDER
@@ -166,29 +166,29 @@ func (h *TicketHandler) ReorderTickets(c *gin.Context) {
 	userNPK := c.GetString("user_npk")
 	var req dto.ReorderTicketsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 	err := h.priorityService.ReorderTickets(c.Request.Context(), req, userNPK)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reorder tickets"})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to reorder tickets", nil)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Ticket priorities updated successfully"})
+	util.SuccessResponse(c, http.StatusOK, gin.H{"message": "Ticket priorities updated successfully"})
 }
 
 // POST /tickets/:id/action
 func (h *TicketHandler) ExecuteAction(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID format"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid ticket ID format", nil)
 		return
 	}
 	userNPK := c.GetString("user_npk")
 
 	var req dto.ExecuteActionRequest
 	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err.Error())
 		return
 	}
 
@@ -199,7 +199,7 @@ func (h *TicketHandler) ExecuteAction(c *gin.Context) {
 		if len(files) > 0 {
 			savedPaths, saveErr := filehandler.SaveFiles(c, files)
 			if saveErr != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save uploaded files"})
+				util.ErrorResponse(c, http.StatusInternalServerError, "Failed to save uploaded files", nil)
 				return
 			}
 			filePaths = savedPaths
@@ -207,25 +207,24 @@ func (h *TicketHandler) ExecuteAction(c *gin.Context) {
 	}
 
 	err = h.workflowService.ExecuteAction(c, id, userNPK, req, filePaths)
-
 	if err != nil {
 		for _, p := range filePaths {
 			os.Remove(p)
 		}
 		switch err.Error() {
 		case "ticket not found", "user not found", "original requestor not found":
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusNotFound, err.Error(), nil)
 		case "user does not have the required role for this action":
-			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusForbidden, err.Error(), nil)
 		case "action not allowed from the current status", "reason is required for this action", "file upload is required for this action":
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusConflict, err.Error(), nil)
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to execute action", "details": err.Error()})
+			util.ErrorResponse(c, http.StatusInternalServerError, "Failed to execute action", err.Error())
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Action '" + req.ActionName + "' executed successfully"})
+	util.SuccessResponse(c, http.StatusOK, gin.H{"message": "Action '" + req.ActionName + "' executed successfully"})
 }
 
 // GET /tickets/:id/available-actions
@@ -235,36 +234,36 @@ func (h *TicketHandler) GetAvailableActions(c *gin.Context) {
 
 	actions, err := h.actionService.GetAvailableActions(c.Request.Context(), id, userNPK)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get available actions", "details": err.Error()})
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to get available actions", err.Error())
 		return
 	}
 
 	if actions == nil {
-		c.JSON(http.StatusOK, []dto.ActionResponse{})
+		util.SuccessResponse(c, http.StatusOK, []dto.ActionResponse{})
 		return
 	}
-	c.JSON(http.StatusOK, actions)
+	util.SuccessResponse(c, http.StatusOK, actions)
 }
 
 // POST /tickets/:id/files
 func (h *TicketHandler) AddSupportFiles(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID format"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid ticket ID format", nil)
 		return
 	}
 	userNPK := c.GetString("user_npk")
 
 	form, err := c.MultipartForm()
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid form data", "details": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid form data", err.Error())
 		return
 	}
-	
+
 	files := form.File["files"]
 
 	if len(files) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "At least one file must be uploaded"})
+		util.ErrorResponse(c, http.StatusBadRequest, "At least one file must be uploaded", nil)
 		return
 	}
 
@@ -272,32 +271,32 @@ func (h *TicketHandler) AddSupportFiles(c *gin.Context) {
 	if err != nil {
 		switch err.Error() {
 		case "ticket not found":
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusNotFound, err.Error(), nil)
 		case "user is not authorized to add files to this ticket":
-			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusForbidden, err.Error(), nil)
 		case "failed to save one or more files":
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusInternalServerError, err.Error(), nil)
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add support files", "details": err.Error()})
+			util.ErrorResponse(c, http.StatusInternalServerError, "Failed to add support files", err.Error())
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Files uploaded and added to ticket successfully"})
+	util.SuccessResponse(c, http.StatusOK, gin.H{"message": "Files uploaded and added to ticket successfully"})
 }
 
 // DELETE /tickets/:id/files
 func (h *TicketHandler) RemoveSupportFiles(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID format"})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid ticket ID format", nil)
 		return
 	}
 	userNPK := c.GetString("user_npk")
 
 	var req dto.DeleteFilesRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err.Error())
 		return
 	}
 
@@ -305,14 +304,14 @@ func (h *TicketHandler) RemoveSupportFiles(c *gin.Context) {
 	if err != nil {
 		switch err.Error() {
 		case "ticket not found":
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusNotFound, err.Error(), nil)
 		case "user is not authorized to remove files from this ticket":
-			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			util.ErrorResponse(c, http.StatusForbidden, err.Error(), nil)
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove support files", "details": err.Error()})
+			util.ErrorResponse(c, http.StatusInternalServerError, "Failed to remove support files", err.Error())
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Selected files removed successfully"})
+	util.SuccessResponse(c, http.StatusOK, gin.H{"message": "Selected files removed successfully"})
 }
