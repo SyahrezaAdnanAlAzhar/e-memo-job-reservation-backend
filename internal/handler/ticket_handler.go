@@ -315,3 +315,25 @@ func (h *TicketHandler) RemoveSupportFiles(c *gin.Context) {
 
 	util.SuccessResponse(c, http.StatusOK, gin.H{"message": "Selected files removed successfully"})
 }
+
+// GET /reports/ticket-summary
+func (h *TicketHandler) GetTicketSummary(c *gin.Context) {
+	var filters dto.TicketSummaryFilter
+	if err := c.ShouldBindQuery(&filters); err != nil {
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid query parameters", err.Error())
+		return
+	}
+
+	summary, err := h.queryService.GetTicketSummary(filters)
+	if err != nil {
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve ticket summary", err.Error())
+		return
+	}
+
+	if summary == nil {
+		util.SuccessResponse(c, http.StatusOK, []dto.TicketSummaryResponse{})
+		return
+	}
+
+	util.SuccessResponse(c, http.StatusOK, summary)
+}

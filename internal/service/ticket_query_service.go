@@ -24,3 +24,7 @@ func (s *TicketQueryService) GetAllTickets(filters dto.TicketFilter) ([]dto.Tick
 func (s *TicketQueryService) GetTicketByID(id int) (*dto.TicketDetailResponse, error) {
 	return s.ticketRepo.FindByID(id)
 }
+
+func (s *TicketQueryService) GetTicketSummary(filters dto.TicketSummaryFilter) ([]dto.TicketSummaryResponse, error) {
+	return s.ticketRepo.GetTicketSummary(filters)
+}

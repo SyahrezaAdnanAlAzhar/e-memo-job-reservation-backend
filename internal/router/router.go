@@ -188,4 +188,8 @@ func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllRepositor
 		jobRoutes.PUT("/:id/assign", auth.RequirePermission("JOB_ASSIGN_PIC", r.PositionPermissionRepo), h.JobHandler.AssignPIC)
 		jobRoutes.PUT("/reorder", auth.RequirePermission("JOB_PRIORITY_MANAGE", r.PositionPermissionRepo), h.JobHandler.ReorderJobs)
 	}
+	reportRoutes := group.Group("/reports")
+	{
+		reportRoutes.GET("/ticket-summary", h.TicketHandler.GetTicketSummary)
+	}
 }
