@@ -49,6 +49,10 @@ func (h *StatusTicketHandler) GetAllStatusTickets(c *gin.Context) {
 		filters["is_active"] = isActive
 	}
 
+	if sectionID, exists := c.GetQuery("section_id"); exists {
+		filters["section_id"] = sectionID
+	}
+
 	statuses, err := h.service.GetAllStatusTickets(filters)
 	if err != nil {
 		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve status tickets", nil)

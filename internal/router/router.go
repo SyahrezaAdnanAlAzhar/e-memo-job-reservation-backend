@@ -167,14 +167,6 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllReposit
 
 // MAIN TICKET
 func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllRepositories) {
-	deptRoutes := group.Group("/department")
-	{
-		deptRoutes.GET("", h.DepartmentHandler.GetAllDepartments)
-	}
-	statusTicketRoutes := group.Group("/status-ticket")
-	{
-		statusTicketRoutes.GET("", h.StatusTicketHandler.GetAllStatusTickets)
-	}
 	ticketRoutes := group.Group("/tickets")
 	{
 		ticketRoutes.POST("", auth.RequirePermission("CREATE_TICKET", r.PositionPermissionRepo), h.TicketHandler.CreateTicket)

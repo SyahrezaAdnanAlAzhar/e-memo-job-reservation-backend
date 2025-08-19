@@ -42,13 +42,19 @@ func (r *StatusTicketRepository) Create(req dto.CreateStatusTicketRequest) (*mod
 
 // GET ALL
 func (r *StatusTicketRepository) FindAll(filters map[string]string) ([]model.StatusTicket, error) {
-	baseQuery := "SELECT id, name, sequence, is_active, created_at, updated_at FROM status_ticket"
+	baseQuery := "SELECT id, name, sequence, is_active, section_id, hex_color, created_at, updated_at FROM status_ticket"
 	var conditions []string
 	var args []interface{}
 	argID := 1
 
 	if val, ok := filters["is_active"]; ok {
 		conditions = append(conditions, "is_active = $"+strconv.Itoa(argID))
+		args = append(args, val)
+		argID++
+	}
+
+	if val, ok := filters["section_id"]; ok {
+		conditions = append(conditions, "section_id = $"+strconv.Itoa(argID))
 		args = append(args, val)
 		argID++
 	}
@@ -68,7 +74,7 @@ func (r *StatusTicketRepository) FindAll(filters map[string]string) ([]model.Sta
 	var statuses []model.StatusTicket
 	for rows.Next() {
 		var s model.StatusTicket
-		err := rows.Scan(&s.ID, &s.Name, &s.Sequence, &s.IsActive, &s.CreatedAt, &s.UpdatedAt)
+		err := rows.Scan(&s.ID, &s.Name, &s.Sequence, &s.IsActive, &s.SectionID, &s.HexColor, &s.CreatedAt, &s.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
