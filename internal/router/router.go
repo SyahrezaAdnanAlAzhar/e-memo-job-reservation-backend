@@ -38,8 +38,8 @@ func SetupRouter(h *AllHandlers, r *AllRepositories, authMiddleware *auth.AuthMi
 	{
 		public.POST("/login", h.AuthHandler.Login)
 		public.POST("/refresh", h.AuthHandler.RefreshToken)
+		public.GET("/departments", h.DepartmentHandler.GetAllDepartments)
 		public.GET("/ws", wsHandler.ServeWs)
-		
 	}
 
 	reportRoutes := api.Group("/reports")
@@ -69,7 +69,6 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllReposit
 		deptRoutes := group.Group("/department")
 		{
 			deptRoutes.POST("", h.DepartmentHandler.CreateDepartment)
-			deptRoutes.GET("", h.DepartmentHandler.GetAllDepartments)
 			deptRoutes.GET("/:id", h.DepartmentHandler.GetDepartmentByID)
 			deptRoutes.DELETE("/:id", h.DepartmentHandler.DeleteDepartment)
 			deptRoutes.PUT("/:id", h.DepartmentHandler.UpdateDepartment)
