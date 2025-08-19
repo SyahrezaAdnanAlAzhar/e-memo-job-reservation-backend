@@ -97,3 +97,15 @@ type TicketFilter struct {
 type DeleteFilesRequest struct {
 	FilePathsToDelete []string `json:"file_paths_to_delete" binding:"required,min=1"`
 }
+
+type TicketSummaryFilter struct {
+	DepartmentID int `form:"department_id"`
+	SectionID    int `form:"section_id"`
+}
+
+type TicketSummaryResponse struct {
+	StatusID   int    `json:"status_id"`
+	StatusName string `json:"status_name"`
+	HexCode    string `json:"hex_code"`
+	Total      int64  `json:"total"`
+}

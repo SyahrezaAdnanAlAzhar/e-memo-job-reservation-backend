@@ -482,3 +482,56 @@ func (r *TicketRepository) RemoveSupportFiles(ctx context.Context, ticketID int,
 
 	return nil
 }
+
+func (r *TicketRepository) GetTicketSummary(filters dto.TicketSummaryFilter) ([]dto.TicketSummaryResponse, error) {
+	baseQuery := `
+        SELECT
+            st.id as status_id,
+            st.name as status_name,
+            st.hex_color,
+            COUNT(t.id) as total
+        FROM ticket t
+        JOIN (
+            SELECT DISTINCT ON (ticket_id) ticket_id, status_ticket_id
+            FROM track_status_ticket
+            ORDER BY ticket_id, start_date DESC, id DESC
+        ) current_tst ON t.id = current_tst.ticket_id
+        JOIN status_ticket st ON current_tst.status_ticket_id = st.id
+    `
+	var conditions []string
+	var args []interface{}
+	argID := 1
+
+	if filters.DepartmentID != 0 {
+		conditions = append(conditions, fmt.Sprintf("t.department_target_id = $%d", argID))
+		args = append(args, filters.DepartmentID)
+		argID++
+	}
+	if filters.SectionID != 0 {
+		conditions = append(conditions, fmt.Sprintf("st.section_id = $%d", argID))
+		args = append(args, filters.SectionID)
+		argID++
+	}
+
+	if len(conditions) > 0 {
+		baseQuery += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	baseQuery += " GROUP BY st.id, st.name, st.hex_color, st.sequence ORDER BY st.sequence ASC"
+
+	rows, err := r.DB.Query(baseQuery, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var summary []dto.TicketSummaryResponse
+	for rows.Next() {
+		var s dto.TicketSummaryResponse
+		if err := rows.Scan(&s.StatusID, &s.StatusName, &s.HexCode, &s.Total); err != nil {
+			return nil, err
+		}
+		summary = append(summary, s)
+	}
+	return summary, nil
+}
