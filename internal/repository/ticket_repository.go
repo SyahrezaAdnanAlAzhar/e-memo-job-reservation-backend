@@ -489,14 +489,21 @@ func (r *TicketRepository) GetTicketSummary(filters dto.TicketSummaryFilter) ([]
             st.id as status_id,
             st.name as status_name,
             st.hex_color,
-            COUNT(t.id) as total
-        FROM ticket t
-        JOIN (
-            SELECT DISTINCT ON (ticket_id) ticket_id, status_ticket_id
-            FROM track_status_ticket
-            ORDER BY ticket_id, start_date DESC, id DESC
-        ) current_tst ON t.id = current_tst.ticket_id
-        JOIN status_ticket st ON current_tst.status_ticket_id = st.id
+            COALESCE(ticket_counts.total, 0) as total
+        FROM status_ticket st
+        LEFT JOIN (
+            SELECT
+                current_tst.status_ticket_id,
+                COUNT(t.id) as total
+            FROM ticket t
+            JOIN (
+                SELECT DISTINCT ON (ticket_id) ticket_id, status_ticket_id
+                FROM track_status_ticket
+                ORDER BY ticket_id, start_date DESC, id DESC
+            ) current_tst ON t.id = current_tst.ticket_id
+            %s 
+            GROUP BY current_tst.status_ticket_id
+        ) ticket_counts ON st.id = ticket_counts.status_ticket_id
     `
 	var conditions []string
 	var args []interface{}
@@ -507,19 +514,40 @@ func (r *TicketRepository) GetTicketSummary(filters dto.TicketSummaryFilter) ([]
 		args = append(args, filters.DepartmentID)
 		argID++
 	}
+
+	year := filters.Year
+	month := filters.Month
+
+	if year == 0 {
+		year = time.Now().Year()
+	}
+
+	conditions = append(conditions, fmt.Sprintf("EXTRACT(YEAR FROM t.created_at) = $%d", argID))
+	args = append(args, year)
+	argID++
+
+	if month != 0 {
+		conditions = append(conditions, fmt.Sprintf("EXTRACT(MONTH FROM t.created_at) = $%d", argID))
+		args = append(args, month)
+		argID++
+	}
+
+	whereClause := ""
+	if len(conditions) > 0 {
+		whereClause = "WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	query := fmt.Sprintf(baseQuery, whereClause)
+
 	if filters.SectionID != 0 {
-		conditions = append(conditions, fmt.Sprintf("st.section_id = $%d", argID))
+		query += fmt.Sprintf(" WHERE st.section_id = $%d", argID)
 		args = append(args, filters.SectionID)
 		argID++
 	}
 
-	if len(conditions) > 0 {
-		baseQuery += " WHERE " + strings.Join(conditions, " AND ")
-	}
+	query += " ORDER BY st.sequence ASC"
 
-	baseQuery += " GROUP BY st.id, st.name, st.hex_color, st.sequence ORDER BY st.sequence ASC"
-
-	rows, err := r.DB.Query(baseQuery, args...)
+	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}

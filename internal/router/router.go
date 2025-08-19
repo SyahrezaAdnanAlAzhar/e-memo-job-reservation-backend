@@ -39,6 +39,12 @@ func SetupRouter(h *AllHandlers, r *AllRepositories, authMiddleware *auth.AuthMi
 		public.POST("/login", h.AuthHandler.Login)
 		public.POST("/refresh", h.AuthHandler.RefreshToken)
 		public.GET("/ws", wsHandler.ServeWs)
+		
+	}
+
+	reportRoutes := api.Group("/reports")
+	{
+		reportRoutes.GET("/ticket-summary", h.TicketHandler.GetTicketSummary)
 	}
 
 	private := api.Group("")
@@ -187,9 +193,5 @@ func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllRepositor
 		jobRoutes.GET("/:id/available-actions", h.JobHandler.GetAvailableActions)
 		jobRoutes.PUT("/:id/assign", auth.RequirePermission("JOB_ASSIGN_PIC", r.PositionPermissionRepo), h.JobHandler.AssignPIC)
 		jobRoutes.PUT("/reorder", auth.RequirePermission("JOB_PRIORITY_MANAGE", r.PositionPermissionRepo), h.JobHandler.ReorderJobs)
-	}
-	reportRoutes := group.Group("/reports")
-	{
-		reportRoutes.GET("/ticket-summary", h.TicketHandler.GetTicketSummary)
 	}
 }

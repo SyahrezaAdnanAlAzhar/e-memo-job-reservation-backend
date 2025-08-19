@@ -101,6 +101,8 @@ type DeleteFilesRequest struct {
 type TicketSummaryFilter struct {
 	DepartmentID int `form:"department_id"`
 	SectionID    int `form:"section_id"`
+	Year         int `form:"year"`
+	Month        int `form:"month"`
 }
 
 type TicketSummaryResponse struct {
