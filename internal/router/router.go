@@ -169,7 +169,7 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllReposit
 func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllRepositories) {
 	ticketRoutes := group.Group("/tickets")
 	{
-		ticketRoutes.POST("", h.TicketHandler.CreateTicket)
+		ticketRoutes.POST("", auth.RequirePermission("CREATE_TICKET", r.PositionPermissionRepo), h.TicketHandler.CreateTicket)
 		ticketRoutes.GET("", h.TicketHandler.GetAllTickets)
 		ticketRoutes.GET("/:id", h.TicketHandler.GetTicketByID)
 		ticketRoutes.PUT("/:id", h.TicketHandler.UpdateTicket)
