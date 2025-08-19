@@ -111,3 +111,8 @@ type TicketSummaryResponse struct {
 	HexCode    string `json:"hex_code"`
 	Total      int64  `json:"total"`
 }
+
+type OldestTicketResponse struct {
+	TicketID  int       `json:"ticket_id"`
+	CreatedAt time.Time `json:"created_at"`
+}

@@ -45,6 +45,7 @@ func SetupRouter(h *AllHandlers, r *AllRepositories, authMiddleware *auth.AuthMi
 	reportRoutes := api.Group("/reports")
 	{
 		reportRoutes.GET("/ticket-summary", h.TicketHandler.GetTicketSummary)
+		reportRoutes.GET("/oldest-ticket", h.TicketHandler.GetOldestTicket)
 	}
 
 	private := api.Group("")

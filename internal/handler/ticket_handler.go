@@ -337,3 +337,18 @@ func (h *TicketHandler) GetTicketSummary(c *gin.Context) {
 
 	util.SuccessResponse(c, http.StatusOK, summary)
 }
+
+// GET /reports/oldest-ticket
+func (h *TicketHandler) GetOldestTicket(c *gin.Context) {
+	oldestTicket, err := h.queryService.GetOldestTicket()
+	if err != nil {
+		if err == sql.ErrNoRows {
+			util.ErrorResponse(c, http.StatusNotFound, "No tickets found in the system", nil)
+			return
+		}
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve oldest ticket", err.Error())
+		return
+	}
+
+	util.SuccessResponse(c, http.StatusOK, oldestTicket)
+}

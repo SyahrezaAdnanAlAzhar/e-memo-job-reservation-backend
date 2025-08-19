@@ -563,3 +563,15 @@ func (r *TicketRepository) GetTicketSummary(filters dto.TicketSummaryFilter) ([]
 	}
 	return summary, nil
 }
+
+func (r *TicketRepository) FindOldestTicket() (*dto.OldestTicketResponse, error) {
+	query := "SELECT id, created_at FROM ticket ORDER BY created_at ASC LIMIT 1"
+	row := r.DB.QueryRow(query)
+
+	var oldestTicket dto.OldestTicketResponse
+	err := row.Scan(&oldestTicket.TicketID, &oldestTicket.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &oldestTicket, nil
+}

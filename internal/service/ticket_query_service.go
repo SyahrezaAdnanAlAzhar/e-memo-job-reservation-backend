@@ -28,3 +28,7 @@ func (s *TicketQueryService) GetTicketByID(id int) (*dto.TicketDetailResponse, e
 func (s *TicketQueryService) GetTicketSummary(filters dto.TicketSummaryFilter) ([]dto.TicketSummaryResponse, error) {
 	return s.ticketRepo.GetTicketSummary(filters)
 }
+
+func (s *TicketQueryService) GetOldestTicket() (*dto.OldestTicketResponse, error) {
+	return s.ticketRepo.FindOldestTicket()
+}
