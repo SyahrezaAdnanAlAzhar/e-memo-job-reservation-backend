@@ -43,18 +43,15 @@ func (h *DepartmentHandler) CreateDepartment(c *gin.Context) {
 
 // GET /department
 func (h *DepartmentHandler) GetAllDepartments(c *gin.Context) {
-	filters := make(map[string]string)
-
-	if isActive, exists := c.GetQuery("is_active"); exists {
-		filters["is_active"] = isActive
-	}
-	if receiveJob, exists := c.GetQuery("receive_job"); exists {
-		filters["receive_job"] = receiveJob
+	var filters dto.DepartmentFilter
+	if err := c.ShouldBindQuery(&filters); err != nil {
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid query parameters", err.Error())
+		return
 	}
 
 	departments, err := h.service.GetAllDepartments(filters)
 	if err != nil {
-		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve departments", nil)
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve departments", err.Error())
 		return
 	}
 

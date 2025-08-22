@@ -3,10 +3,11 @@ package repository
 import (
 	"database/sql"
 	"errors"
-	"strconv"
-    "strings"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"fmt"
+	"strings"
+
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 )
 
 type DepartmentRepository struct {
@@ -61,28 +62,31 @@ func (r *DepartmentRepository) Create(req dto.CreateDepartmentRequest) (*model.D
 
 
 // GET ALL
-func (r *DepartmentRepository) FindAll(filters map[string]string) ([]model.Department, error) {
+func (r *DepartmentRepository) FindAll(filters dto.DepartmentFilter) ([]model.Department, error) {
 	query := "SELECT id, name, receive_job, is_active, created_at, updated_at FROM department"
-	
 	var conditions []string
 	var args []interface{}
 	argID := 1
 
-	if val, ok := filters["is_active"]; ok {
-		conditions = append(conditions, "is_active = $"+strconv.Itoa(argID))
-		args = append(args, val)
+	if filters.Name != "" {
+		conditions = append(conditions, fmt.Sprintf("name ILIKE $%d", argID))
+		args = append(args, "%"+filters.Name+"%") 
 		argID++
 	}
-	if val, ok := filters["receive_job"]; ok {
-		conditions = append(conditions, "receive_job = $"+strconv.Itoa(argID))
-		args = append(args, val)
+	if filters.IsActive != nil {
+		conditions = append(conditions, fmt.Sprintf("is_active = $%d", argID))
+		args = append(args, *filters.IsActive)
+		argID++
+	}
+	if filters.ReceiveJob != nil {
+		conditions = append(conditions, fmt.Sprintf("receive_job = $%d", argID))
+		args = append(args, *filters.ReceiveJob)
 		argID++
 	}
 
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
-
 	query += " ORDER BY id ASC"
 	
 	rows, err := r.DB.Query(query, args...)
@@ -108,6 +112,19 @@ func (r *DepartmentRepository) FindAll(filters map[string]string) ([]model.Depar
 func (r *DepartmentRepository) FindByID(id int) (*model.Department, error) {
 	query := "SELECT id, name, receive_job, is_active, created_at, updated_at FROM department WHERE id = $1"
 	row := r.DB.QueryRow(query, id)
+
+	var d model.Department
+	err := row.Scan(&d.ID, &d.Name, &d.ReceiveJob, &d.IsActive, &d.CreatedAt, &d.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &d, nil
+}
+
+// GET BY NAME
+func (r *DepartmentRepository) FindByName(name string) (*model.Department, error) {
+	query := "SELECT id, name, receive_job, is_active, created_at, updated_at FROM department WHERE name ILIKE $1"
+	row := r.DB.QueryRow(query, name)
 
 	var d model.Department
 	err := row.Scan(&d.ID, &d.Name, &d.ReceiveJob, &d.IsActive, &d.CreatedAt, &d.UpdatedAt)

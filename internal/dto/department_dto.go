@@ -14,3 +14,9 @@ type UpdateDepartmentRequest struct {
 type UpdateStatusRequest struct {
 	IsActive bool `json:"is_active"`
 }
+
+type DepartmentFilter struct {
+	Name       string `form:"name"`
+	IsActive   *bool  `form:"is_active"`
+	ReceiveJob *bool  `form:"receive_job"`
+}

@@ -36,7 +36,7 @@ func (s *DepartmentService) CreateDepartment(req dto.CreateDepartmentRequest) (*
 
 
 // GET ALL
-func (s *DepartmentService) GetAllDepartments(filters map[string]string) ([]model.Department, error) {
+func (s *DepartmentService) GetAllDepartments(filters dto.DepartmentFilter) ([]model.Department, error) {
 	return s.repo.FindAll(filters)
 }
 
@@ -46,6 +46,10 @@ func (s *DepartmentService) GetDepartmentByID(id int) (*model.Department, error)
 	return s.repo.FindByID(id)
 }
 
+// GET BY NAME
+func (s *DepartmentService) GetDepartmentByName(name string) (*model.Department, error) {
+	return s.repo.FindByName(name)
+}
 
 // DELETE
 func (s *DepartmentService) DeleteDepartment(id int) error {
