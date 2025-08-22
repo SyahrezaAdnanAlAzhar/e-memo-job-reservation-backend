@@ -39,6 +39,8 @@ func SetupRouter(h *AllHandlers, r *AllRepositories, authMiddleware *auth.AuthMi
 		public.POST("/login", h.AuthHandler.Login)
 		public.POST("/refresh", h.AuthHandler.RefreshToken)
 		public.GET("/departments", h.DepartmentHandler.GetAllDepartments)
+		public.GET("/tickets", h.TicketHandler.GetAllTickets)
+		public.GET("/status-ticket", h.StatusTicketHandler.GetAllStatusTickets)
 		public.GET("/ws", wsHandler.ServeWs)
 	}
 
@@ -107,7 +109,6 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllReposit
 		statusTicketRoutes := group.Group("/status-ticket")
 		{
 			statusTicketRoutes.POST("", h.StatusTicketHandler.CreateStatusTicket)
-			statusTicketRoutes.GET("", h.StatusTicketHandler.GetAllStatusTickets)
 			statusTicketRoutes.GET("/:id", h.StatusTicketHandler.GetStatusTicketByID)
 			statusTicketRoutes.DELETE("/:id", h.StatusTicketHandler.DeleteStatusTicket)
 			statusTicketRoutes.PATCH("/:id/status", h.StatusTicketHandler.UpdateStatusTicketActiveStatus)
@@ -176,7 +177,6 @@ func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllRepositor
 	ticketRoutes := group.Group("/tickets")
 	{
 		ticketRoutes.POST("", auth.RequirePermission("CREATE_TICKET", r.PositionPermissionRepo), h.TicketHandler.CreateTicket)
-		ticketRoutes.GET("", h.TicketHandler.GetAllTickets)
 		ticketRoutes.GET("/:id", h.TicketHandler.GetTicketByID)
 		ticketRoutes.PUT("/:id", h.TicketHandler.UpdateTicket)
 		ticketRoutes.PUT("/reorder", auth.RequirePermission("TICKET_PRIORITY_MANAGE", r.PositionPermissionRepo), h.TicketHandler.ReorderTickets)

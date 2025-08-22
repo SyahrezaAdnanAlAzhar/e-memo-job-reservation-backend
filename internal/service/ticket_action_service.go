@@ -39,7 +39,7 @@ func NewTicketActionService(cfg *TicketActionServiceConfig) *TicketActionService
 }
 
 // GET AVAILABLE ACTIONS
-func (s *TicketActionService) GetAvailableActions(ctx context.Context, ticketID int, userNPK string) ([]dto.ActionResponse, error) {
+func (s *TicketActionService) GetAvailableActions(ctx context.Context, ticketID int, userNPK string) ([]dto.AvailableTicketActionResponse, error) {
 	user, err := s.employeeRepo.FindByNPK(userNPK)
 	if err != nil {
 		if err == sql.ErrNoRows {

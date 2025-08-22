@@ -239,7 +239,7 @@ func (h *TicketHandler) GetAvailableActions(c *gin.Context) {
 	}
 
 	if actions == nil {
-		util.SuccessResponse(c, http.StatusOK, []dto.ActionResponse{})
+		util.SuccessResponse(c, http.StatusOK, []dto.AvailableTicketActionResponse{})
 		return
 	}
 	util.SuccessResponse(c, http.StatusOK, actions)

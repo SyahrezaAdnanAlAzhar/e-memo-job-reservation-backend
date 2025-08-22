@@ -1,6 +1,6 @@
 package dto
 
-type ActionResponse struct {
+type AvailableTicketActionResponse struct {
 	ActionName     string  `json:"action_name"`
 	HexCode        *string `json:"hex_code"`
 	RequiresReason bool    `json:"requires_reason"`
@@ -10,5 +10,5 @@ type ActionResponse struct {
 
 type TransitionDetail struct {
 	RequiredActorRole string
-	Action            ActionResponse
+	Action            AvailableTicketActionResponse
 }

@@ -19,7 +19,7 @@ func NewStatusTransitionRepository(db *sql.DB) *StatusTransitionRepository {
 
 type TransitionDetail struct {
 	RequiredActorRole string
-	ActionDetail      dto.ActionResponse
+	ActionDetail      dto.AvailableTicketActionResponse
 }
 
 func (r *StatusTransitionRepository) FindValidTransition(fromStatusID int, actionName string) (int, []int, error) {
@@ -103,9 +103,9 @@ func (r *StatusTransitionRepository) FindPossibleTransitionsWithDetails(fromStat
 	return transitions, nil
 }
 
-func (r *StatusTransitionRepository) FindAvailableTransitionsForRoles(fromStatusID int, roleIDs []int) ([]dto.ActionResponse, error) {
+func (r *StatusTransitionRepository) FindAvailableTransitionsForRoles(fromStatusID int, roleIDs []int) ([]dto.AvailableTicketActionResponse, error) {
 	if len(roleIDs) == 0 {
-		return []dto.ActionResponse{}, nil
+		return []dto.AvailableTicketActionResponse{}, nil
 	}
 
 	query := `
@@ -122,9 +122,9 @@ func (r *StatusTransitionRepository) FindAvailableTransitionsForRoles(fromStatus
 	}
 	defer rows.Close()
 
-	var actions []dto.ActionResponse
+	var actions []dto.AvailableTicketActionResponse
 	for rows.Next() {
-		var a dto.ActionResponse
+		var a dto.AvailableTicketActionResponse
 		if err := rows.Scan(&a.ActionName, &a.HexCode); err != nil {
 			return nil, err
 		}
