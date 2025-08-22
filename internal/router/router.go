@@ -23,6 +23,7 @@ type AllHandlers struct {
 	SpecifiedLocationHandler   *handler.SpecifiedLocationHandler
 	RejectedTicketHandler      *handler.RejectedTicketHandler
 	JobHandler                 *handler.JobHandler
+	ActionHandler              *handler.ActionHandler
 }
 
 type AllRepositories struct {
@@ -41,6 +42,7 @@ func SetupRouter(h *AllHandlers, r *AllRepositories, authMiddleware *auth.AuthMi
 		public.GET("/departments", h.DepartmentHandler.GetAllDepartments)
 		public.GET("/tickets", h.TicketHandler.GetAllTickets)
 		public.GET("/status-ticket", h.StatusTicketHandler.GetAllStatusTickets)
+		public.GET("/actions", h.ActionHandler.GetAllActions)
 		public.GET("/ws", wsHandler.ServeWs)
 	}
 

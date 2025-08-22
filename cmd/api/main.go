@@ -57,6 +57,7 @@ func main() {
 	statusTransitionRepo := repository.NewStatusTransitionRepository(db)
 	rejectedTicketRepo := repository.NewRejectedTicketRepository(db)
 	ticketActionLogRepo := repository.NewTicketActionLogRepository(db)
+	actionRepo := repository.NewActionRepository(db)
 
 	// SERVICE
 	authService := service.NewAuthService(authRepo, appUserRepo, positionPermissionRepo, employeeRepo)
@@ -134,6 +135,8 @@ func main() {
 		ActionService:   ticketActionService,
 	})
 
+	actionService := service.NewActionService(actionRepo)
+
 	// HANDLER
 	wsHandler := handler.NewWebSocketHandler(hub, authRepo)
 
@@ -151,6 +154,7 @@ func main() {
 		SpecifiedLocationHandler:   handler.NewSpecifiedLocationHandler(specifiedLocationService),
 		RejectedTicketHandler:      handler.NewRejectedTicketHandler(rejectedTicketService),
 		JobHandler:                 handler.NewJobHandler(jobService, jobQueryService),
+		ActionHandler:              handler.NewActionHandler(actionService),
 		TicketHandler:              ticketHandler,
 	}
 
