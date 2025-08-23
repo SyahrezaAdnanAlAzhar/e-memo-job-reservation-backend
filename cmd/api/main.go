@@ -62,6 +62,7 @@ func main() {
 	// SERVICE
 	authService := service.NewAuthService(authRepo, appUserRepo, positionPermissionRepo, employeeRepo)
 	departmentService := service.NewDepartmentService(departmentRepo)
+	employeeService := service.NewEmployeeService(employeeRepo)
 	areaService := service.NewAreaService(areaRepo)
 	physicalLocationService := service.NewPhysicalLocationService(physicalLocationRepo)
 	accessPermissionService := service.NewAccessPermissionService(accessPermissionRepo)
@@ -143,6 +144,7 @@ func main() {
 	allHandlers := &router.AllHandlers{
 		AuthHandler:                handler.NewAuthHandler(authService),
 		DepartmentHandler:          handler.NewDepartmentHandler(departmentService),
+		EmployeeHandler:            handler.NewEmployeeHandler(employeeService),
 		AreaHandler:                handler.NewAreaHandler(areaService),
 		PhysicalLocationHandler:    handler.NewPhysicalLocationHandler(physicalLocationService),
 		AccessPermissionHandler:    handler.NewAccessPermissionHandler(accessPermissionService),

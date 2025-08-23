@@ -4,7 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 )
 
@@ -16,17 +19,49 @@ func NewEmployeeRepository(db *sql.DB) *EmployeeRepository {
 	return &EmployeeRepository{DB: db}
 }
 
-func (r *EmployeeRepository) GetAllEmployees() ([]model.Employee, error) {
-	query := `
-        SELECT 
-            e.npk, e.department_id, e.area_id, e.name, e.is_active,
-            ep.id as position_id, ep.name as position_name
-        FROM employee e
-        JOIN employee_position ep ON e.employee_position_id = ep.id
-        WHERE e.is_active = true
-        ORDER BY e.name ASC`
+func (r *EmployeeRepository) FindAll(filters dto.EmployeeFilter) ([]model.Employee, error) {
+	query := "SELECT npk, department_id, area_id, name, is_active, created_at, updated_at, employee_position_id FROM employee"
+	var conditions []string
+	var args []interface{}
+	argID := 1
 
-	rows, err := r.DB.Query(query)
+	if filters.DepartmentID != 0 {
+		conditions = append(conditions, fmt.Sprintf("department_id = $%d", argID))
+		args = append(args, filters.DepartmentID)
+		argID++
+	}
+	if filters.AreaID != 0 {
+		conditions = append(conditions, fmt.Sprintf("area_id = $%d", argID))
+		args = append(args, filters.AreaID)
+		argID++
+	}
+	if filters.EmployeePositionID != 0 {
+		conditions = append(conditions, fmt.Sprintf("employee_position_id = $%d", argID))
+		args = append(args, filters.EmployeePositionID)
+		argID++
+	}
+	if filters.Name != "" {
+		conditions = append(conditions, fmt.Sprintf("name ILIKE $%d", argID))
+		args = append(args, "%"+filters.Name+"%")
+		argID++
+	}
+	if filters.NPK != "" {
+		conditions = append(conditions, fmt.Sprintf("npk ILIKE $%d", argID))
+		args = append(args, "%"+filters.NPK+"%")
+		argID++
+	}
+	if filters.IsActive != nil {
+		conditions = append(conditions, fmt.Sprintf("is_active = $%d", argID))
+		args = append(args, *filters.IsActive)
+		argID++
+	}
+
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+	query += " ORDER BY name ASC"
+
+	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -35,15 +70,7 @@ func (r *EmployeeRepository) GetAllEmployees() ([]model.Employee, error) {
 	var employees []model.Employee
 	for rows.Next() {
 		var e model.Employee
-		err := rows.Scan(
-			&e.NPK,
-			&e.DepartmentID,
-			&e.AreaID,
-			&e.Name,
-			&e.IsActive,
-			&e.Position.ID,
-			&e.Position.Name,
-		)
+		err := rows.Scan(&e.NPK, &e.DepartmentID, &e.AreaID, &e.Name, &e.IsActive, &e.CreatedAt, &e.UpdatedAt, &e.Position.ID)
 		if err != nil {
 			return nil, err
 		}

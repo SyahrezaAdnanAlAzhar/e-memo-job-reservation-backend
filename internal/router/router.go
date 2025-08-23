@@ -12,6 +12,7 @@ type AllHandlers struct {
 	AuthHandler                *handler.AuthHandler
 	DepartmentHandler          *handler.DepartmentHandler
 	AreaHandler                *handler.AreaHandler
+	EmployeeHandler            *handler.EmployeeHandler
 	PhysicalLocationHandler    *handler.PhysicalLocationHandler
 	AccessPermissionHandler    *handler.AccessPermissionHandler
 	SectionStatusTicketHandler *handler.SectionStatusTicketHandler
@@ -79,6 +80,12 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllReposit
 			deptRoutes.PUT("/:id", h.DepartmentHandler.UpdateDepartment)
 			deptRoutes.PATCH("/:id/status", h.DepartmentHandler.UpdateDepartmentActiveStatus)
 		}
+		
+		employeeRoutes := group.Group("/employee")
+		{
+			employeeRoutes.GET("", h.EmployeeHandler.GetAllEmployees)
+		}
+		
 		physicalLocationRoutes := group.Group("/physical-location")
 		{
 			physicalLocationRoutes.POST("", h.PhysicalLocationHandler.CreatePhysicalLocation)

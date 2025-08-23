@@ -1,28 +1,38 @@
 package handler
 
 import (
-	"encoding/json"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository" 
-	"log"
 	"net/http"
+
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/util"
+	"github.com/gin-gonic/gin"
 )
 
 type EmployeeHandler struct {
-	Repo *repository.EmployeeRepository
+	service *service.EmployeeService
 }
 
-func NewEmployeeHandler(repo *repository.EmployeeRepository) *EmployeeHandler {
-	return &EmployeeHandler{Repo: repo}
+func NewEmployeeHandler(service *service.EmployeeService) *EmployeeHandler {
+	return &EmployeeHandler{service: service}
 }
 
-func (h *EmployeeHandler) GetAllEmployees(w http.ResponseWriter, r *http.Request) {
-	employees, err := h.Repo.GetAllEmployees()
-	if err != nil {
-		log.Printf("Error getting employees: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+func (h *EmployeeHandler) GetAllEmployees(c *gin.Context) {
+	var filters dto.EmployeeFilter
+	if err := c.ShouldBindQuery(&filters); err != nil {
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid query parameters", err.Error())
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(employees)
+	employees, err := h.service.GetAllEmployees(filters)
+	if err != nil {
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve employees", err.Error())
+		return
+	}
+
+	if employees == nil {
+		util.SuccessResponse(c, http.StatusOK, []gin.H{})
+		return
+	}
+	util.SuccessResponse(c, http.StatusOK, employees)
 }
