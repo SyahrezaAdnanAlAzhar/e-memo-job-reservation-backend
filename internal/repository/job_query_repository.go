@@ -20,8 +20,10 @@ const baseJobQuery = `
         dept.name as assigned_department_name,
         current_st.name as current_status,
         current_st.hex_color as current_status_hex_code,
+        current_sst.name as current_section_name,
         pic_emp.name as pic_name,
         req_emp.name as requestor_name,
+        req_dept.name as requestor_department,
         (NOW()::date - t.created_at::date) as ticket_age_days,
         t.deadline,
         (t.deadline::date - NOW()::date) as days_remaining
@@ -29,13 +31,15 @@ const baseJobQuery = `
     JOIN ticket t ON j.ticket_id = t.id
     JOIN department dept ON t.department_target_id = dept.id
     JOIN employee req_emp ON t.requestor = req_emp.npk
+    LEFT JOIN department req_dept ON req_emp.department_id = req_dept.id
     LEFT JOIN employee pic_emp ON j.pic_job = pic_emp.npk
     LEFT JOIN (
         SELECT DISTINCT ON (ticket_id) ticket_id, status_ticket_id
         FROM track_status_ticket
-        ORDER BY ticket_id, start_date DESC
+        ORDER BY ticket_id, start_date DESC, id DESC
     ) current_tst ON t.id = current_tst.ticket_id
     LEFT JOIN status_ticket current_st ON current_tst.status_ticket_id = current_st.id
+    LEFT JOIN section_status_ticket current_sst ON current_st.section_id = current_sst.id
 `
 
 type JobQueryRepository struct {
@@ -53,9 +57,10 @@ func (r *JobQueryRepository) FindAll(filters dto.JobFilter) ([]dto.JobDetailResp
 	var args []interface{}
 	argID := 1
 
-	if filters.AssignedDepartmentID != 0 {
-		conditions = append(conditions, fmt.Sprintf("t.department_target_id = $%d", argID))
-		args = append(args, filters.AssignedDepartmentID)
+	// --- Bangun Klausa WHERE ---
+	if filters.SectionID != 0 {
+		conditions = append(conditions, fmt.Sprintf("current_sst.id = $%d", argID))
+		args = append(args, filters.SectionID)
 		argID++
 	}
 	if filters.StatusID != 0 {
@@ -63,12 +68,26 @@ func (r *JobQueryRepository) FindAll(filters dto.JobFilter) ([]dto.JobDetailResp
 		args = append(args, filters.StatusID)
 		argID++
 	}
+	if filters.AssignedDepartmentID != 0 {
+		conditions = append(conditions, fmt.Sprintf("t.department_target_id = $%d", argID))
+		args = append(args, filters.AssignedDepartmentID)
+		argID++
+	}
+	if filters.AssignedDepartmentName != "" {
+		conditions = append(conditions, fmt.Sprintf("dept.name ILIKE $%d", argID))
+		args = append(args, "%"+filters.AssignedDepartmentName+"%")
+		argID++
+	}
 	if filters.PicNPK != "" {
 		conditions = append(conditions, fmt.Sprintf("j.pic_job = $%d", argID))
 		args = append(args, filters.PicNPK)
 		argID++
 	}
-
+	if filters.RequestorNPK != "" {
+		conditions = append(conditions, fmt.Sprintf("t.requestor = $%d", argID))
+		args = append(args, filters.RequestorNPK)
+		argID++
+	}
 	if filters.SearchQuery != "" {
 		searchQuery := strings.ReplaceAll(strings.TrimSpace(filters.SearchQuery), " ", " & ")
 		conditions = append(conditions, fmt.Sprintf("t.description_tsv @@ to_tsquery('simple', $%d)", argID))
@@ -152,7 +171,8 @@ func scanJobDetails(rows *sql.Rows) ([]dto.JobDetailResponse, error) {
 		err := rows.Scan(
 			&j.JobID, &j.TicketID, &j.Description, &j.JobPriority, &j.TicketPriority,
 			&j.Version, &j.AssignedDepartmentID, &j.AssignedDepartmentName,
-			&j.CurrentStatus, &j.CurrentStatusHexCode, &j.PicName, &j.RequestorName,
+			&j.CurrentStatus, &j.CurrentStatusHexCode, &j.CurrentSectionName,
+			&j.PicName, &j.RequestorName, &j.RequestorDepartment,
 			&j.TicketAgeDays, &j.Deadline, &j.DaysRemaining,
 		)
 		if err != nil {

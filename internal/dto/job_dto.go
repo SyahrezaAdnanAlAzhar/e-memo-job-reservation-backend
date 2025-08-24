@@ -32,10 +32,12 @@ type JobDetailResponse struct {
 	// STATUS INFORMATION
 	CurrentStatus        *string `json:"current_status"`
 	CurrentStatusHexCode *string `json:"current_status_hex_code"`
+	CurrentSectionName   *string `json:"current_section_name"`
 
 	// PEOPLE INFORMATION
-	PicName       *string `json:"pic_name"`
-	RequestorName string  `json:"requestor_name"`
+	PicName             *string `json:"pic_name"`
+	RequestorName       string  `json:"requestor_name"`
+	RequestorDepartment *string `json:"requestor_department"`
 
 	// TIME INFORMATION
 	TicketAgeDays *int       `json:"ticket_age_days"`
@@ -44,13 +46,23 @@ type JobDetailResponse struct {
 }
 
 type JobFilter struct {
-	AssignedDepartmentID int    `form:"assigned_department_id"`
+	// FILTER BY ID
+	SectionID            int    `form:"section_id"`
 	StatusID             int    `form:"status_id"`
+	AssignedDepartmentID int    `form:"assigned_department_id"`
 	PicNPK               string `form:"pic_npk"`
-	SearchQuery          string `form:"search"`
-	SortBy               string `form:"sort_by"`
+	RequestorNPK         string `form:"requestor_npk"`
+
+	// FILTER BY SEARCH QUERY
+	SearchQuery string `form:"search"`
+
+	// FILTER BY NAME
+	AssignedDepartmentName string `form:"assigned_department_name"`
+
+	// SORTING OPTION
+	SortBy string `form:"sort_by"`
 }
 
 type AvailableActionResponse struct {
-	Name        string `json:"name"`
+	Name string `json:"name"`
 }
