@@ -91,6 +91,9 @@ type TicketFilter struct {
 	// FILTER BY SEARCH QUERY
 	SearchQuery string `form:"search"`
 
+	// FILTER BY NAME
+	DepartmentTargetName string `form:"department_target_name"`
+
 	// SORTING OPTION
 	SortBy string `form:"sort_by"`
 }

@@ -124,6 +124,12 @@ func (r *TicketRepository) FindAll(filters dto.TicketFilter) ([]dto.TicketDetail
 		argID++
 	}
 
+	if filters.DepartmentTargetName != "" {
+        conditions = append(conditions, fmt.Sprintf("dt.name ILIKE $%d", argID))
+        args = append(args, "%"+filters.DepartmentTargetName+"%")
+        argID++
+    }
+
 	if filters.Requestor != "" {
 		conditions = append(conditions, fmt.Sprintf("t.requestor = $%d", argID))
 		args = append(args, filters.Requestor)
