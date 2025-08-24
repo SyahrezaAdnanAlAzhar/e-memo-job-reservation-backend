@@ -124,6 +124,7 @@ func main() {
 		ActorRoleRepo:         actorRoleRepo,
 		ActorRoleMappingRepo:  actorRoleMappingRepo,
 		TicketActionLogRepo:   ticketActionLogRepo,
+		ActionService: ticketActionService,
 	})
 
 	ticketPriorityService := service.NewTicketPriorityService(db, hub, ticketRepo, employeeRepo)

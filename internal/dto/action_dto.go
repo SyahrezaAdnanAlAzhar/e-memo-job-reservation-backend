@@ -12,11 +12,13 @@ type ActionResponse struct {
 }
 
 type AvailableTicketActionResponse struct {
-	ActionName     string  `json:"action_name"`
-	HexCode        *string `json:"hex_code"`
-	RequiresReason bool    `json:"requires_reason"`
-	ReasonLabel    *string `json:"reason_label"`
-	RequiresFile   bool    `json:"requires_file"`
+	ActionName    string  `json:"action_name"`
+	ActionID      int     `json:"-"`
+	ToStatusID    int     `json:"-"`
+	HexCode       *string `json:"hex_code"`
+	RequireReason bool    `json:"require_reason"`
+	ReasonLabel   *string `json:"reason_label"`
+	RequireFile   bool    `json:"require_file"`
 }
 
 type TransitionDetail struct {

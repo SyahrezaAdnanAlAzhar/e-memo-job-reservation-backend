@@ -9,7 +9,6 @@ import (
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
-	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
 )
 
@@ -24,6 +23,7 @@ type TicketWorkflowService struct {
 	actorRoleRepo         *repository.ActorRoleRepository
 	actorRoleMappingRepo  *repository.ActorRoleMappingRepository
 	ticketActionLogRepo   *repository.TicketActionLogRepository
+	actionService         *TicketActionService
 }
 
 type TicketWorkflowServiceConfig struct {
@@ -37,6 +37,7 @@ type TicketWorkflowServiceConfig struct {
 	ActorRoleRepo         *repository.ActorRoleRepository
 	ActorRoleMappingRepo  *repository.ActorRoleMappingRepository
 	TicketActionLogRepo   *repository.TicketActionLogRepository
+	ActionService         *TicketActionService
 }
 
 func NewTicketWorkflowService(cfg *TicketWorkflowServiceConfig) *TicketWorkflowService {
@@ -51,77 +52,47 @@ func NewTicketWorkflowService(cfg *TicketWorkflowServiceConfig) *TicketWorkflowS
 		actorRoleRepo:         cfg.ActorRoleRepo,
 		actorRoleMappingRepo:  cfg.ActorRoleMappingRepo,
 		ticketActionLogRepo:   cfg.TicketActionLogRepo,
+		actionService:         cfg.ActionService,
 	}
 }
 
 // EXECUTE ACTION TO GET TO THE NEXT STATUS BASED ON STATE
-func (s *TicketWorkflowService) ExecuteAction(c *gin.Context, ticketID int, userNPK string, req dto.ExecuteActionRequest, filePaths []string) error {
-	ctx := c.Request.Context()
-
-	user, err := s.employeeRepo.FindByNPK(userNPK)
-	if err != nil {
-		return errors.New("user not found")
-	}
-
-	ticket, err := s.ticketRepo.FindByIDAsStruct(ctx, ticketID)
-	if err != nil {
-		return errors.New("ticket not found")
-	}
-
-	requestor, err := s.employeeRepo.FindByNPK(ticket.Requestor)
-	if err != nil {
-		return errors.New("original requestor not found")
-	}
-
-	job, _ := s.jobRepo.FindByTicketID(ctx, ticketID)
-
-	currentStatusID, _, err := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
-	if err != nil {
-		return errors.New("could not get current ticket status")
-	}
-
-	toStatusID, allowedRoleIDs, err := s.statusTransitionRepo.FindValidTransition(currentStatusID, req.ActionName)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return errors.New("action not allowed from the current status")
-		}
-		return err
-	}
-
-	userContexts := s.determineUserContexts(user, ticket, requestor, job)
-	userRoleIDs, err := s.actorRoleMappingRepo.GetRoleIDsForUserContext(user.Position.ID, userContexts)
-
+func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int, userNPK string, req dto.ExecuteActionRequest, filePaths []string) error {
+	availableActions, err := s.actionService.GetAvailableActions(ctx, ticketID, userNPK)
 	if err != nil {
 		return err
 	}
 
-	isAuthorized := false
-	for _, userRoleID := range userRoleIDs {
-		for _, allowedRoleID := range allowedRoleIDs {
-			if userRoleID == allowedRoleID {
-				isAuthorized = true
-				break
-			}
-		}
-		if isAuthorized {
+	var selectedAction *dto.AvailableTicketActionResponse
+	for _, action := range availableActions {
+		if action.ActionName == req.ActionName {
+			act := action
+			selectedAction = &act
 			break
 		}
 	}
-	if !isAuthorized {
-		return errors.New("user does not have the required role for this action")
+
+	if selectedAction == nil {
+		return errors.New("user does not have the required role or action is not allowed from the current status")
 	}
 
-	transitionDetails, err := s.statusTransitionRepo.GetTransitionDetails(currentStatusID, req.ActionName)
-	if err != nil {
-		return errors.New("could not retrieve transition details")
-	}
-
-	if transitionDetails.RequiresReason && req.Reason == "" {
+	if selectedAction.RequireReason && req.Reason == "" {
 		errorMsg := "reason is required for this action"
-		if transitionDetails.ReasonLabel.Valid {
-			errorMsg = fmt.Sprintf("%s is required", transitionDetails.ReasonLabel.String)
+		if selectedAction.ReasonLabel != nil {
+			errorMsg = fmt.Sprintf("%s is required", *selectedAction.ReasonLabel)
 		}
 		return errors.New(errorMsg)
+	}
+
+	if selectedAction.RequireFile && len(filePaths) == 0 {
+		return errors.New("file upload is required for this action")
+	}
+
+	if selectedAction.ActionName == "Selesaikan Job" {
+		job, err := s.jobRepo.FindByTicketID(ctx, ticketID)
+		if err != nil || len(job.ReportFile) == 0 {
+			return errors.New("a report file must be uploaded before completing the job")
+		}
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -130,21 +101,22 @@ func (s *TicketWorkflowService) ExecuteAction(c *gin.Context, ticketID int, user
 	}
 	defer tx.Rollback()
 
+	currentStatusID, _, _ := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
+
 	logEntry := model.TicketActionLog{
 		TicketID:       int64(ticketID),
-		ActionID:       transitionDetails.ActionID,
+		ActionID:       selectedAction.ActionID,
 		PerformedByNpk: userNPK,
 		DetailsText:    sql.NullString{String: req.Reason, Valid: req.Reason != ""},
 		FilePath:       pq.StringArray(filePaths),
 		FromStatusID:   sql.NullInt32{Int32: int32(currentStatusID), Valid: true},
-		ToStatusID:     transitionDetails.ToStatusID,
+		ToStatusID:     selectedAction.ToStatusID,
 	}
-
 	if err := s.ticketActionLogRepo.Create(ctx, tx, logEntry); err != nil {
 		return err
 	}
 
-	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, toStatusID); err != nil {
+	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, selectedAction.ToStatusID); err != nil {
 		return err
 	}
 
@@ -165,22 +137,4 @@ func (s *TicketWorkflowService) ValidateAndGetTransition(ctx context.Context, cu
 	}
 
 	return toStatusID, allowedRoleIDs, nil
-}
-
-// HELPER FUNCTION
-func (s *TicketWorkflowService) determineUserContexts(user *model.Employee, ticket *model.Ticket, requestor *model.Employee, job *model.Job) []string {
-	var contexts []string
-	if user.NPK == ticket.Requestor {
-		contexts = append(contexts, "SELF")
-	}
-	if user.DepartmentID == requestor.DepartmentID {
-		contexts = append(contexts, "REQUESTOR_DEPT")
-	}
-	if user.DepartmentID == ticket.DepartmentTargetID {
-		contexts = append(contexts, "TARGET_DEPT")
-	}
-	if job != nil && job.PicJob.Valid && user.NPK == job.PicJob.String {
-		contexts = append(contexts, "ASSIGNED")
-	}
-	return contexts
 }

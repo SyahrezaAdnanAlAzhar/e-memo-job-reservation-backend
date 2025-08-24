@@ -91,9 +91,9 @@ func (r *StatusTransitionRepository) FindPossibleTransitionsWithDetails(fromStat
 			&t.RequiredActorRole,
 			&t.ActionDetail.ActionName,
 			&t.ActionDetail.HexCode,
-			&t.ActionDetail.RequiresReason,
+			&t.ActionDetail.RequireReason,
 			&t.ActionDetail.ReasonLabel,
-			&t.ActionDetail.RequiresFile,
+			&t.ActionDetail.RequireFile,
 		)
 		if err != nil {
 			return nil, err
@@ -109,12 +109,20 @@ func (r *StatusTransitionRepository) FindAvailableTransitionsForRoles(fromStatus
 	}
 
 	query := `
-        SELECT a.name as action_name, a.hex_code
+        SELECT 
+            a.name as action_name,
+            a.id as action_id,
+            st.to_status_id,
+            a.hex_code,
+            st.require_reason,
+            st.reason_label,
+            st.require_file
         FROM status_transition st
         JOIN action a ON st.action_id = a.id
         WHERE st.from_status_id = $1
           AND st.actor_role_id = ANY($2)
-          AND st.is_active = true`
+          AND st.is_active = true
+          AND a.is_active = true`
 
 	rows, err := r.DB.Query(query, fromStatusID, pq.Array(roleIDs))
 	if err != nil {
@@ -125,7 +133,15 @@ func (r *StatusTransitionRepository) FindAvailableTransitionsForRoles(fromStatus
 	var actions []dto.AvailableTicketActionResponse
 	for rows.Next() {
 		var a dto.AvailableTicketActionResponse
-		if err := rows.Scan(&a.ActionName, &a.HexCode); err != nil {
+		if err := rows.Scan(
+			&a.ActionName,
+			&a.ActionID,
+			&a.ToStatusID,
+			&a.HexCode,
+			&a.RequireReason,
+			&a.ReasonLabel,
+			&a.RequireFile,
+		); err != nil {
 			return nil, err
 		}
 		actions = append(actions, a)
