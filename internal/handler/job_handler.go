@@ -148,3 +148,66 @@ func (h *JobHandler) GetAvailableActions(c *gin.Context) {
 
 	util.SuccessResponse(c, http.StatusOK, actions)
 }
+
+// POST /jobs/:id/files
+func (h *JobHandler) AddReportFiles(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid job ID format", nil)
+		return
+	}
+	userNPK := c.GetString("user_npk")
+
+	form, err := c.MultipartForm()
+	if err != nil {
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid form data", err.Error())
+		return
+	}
+	files := form.File["files"]
+	if len(files) == 0 {
+		util.ErrorResponse(c, http.StatusBadRequest, "At least one file must be uploaded", nil)
+		return
+	}
+
+	savedPaths, err := h.commandService.AddReportFiles(c.Request.Context(), c, id, userNPK, files)
+	if err != nil {
+		if err.Error() == "job not found" {
+			util.ErrorResponse(c, http.StatusNotFound, err.Error(), nil)
+		} else if err.Error() == "user is not the assigned PIC for this job" {
+			util.ErrorResponse(c, http.StatusForbidden, err.Error(), nil)
+		} else {
+			util.ErrorResponse(c, http.StatusInternalServerError, "Failed to add report files", err.Error())
+		}
+		return
+	}
+	util.SuccessResponse(c, http.StatusOK, gin.H{"message": "Report files uploaded successfully", "file_paths": savedPaths})
+}
+
+// DELETE /jobs/:id/files
+func (h *JobHandler) RemoveReportFiles(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid job ID format", nil)
+		return
+	}
+	userNPK := c.GetString("user_npk")
+
+	var req dto.DeleteJobFilesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err.Error())
+		return
+	}
+
+	err = h.commandService.RemoveReportFiles(c.Request.Context(), id, userNPK, req)
+	if err != nil {
+		if err.Error() == "job not found" {
+			util.ErrorResponse(c, http.StatusNotFound, err.Error(), nil)
+		} else if err.Error() == "user is not the assigned PIC for this job" {
+			util.ErrorResponse(c, http.StatusForbidden, err.Error(), nil)
+		} else {
+			util.ErrorResponse(c, http.StatusInternalServerError, "Failed to remove report files", err.Error())
+		}
+		return
+	}
+	util.SuccessResponse(c, http.StatusOK, gin.H{"message": "Selected report files removed successfully"})
+}

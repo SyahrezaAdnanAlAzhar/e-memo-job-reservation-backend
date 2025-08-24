@@ -66,3 +66,7 @@ type JobFilter struct {
 type AvailableActionResponse struct {
 	Name string `json:"name"`
 }
+
+type DeleteJobFilesRequest struct {
+	FilePathsToDelete []string `json:"file_paths_to_delete" binding:"required,min=1"`
+}
