@@ -80,12 +80,12 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllReposit
 			deptRoutes.PUT("/:id", h.DepartmentHandler.UpdateDepartment)
 			deptRoutes.PATCH("/:id/status", h.DepartmentHandler.UpdateDepartmentActiveStatus)
 		}
-		
+
 		employeeRoutes := group.Group("/employee")
 		{
 			employeeRoutes.GET("", h.EmployeeHandler.GetAllEmployees)
 		}
-		
+
 		physicalLocationRoutes := group.Group("/physical-location")
 		{
 			physicalLocationRoutes.POST("", h.PhysicalLocationHandler.CreatePhysicalLocation)
@@ -202,7 +202,5 @@ func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllRepositor
 		jobRoutes.GET("/:id/available-actions", h.JobHandler.GetAvailableActions)
 		jobRoutes.PUT("/:id/assign", auth.RequirePermission("JOB_ASSIGN_PIC", r.PositionPermissionRepo), h.JobHandler.AssignPIC)
 		jobRoutes.PUT("/reorder", auth.RequirePermission("JOB_PRIORITY_MANAGE", r.PositionPermissionRepo), h.JobHandler.ReorderJobs)
-		jobRoutes.POST("/:id/files", h.JobHandler.AddReportFiles)
-		jobRoutes.DELETE("/:id/files", h.JobHandler.RemoveReportFiles)
 	}
 }

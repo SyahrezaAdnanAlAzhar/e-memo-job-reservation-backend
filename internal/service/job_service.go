@@ -5,13 +5,10 @@ import (
 	"database/sql"
 	"errors"
 	"log"
-	"mime/multipart"
-	"os"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/websocket"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/filehandler"
 	"github.com/gin-gonic/gin"
 )
 
@@ -121,52 +118,5 @@ func (s *JobService) ReorderJobs(ctx context.Context, req dto.ReorderJobsRequest
 		s.hub.BroadcastMessage(message)
 	}
 
-	return nil
-}
-
-func (s *JobService) AddReportFiles(ctx context.Context, c *gin.Context, jobID int, userNPK string, files []*multipart.FileHeader) ([]string, error) {
-	job, err := s.jobCommandRepo.FindByID(jobID)
-	if err != nil {
-		return nil, errors.New("job not found")
-	}
-	if !job.PicJob.Valid || job.PicJob.String != userNPK {
-		return nil, errors.New("user is not the assigned PIC for this job")
-	}
-
-	savedFilePaths, err := filehandler.SaveFiles(c, files)
-	if err != nil {
-		return nil, errors.New("failed to save one or more files")
-	}
-	if len(savedFilePaths) == 0 {
-		return []string{}, nil
-	}
-
-	if err := s.jobCommandRepo.AddReportFiles(ctx, jobID, savedFilePaths); err != nil {
-		for _, savedPath := range savedFilePaths {
-			os.Remove(savedPath)
-		}
-		return nil, err
-	}
-	return savedFilePaths, nil
-}
-
-func (s *JobService) RemoveReportFiles(ctx context.Context, jobID int, userNPK string, req dto.DeleteJobFilesRequest) error {
-	job, err := s.jobCommandRepo.FindByID(jobID)
-	if err != nil {
-		return errors.New("job not found")
-	}
-	if !job.PicJob.Valid || job.PicJob.String != userNPK {
-		return errors.New("user is not the assigned PIC for this job")
-	}
-
-	if err := s.jobCommandRepo.RemoveReportFiles(ctx, jobID, req.FilePathsToDelete); err != nil {
-		return err
-	}
-
-	for _, filePath := range req.FilePathsToDelete {
-		if err := os.Remove(filePath); err != nil {
-			log.Printf("WARNING: Failed to delete file from storage, but DB record was removed. File path: %s, Error: %v", filePath, err)
-		}
-	}
 	return nil
 }

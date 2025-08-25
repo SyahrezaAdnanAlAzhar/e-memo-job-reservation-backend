@@ -88,18 +88,20 @@ func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int,
 		return errors.New("file upload is required for this action")
 	}
 
-	if selectedAction.ActionName == "Selesaikan Job" {
-		job, err := s.jobRepo.FindByTicketID(ctx, ticketID)
-		if err != nil || len(job.ReportFile) == 0 {
-			return errors.New("a report file must be uploaded before completing the job")
-		}
-	}
-
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
+
+	if req.ActionName == "Selesaikan Job" {
+		if len(filePaths) > 0 {
+			err := s.jobRepo.AddReportFilesTransactional(ctx, tx, ticketID, filePaths)
+			if err != nil {
+				return errors.New("failed to save report files to job")
+			}
+		}
+	}
 
 	currentStatusID, _, _ := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
 

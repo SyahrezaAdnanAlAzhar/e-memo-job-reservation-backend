@@ -165,7 +165,7 @@ func (r *JobRepository) FindByID(id int) (*model.Job, error) {
 	return &j, err
 }
 
-func (r *JobRepository) AddReportFiles(ctx context.Context, jobID int, filePaths []string) error {
+func (r *JobRepository) AddReportFilesTransactional(ctx context.Context, tx *sql.Tx, ticketID int, filePaths []string) error {
 	if len(filePaths) == 0 {
 		return nil
 	}
@@ -173,33 +173,9 @@ func (r *JobRepository) AddReportFiles(ctx context.Context, jobID int, filePaths
         UPDATE job 
         SET report_file = COALESCE(report_file, '{}') || $1, 
             updated_at = NOW()
-        WHERE id = $2`
-	result, err := r.DB.ExecContext(ctx, query, pq.Array(filePaths), jobID)
-	if err != nil {
-		return err
-	}
-	rowsAffected, _ := result.RowsAffected()
-	if rowsAffected == 0 {
-		return sql.ErrNoRows
-	}
-	return nil
-}
-
-func (r *JobRepository) RemoveReportFiles(ctx context.Context, jobID int, filePathsToRemove []string) error {
-	if len(filePathsToRemove) == 0 {
-		return nil
-	}
-	query := `
-        UPDATE job
-        SET 
-            report_file = (
-                SELECT array_agg(elem)
-                FROM unnest(report_file) AS elem
-                WHERE elem <> ALL($1)
-            ),
-            updated_at = NOW()
-        WHERE id = $2`
-	result, err := r.DB.ExecContext(ctx, query, pq.Array(filePathsToRemove), jobID)
+        WHERE ticket_id = $2`
+	
+	result, err := tx.ExecContext(ctx, query, pq.Array(filePaths), ticketID)
 	if err != nil {
 		return err
 	}

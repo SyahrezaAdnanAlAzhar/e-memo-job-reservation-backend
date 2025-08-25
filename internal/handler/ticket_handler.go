@@ -195,7 +195,7 @@ func (h *TicketHandler) ExecuteAction(c *gin.Context) {
 	var filePaths []string
 	form, err := c.MultipartForm()
 	if err == nil {
-		files := form.File["files"]
+		files := form.File["Files"]
 		if len(files) > 0 {
 			savedPaths, saveErr := filehandler.SaveFiles(c, files)
 			if saveErr != nil {
