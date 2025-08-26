@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -590,4 +591,21 @@ func (r *TicketRepository) FindOldestTicket() (*dto.OldestTicketResponse, error)
 		return nil, err
 	}
 	return &oldestTicket, nil
+}
+
+func (r *TicketRepository) GetSupportFilesByTicketID(ctx context.Context, ticketID int) ([]string, time.Time, error) {
+	var supportFiles pq.StringArray
+	var updatedAt time.Time
+
+	query := "SELECT COALESCE(support_file, '{}'), updated_at FROM ticket WHERE id = $1"
+
+	err := r.DB.QueryRowContext(ctx, query, ticketID).Scan(&supportFiles, &updatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, time.Time{}, errors.New("ticket not found")
+		}
+		return nil, time.Time{}, err
+	}
+
+	return supportFiles, updatedAt, nil
 }

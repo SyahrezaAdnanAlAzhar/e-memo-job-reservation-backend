@@ -1,11 +1,14 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
+	"github.com/lib/pq"
 )
 
 const baseJobQuery = `
@@ -181,4 +184,28 @@ func scanJobDetails(rows *sql.Rows) ([]dto.JobDetailResponse, error) {
 		jobs = append(jobs, j)
 	}
 	return jobs, nil
+}
+
+func (r *JobRepository) GetReportFilesByTicketID(ctx context.Context, ticketID int) ([]string, time.Time, error) {
+	query := `
+        SELECT 
+            COALESCE(array_agg(elem), '{}'),
+            MAX(updated_at)
+        FROM job, unnest(COALESCE(report_file, '{}')) AS elem
+        WHERE ticket_id = $1`
+
+	var reportFiles pq.StringArray
+	var latestUpdate sql.NullTime
+
+	err := r.DB.QueryRowContext(ctx, query, ticketID).Scan(&reportFiles, &latestUpdate)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+
+	var updatedAt time.Time
+	if latestUpdate.Valid {
+		updatedAt = latestUpdate.Time
+	}
+
+	return reportFiles, updatedAt, nil
 }

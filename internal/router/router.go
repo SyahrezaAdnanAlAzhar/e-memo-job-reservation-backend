@@ -42,6 +42,7 @@ func SetupRouter(h *AllHandlers, r *AllRepositories, authMiddleware *auth.AuthMi
 		public.POST("/refresh", h.AuthHandler.RefreshToken)
 		public.GET("/departments", h.DepartmentHandler.GetAllDepartments)
 		public.GET("/tickets", h.TicketHandler.GetAllTickets)
+		public.GET("/tickets/:id", h.TicketHandler.GetTicketByID)
 		public.GET("/status-ticket", h.StatusTicketHandler.GetAllStatusTickets)
 		public.GET("/actions", h.ActionHandler.GetAllActions)
 		public.GET("/ws", wsHandler.ServeWs)
@@ -186,7 +187,6 @@ func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllRepositor
 	ticketRoutes := group.Group("/tickets")
 	{
 		ticketRoutes.POST("", auth.RequirePermission("CREATE_TICKET", r.PositionPermissionRepo), h.TicketHandler.CreateTicket)
-		ticketRoutes.GET("/:id", h.TicketHandler.GetTicketByID)
 		ticketRoutes.PUT("/:id", h.TicketHandler.UpdateTicket)
 		ticketRoutes.PUT("/reorder", auth.RequirePermission("TICKET_PRIORITY_MANAGE", r.PositionPermissionRepo), h.TicketHandler.ReorderTickets)
 		ticketRoutes.POST("/:id/action", h.TicketHandler.ExecuteAction)
