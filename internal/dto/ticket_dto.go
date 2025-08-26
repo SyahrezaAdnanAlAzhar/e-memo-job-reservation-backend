@@ -69,8 +69,10 @@ type TicketDetailResponse struct {
 
 	// PEOPLE INFORMATION
 	RequestorName       string  `json:"requestor_name"`
+	RequestorNPK        string  `json:"requestor_npk"`
 	RequestorDepartment *string `json:"requestor_department"`
 	PicName             *string `json:"pic_name"`
+	PicNPK              *string `json:"pic_npk"`
 	PicAreaName         *string `json:"pic_area_name"`
 
 	// STATUS IFNORMATION

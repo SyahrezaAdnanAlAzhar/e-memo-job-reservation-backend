@@ -37,8 +37,10 @@ const baseTicketQuery = `
         t.deadline,
         (t.deadline::date - NOW()::date) as days_remaining,
         req_emp.name as requestor_name,
+		req_emp.npk as requestor_npk,
         req_dept.name as requestor_department,
         pic_emp.name as pic_name,
+		pic_emp.npk as pic_npk,
         pic_area.name as pic_area_name,
         current_st.name as current_status,
         current_st.hex_color as current_status_hex_code,
@@ -125,10 +127,10 @@ func (r *TicketRepository) FindAll(filters dto.TicketFilter) ([]dto.TicketDetail
 	}
 
 	if filters.DepartmentTargetName != "" {
-        conditions = append(conditions, fmt.Sprintf("dt.name ILIKE $%d", argID))
-        args = append(args, "%"+filters.DepartmentTargetName+"%")
-        argID++
-    }
+		conditions = append(conditions, fmt.Sprintf("dt.name ILIKE $%d", argID))
+		args = append(args, "%"+filters.DepartmentTargetName+"%")
+		argID++
+	}
 
 	if filters.Requestor != "" {
 		conditions = append(conditions, fmt.Sprintf("t.requestor = $%d", argID))
@@ -419,8 +421,10 @@ func scanTicketDetails(rows *sql.Rows) ([]dto.TicketDetailResponse, error) {
 			&t.Deadline,
 			&t.DaysRemaining,
 			&t.RequestorName,
+			&t.RequestorNPK,
 			&t.RequestorDepartment,
 			&t.PicName,
+			&t.PicNPK,
 			&t.PicAreaName,
 			&t.CurrentStatus,
 			&t.CurrentStatusHexCode,

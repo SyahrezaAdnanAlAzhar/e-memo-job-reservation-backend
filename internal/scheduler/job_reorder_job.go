@@ -95,10 +95,10 @@ func (j *JobReorderJob) getActiveJobsByDepartment(ctx context.Context, tx *sql.T
 	query := `
         SELECT 
             j.id, j.job_priority,
-            t.id, t.created_at, t.ticket_priority, t.deadline
+            t.id as ticket_id, t.created_at, t.ticket_priority, t.deadline
         FROM job j
         JOIN ticket t ON j.ticket_id = t.id
-        WHERE j.assigned_department_id = $1
+        WHERE t.department_target_id = $1 -- [FIX] Menggunakan kolom dari tabel ticket
         AND EXISTS (
             SELECT 1 FROM track_status_ticket tst
             JOIN status_ticket st ON tst.status_ticket_id = st.id
@@ -123,6 +123,7 @@ func (j *JobReorderJob) getActiveJobsByDepartment(ctx context.Context, tx *sql.T
 		); err != nil {
 			return nil, err
 		}
+		job.TicketID = ticket.ID
 		job.Ticket = ticket 
 		jobs = append(jobs, job)
 	}
