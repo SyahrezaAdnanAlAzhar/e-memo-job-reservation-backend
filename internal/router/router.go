@@ -25,6 +25,7 @@ type AllHandlers struct {
 	RejectedTicketHandler      *handler.RejectedTicketHandler
 	JobHandler                 *handler.JobHandler
 	ActionHandler              *handler.ActionHandler
+	FileHandler                *handler.FileHandler
 }
 
 type AllRepositories struct {
@@ -191,6 +192,7 @@ func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllRepositor
 		ticketRoutes.PUT("/reorder", auth.RequirePermission("TICKET_PRIORITY_MANAGE", r.PositionPermissionRepo), h.TicketHandler.ReorderTickets)
 		ticketRoutes.POST("/:id/action", h.TicketHandler.ExecuteAction)
 		ticketRoutes.GET("/:id/available-actions", h.TicketHandler.GetAvailableActions)
+		ticketRoutes.GET("/:id/files", h.FileHandler.GetAllFilesByTicketID)
 		ticketRoutes.POST("/:id/files", h.TicketHandler.AddSupportFiles)
 		ticketRoutes.DELETE("/:id/files", h.TicketHandler.RemoveSupportFiles)
 	}

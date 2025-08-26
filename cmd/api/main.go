@@ -124,7 +124,7 @@ func main() {
 		ActorRoleRepo:         actorRoleRepo,
 		ActorRoleMappingRepo:  actorRoleMappingRepo,
 		TicketActionLogRepo:   ticketActionLogRepo,
-		ActionService: ticketActionService,
+		ActionService:         ticketActionService,
 	})
 
 	ticketPriorityService := service.NewTicketPriorityService(db, hub, ticketRepo, employeeRepo)
@@ -138,6 +138,7 @@ func main() {
 	})
 
 	actionService := service.NewActionService(actionRepo)
+	fileService := service.NewFileService(ticketRepo, jobRepo)
 
 	// HANDLER
 	wsHandler := handler.NewWebSocketHandler(hub, authRepo)
@@ -159,6 +160,7 @@ func main() {
 		JobHandler:                 handler.NewJobHandler(jobService, jobQueryService),
 		ActionHandler:              handler.NewActionHandler(actionService),
 		TicketHandler:              ticketHandler,
+		FileHandler:                handler.NewFileHandler(fileService),
 	}
 
 	allRepositories := &router.AllRepositories{
