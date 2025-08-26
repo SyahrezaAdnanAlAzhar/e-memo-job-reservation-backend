@@ -2,7 +2,10 @@ package handler
 
 import (
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/util"
@@ -36,4 +39,26 @@ func (h *FileHandler) GetAllFilesByTicketID(c *gin.Context) {
 	}
 
 	util.SuccessResponse(c, http.StatusOK, files)
+}
+
+func (h *FileHandler) DownloadFile(c *gin.Context) {
+	filePath := c.Query("path")
+	if filePath == "" {
+		util.ErrorResponse(c, http.StatusBadRequest, "File path is required", nil)
+		return
+	}
+
+	storagePath := os.Getenv("STORAGE_PATH")
+	if storagePath == "" {
+		storagePath = "./uploads"
+	}
+
+	cleanedPath := filepath.Clean(filePath)
+
+	if !strings.HasPrefix(cleanedPath, storagePath) {
+		util.ErrorResponse(c, http.StatusForbidden, "Access to the requested file path is forbidden", nil)
+		return
+	}
+
+	c.FileAttachment(cleanedPath, filepath.Base(cleanedPath))
 }
