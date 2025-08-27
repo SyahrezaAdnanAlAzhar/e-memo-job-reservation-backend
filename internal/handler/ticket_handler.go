@@ -172,7 +172,14 @@ func (h *TicketHandler) ReorderTickets(c *gin.Context) {
 	}
 	err := h.priorityService.ReorderTickets(c.Request.Context(), req, userNPK)
 	if err != nil {
-		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to reorder tickets", nil)
+		switch err.Error() {
+		case "data conflict: one or more tickets have been modified by another user, please refresh":
+			util.ErrorResponse(c, http.StatusConflict, err.Error(), nil)
+		case "action performer not found":
+			util.ErrorResponse(c, http.StatusNotFound, err.Error(), nil)
+		default:
+			util.ErrorResponse(c, http.StatusInternalServerError, "Failed to reorder tickets", err.Error())
+		}
 		return
 	}
 	util.SuccessResponse(c, http.StatusOK, gin.H{"message": "Ticket priorities updated successfully"})
