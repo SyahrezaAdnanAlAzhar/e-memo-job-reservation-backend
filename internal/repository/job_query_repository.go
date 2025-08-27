@@ -3,12 +3,13 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
-	"github.com/lib/pq"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 )
 
 const baseJobQuery = `
@@ -186,20 +187,29 @@ func scanJobDetails(rows *sql.Rows) ([]dto.JobDetailResponse, error) {
 	return jobs, nil
 }
 
-func (r *JobRepository) GetReportFilesByTicketID(ctx context.Context, ticketID int) ([]string, time.Time, error) {
-	query := `
-        SELECT 
-            COALESCE(array_agg(elem), '{}'),
-            MAX(updated_at)
-        FROM job, unnest(COALESCE(report_file, '{}')) AS elem
-        WHERE ticket_id = $1`
-
-	var reportFiles pq.StringArray
+func (r *JobRepository) GetReportFilesByTicketID(ctx context.Context, ticketID int) ([]model.FileMetadata, time.Time, error) {
+	var jsonFiles []byte
 	var latestUpdate sql.NullTime
 
-	err := r.DB.QueryRowContext(ctx, query, ticketID).Scan(&reportFiles, &latestUpdate)
+	query := `
+        SELECT 
+            COALESCE(jsonb_agg(file_meta), '[]'::jsonb),
+            MAX(j.updated_at)
+        FROM job j,
+             jsonb_array_elements(COALESCE(j.report_file, '[]'::jsonb)) AS file_meta
+        WHERE j.ticket_id = $1`
+
+	err := r.DB.QueryRowContext(ctx, query, ticketID).Scan(&jsonFiles, &latestUpdate)
 	if err != nil {
 		return nil, time.Time{}, err
+	}
+
+	var filesMetadata []model.FileMetadata
+	if string(jsonFiles) == "null" || len(jsonFiles) == 0 {
+		return []model.FileMetadata{}, time.Time{}, nil
+	}
+	if err := json.Unmarshal(jsonFiles, &filesMetadata); err != nil {
+		return nil, time.Time{}, fmt.Errorf("failed to unmarshal report files: %w", err)
 	}
 
 	var updatedAt time.Time
@@ -207,5 +217,5 @@ func (r *JobRepository) GetReportFilesByTicketID(ctx context.Context, ticketID i
 		updatedAt = latestUpdate.Time
 	}
 
-	return reportFiles, updatedAt, nil
+	return filesMetadata, updatedAt, nil
 }

@@ -4,9 +4,9 @@ import (
 	"context"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 )
 
@@ -23,36 +23,37 @@ func NewFileService(ticketRepo *repository.TicketRepository, jobRepo *repository
 }
 
 func (s *FileService) GetAllFilesByTicketID(ctx context.Context, ticketID int) (*dto.AllFilesResponse, error) {
-	supportFilePaths, supportFileTime, err := s.ticketRepo.GetSupportFilesByTicketID(ctx, ticketID)
+	supportFilesMetadata, _, err := s.ticketRepo.GetSupportFilesByTicketID(ctx, ticketID)
 	if err != nil {
-		return nil, err 
+		return nil, err
 	}
 
-	reportFilePaths, reportFileTime, err := s.jobRepo.GetReportFilesByTicketID(ctx, ticketID)
+	reportFilesMetadata, _, err := s.jobRepo.GetReportFilesByTicketID(ctx, ticketID)
 	if err != nil {
 		return nil, err
 	}
 
 	response := &dto.AllFilesResponse{
-		SupportFiles: formatFileResponses(supportFilePaths, supportFileTime),
-		ReportFiles:  formatFileResponses(reportFilePaths, reportFileTime),
+		SupportFiles: formatFileMetadataToResponse(supportFilesMetadata),
+		ReportFiles:  formatFileMetadataToResponse(reportFilesMetadata),
 	}
 
 	return response, nil
 }
 
-func formatFileResponses(paths []string, timestamp time.Time) []dto.FileResponse {
-	if len(paths) == 0 || (len(paths) == 1 && paths[0] == "") {
+func formatFileMetadataToResponse(metadata []model.FileMetadata) []dto.FileResponse {
+	if len(metadata) == 0 {
 		return []dto.FileResponse{}
 	}
 
-	responses := make([]dto.FileResponse, len(paths))
-	for i, path := range paths {
+	responses := make([]dto.FileResponse, len(metadata))
+	for i, m := range metadata {
 		responses[i] = dto.FileResponse{
-			FileName:   filepath.Base(path),
-			FilePath:   path,
-			FileType:   determineFileType(path),
-			UploadedAt: timestamp,
+			FileName:   m.FileName,
+			FilePath:   m.FilePath,
+			FileSize:   m.FileSize,
+			FileType:   determineFileType(m.FilePath), 
+			UploadedAt: m.UploadedAt,
 		}
 	}
 	return responses

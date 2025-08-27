@@ -80,6 +80,7 @@ func main() {
 		TrackStatusTicketRepo: trackStatusTicketRepo,
 		StatusTransitionRepo:  statusTransitionRepo,
 		ActorRoleMappingRepo:  actorRoleMappingRepo,
+		ActorRoleRepo:         actorRoleRepo,
 	})
 	employeePositionService := service.NewEmployeePositionService(
 		employeePositionRepo,

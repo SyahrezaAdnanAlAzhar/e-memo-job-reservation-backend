@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/util"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/filehandler"
@@ -55,24 +56,24 @@ func (h *TicketHandler) CreateTicket(c *gin.Context) {
 		return
 	}
 
-	var filePaths []string
+	var filesMetadata []model.FileMetadata
 	form, err := c.MultipartForm()
 	if err == nil {
 		files := form.File["support_files"]
 		if len(files) > 0 {
-			savedPaths, saveErr := filehandler.SaveFiles(c, files)
+			savedMetadata, saveErr := filehandler.SaveFiles(c, files)
 			if saveErr != nil {
 				util.ErrorResponse(c, http.StatusInternalServerError, "Failed to save uploaded files", nil)
 				return
 			}
-			filePaths = savedPaths
+			filesMetadata = savedMetadata
 		}
 	}
 
-	createdTicket, err := h.commandService.CreateTicket(c.Request.Context(), req, requestorNPK, filePaths)
+	createdTicket, err := h.commandService.CreateTicket(c.Request.Context(), req, requestorNPK, filesMetadata)
 	if err != nil {
-		for _, p := range filePaths {
-			os.Remove(p)
+		for _, metadata := range filesMetadata {
+			os.Remove(metadata.FilePath)
 		}
 		switch err.Error() {
 		case "requestor not found", "no workflow defined for this user's position":
@@ -192,24 +193,24 @@ func (h *TicketHandler) ExecuteAction(c *gin.Context) {
 		return
 	}
 
-	var filePaths []string
+	var filesMetadata []model.FileMetadata
 	form, err := c.MultipartForm()
 	if err == nil {
 		files := form.File["Files"]
 		if len(files) > 0 {
-			savedPaths, saveErr := filehandler.SaveFiles(c, files)
+			savedMetadata, saveErr := filehandler.SaveFiles(c, files)
 			if saveErr != nil {
 				util.ErrorResponse(c, http.StatusInternalServerError, "Failed to save uploaded files", nil)
 				return
 			}
-			filePaths = savedPaths
+			filesMetadata = savedMetadata
 		}
 	}
 
-	err = h.workflowService.ExecuteAction(c, id, userNPK, req, filePaths)
+	err = h.workflowService.ExecuteAction(c.Request.Context(), id, userNPK, req, filesMetadata)
 	if err != nil {
-		for _, p := range filePaths {
-			os.Remove(p)
+		for _, metadata := range filesMetadata {
+			os.Remove(metadata.FilePath)
 		}
 		switch err.Error() {
 		case "ticket not found", "user not found", "original requestor not found":

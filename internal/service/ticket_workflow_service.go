@@ -57,7 +57,7 @@ func NewTicketWorkflowService(cfg *TicketWorkflowServiceConfig) *TicketWorkflowS
 }
 
 // EXECUTE ACTION TO GET TO THE NEXT STATUS BASED ON STATE
-func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int, userNPK string, req dto.ExecuteActionRequest, filePaths []string) error {
+func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int, userNPK string, req dto.ExecuteActionRequest, filesMetadata []model.FileMetadata) error {
 	availableActions, err := s.actionService.GetAvailableActions(ctx, ticketID, userNPK)
 	if err != nil {
 		return err
@@ -84,7 +84,7 @@ func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int,
 		return errors.New(errorMsg)
 	}
 
-	if selectedAction.RequireFile && len(filePaths) == 0 {
+	if selectedAction.RequireFile && len(filesMetadata) == 0 {
 		return errors.New("file upload is required for this action")
 	}
 
@@ -95,8 +95,8 @@ func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int,
 	defer tx.Rollback()
 
 	if req.ActionName == "Selesaikan Job" {
-		if len(filePaths) > 0 {
-			err := s.jobRepo.AddReportFilesTransactional(ctx, tx, ticketID, filePaths)
+		if len(filesMetadata) > 0 {
+			err := s.jobRepo.AddReportFilesTransactional(ctx, tx, ticketID, filesMetadata)
 			if err != nil {
 				return errors.New("failed to save report files to job")
 			}
@@ -105,12 +105,17 @@ func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int,
 
 	currentStatusID, _, _ := s.trackStatusTicketRepo.GetCurrentStatusByTicketID(ctx, ticketID)
 
+	var filePathsForLog []string
+	for _, meta := range filesMetadata {
+		filePathsForLog = append(filePathsForLog, meta.FilePath)
+	}
+
 	logEntry := model.TicketActionLog{
 		TicketID:       int64(ticketID),
 		ActionID:       selectedAction.ActionID,
 		PerformedByNpk: userNPK,
 		DetailsText:    sql.NullString{String: req.Reason, Valid: req.Reason != ""},
-		FilePath:       pq.StringArray(filePaths),
+		FilePath:       pq.StringArray(filePathsForLog),
 		FromStatusID:   sql.NullInt32{Int32: int32(currentStatusID), Valid: true},
 		ToStatusID:     selectedAction.ToStatusID,
 	}

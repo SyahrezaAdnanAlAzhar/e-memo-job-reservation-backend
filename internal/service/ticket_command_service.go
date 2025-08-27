@@ -16,7 +16,6 @@ import (
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/websocket"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/filehandler"
 	"github.com/gin-gonic/gin"
-	"github.com/lib/pq"
 )
 
 type TicketCommandService struct {
@@ -67,8 +66,7 @@ func NewTicketCommandService(cfg *TicketCommandServiceConfig) *TicketCommandServ
 }
 
 // CREATE TICKET
-func (s *TicketCommandService) CreateTicket(ctx context.Context, req dto.CreateTicketRequest, requestor string, supportFiles []string) (*model.Ticket, error) {
-	// VALIDATE DEPARTMENT
+func (s *TicketCommandService) CreateTicket(ctx context.Context, req dto.CreateTicketRequest, requestor string, filesMetadata []model.FileMetadata) (*model.Ticket, error) { // VALIDATE DEPARTMENT
 	canReceive, err := s.departmentRepo.IsReceiver(req.DepartmentTargetID)
 	if err != nil {
 		return nil, err // "department not found or is not active"
@@ -120,7 +118,7 @@ func (s *TicketCommandService) CreateTicket(ctx context.Context, req dto.CreateT
 		Description:         req.Description,
 		TicketPriority:      lastPriority,
 		Deadline:            deadline,
-		SupportFile:         pq.StringArray(supportFiles),
+		SupportFiles:        filesMetadata,
 	}
 
 	// INSERT DATA TO TICKET TABLE
@@ -324,18 +322,18 @@ func (s *TicketCommandService) AddSupportFiles(ctx context.Context, c *gin.Conte
 		return errors.New("user is not authorized to edit this ticket")
 	}
 
-	savedFilePaths, err := filehandler.SaveFiles(c, files)
+	savedFilesMetadata, err := filehandler.SaveFiles(c, files)
 	if err != nil {
 		return errors.New("failed to save one or more files")
 	}
 
-	if len(savedFilePaths) == 0 {
+	if len(savedFilesMetadata) == 0 {
 		return nil
 	}
 
-	if err := s.ticketRepo.AddSupportFiles(ctx, ticketID, savedFilePaths); err != nil {
-		for _, savedPath := range savedFilePaths {
-			os.Remove(savedPath)
+	if err := s.ticketRepo.AddSupportFiles(ctx, ticketID, savedFilesMetadata); err != nil {
+		for _, metadata := range savedFilesMetadata {
+			os.Remove(metadata.FilePath)
 		}
 		return err
 	}
@@ -425,8 +423,7 @@ func (s *TicketCommandService) RemoveSupportFiles(ctx context.Context, ticketID 
 	}
 
 	for _, filePath := range req.FilePathsToDelete {
-		err := os.Remove(filePath)
-		if err != nil {
+		if err := os.Remove(filePath); err != nil {
 			log.Printf("WARNING: Failed to delete file from storage, but DB record was removed. File path: %s, Error: %v", filePath, err)
 		}
 	}

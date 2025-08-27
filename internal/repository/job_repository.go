@@ -3,7 +3,10 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"log"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 	"github.com/lib/pq"
@@ -141,11 +144,26 @@ func (r *JobRepository) FindByTicketID(ctx context.Context, ticketID int) (*mode
 	row := r.DB.QueryRowContext(ctx, query, ticketID)
 
 	var j model.Job
+	var reportFilesJSON []byte
+
 	err := row.Scan(
-		&j.ID, &j.TicketID, &j.PicJob, &j.JobPriority, &j.ReportFile, &j.Version, &j.CreatedAt, &j.UpdatedAt,
+		&j.ID,
+		&j.TicketID,
+		&j.PicJob,
+		&j.JobPriority,
+		&reportFilesJSON,
+		&j.Version,
+		&j.CreatedAt,
+		&j.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(reportFilesJSON) > 0 {
+		if err := json.Unmarshal(reportFilesJSON, &j.ReportFiles); err != nil {
+			log.Printf("WARNING: Failed to unmarshal report_file for job with ticket_id %d: %v", ticketID, err)
+		}
 	}
 
 	return &j, nil
@@ -160,28 +178,41 @@ func (r *JobRepository) FindByID(id int) (*model.Job, error) {
 
 	var j model.Job
 	err := row.Scan(
-		&j.ID, &j.TicketID, &j.PicJob, &j.JobPriority, &j.ReportFile, &j.Version, &j.CreatedAt, &j.UpdatedAt,
+		&j.ID, &j.TicketID, &j.PicJob, &j.JobPriority, &j.ReportFiles, &j.Version, &j.CreatedAt, &j.UpdatedAt,
 	)
 	return &j, err
 }
 
-func (r *JobRepository) AddReportFilesTransactional(ctx context.Context, tx *sql.Tx, ticketID int, filePaths []string) error {
-	if len(filePaths) == 0 {
+func (r *JobRepository) AddReportFilesTransactional(ctx context.Context, tx *sql.Tx, ticketID int, filesMetadata []model.FileMetadata) error {
+	if len(filesMetadata) == 0 {
 		return nil
 	}
-	query := `
-        UPDATE job 
-        SET report_file = COALESCE(report_file, '{}') || $1, 
-            updated_at = NOW()
-        WHERE ticket_id = $2`
-	
-	result, err := tx.ExecContext(ctx, query, pq.Array(filePaths), ticketID)
-	if err != nil {
-		return err
-	}
-	rowsAffected, _ := result.RowsAffected()
-	if rowsAffected == 0 {
-		return sql.ErrNoRows
+
+	for _, fm := range filesMetadata {
+		jsonBytes, err := json.Marshal(fm)
+		if err != nil {
+			return fmt.Errorf("failed to marshal file metadata: %w", err)
+		}
+
+		query := `
+            UPDATE job 
+            SET report_file = jsonb_set(
+                                COALESCE(report_file, '[]'::jsonb), 
+                                '{999999}', 
+                                $1::jsonb, 
+                                true
+                            ), 
+                updated_at = NOW()
+            WHERE ticket_id = $2`
+
+		result, err := tx.ExecContext(ctx, query, string(jsonBytes), ticketID)
+		if err != nil {
+			return err
+		}
+		rowsAffected, _ := result.RowsAffected()
+		if rowsAffected == 0 {
+			return sql.ErrNoRows
+		}
 	}
 	return nil
 }

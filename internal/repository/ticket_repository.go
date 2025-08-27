@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -68,6 +69,8 @@ const baseTicketQuery = `
 
 // CREATE TICKET
 func (r *TicketRepository) Create(ctx context.Context, tx *sql.Tx, ticket model.Ticket) (*model.Ticket, error) {
+	supportFilesJSON, _ := json.Marshal(ticket.SupportFiles)
+
 	query := `
         INSERT INTO ticket (
             requestor, department_target_id, physical_location_id, 
@@ -84,7 +87,7 @@ func (r *TicketRepository) Create(ctx context.Context, tx *sql.Tx, ticket model.
 		ticket.Description,
 		ticket.TicketPriority,
 		ticket.Deadline,
-		ticket.SupportFile,
+		supportFilesJSON,
 	)
 
 	var newTicket model.Ticket = ticket
@@ -440,32 +443,44 @@ func scanTicketDetails(rows *sql.Rows) ([]dto.TicketDetailResponse, error) {
 }
 
 // ADD SUPPORT FILE FOR TICKET
-func (r *TicketRepository) AddSupportFiles(ctx context.Context, ticketID int, filePaths []string) error {
-	if len(filePaths) == 0 {
+func (r *TicketRepository) AddSupportFiles(ctx context.Context, ticketID int, filesMetadata []model.FileMetadata) error {
+	if len(filesMetadata) == 0 {
 		return nil
 	}
-
-	query := `
-        UPDATE ticket 
-        SET support_file = COALESCE(support_file, '{}') || $1, 
-            updated_at = NOW()
-        WHERE id = $2`
-
-	result, err := r.DB.ExecContext(ctx, query, pq.Array(filePaths), ticketID)
+	tx, err := r.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return err
+	for _, fm := range filesMetadata {
+		jsonBytes, err := json.Marshal(fm)
+		if err != nil {
+			return fmt.Errorf("failed to marshal file metadata: %w", err)
+		}
+
+		query := `
+            UPDATE ticket 
+            SET support_file = jsonb_set(
+                                COALESCE(support_file, '[]'::jsonb), 
+                                '{999999}', 
+                                $1::jsonb, 
+                                true
+                            ), 
+                updated_at = NOW()
+            WHERE id = $2`
+
+		result, err := tx.ExecContext(ctx, query, string(jsonBytes), ticketID)
+		if err != nil {
+			return err 
+		}
+		rowsAffected, _ := result.RowsAffected()
+		if rowsAffected == 0 {
+			return sql.ErrNoRows
+		}
 	}
 
-	if rowsAffected == 0 {
-		return sql.ErrNoRows
-	}
-
-	return nil
+	return tx.Commit()
 }
 
 func (r *TicketRepository) RemoveSupportFiles(ctx context.Context, ticketID int, filePathsToRemove []string) error {
@@ -474,13 +489,18 @@ func (r *TicketRepository) RemoveSupportFiles(ctx context.Context, ticketID int,
 	}
 
 	query := `
+        WITH files_to_remove (path) AS (
+            SELECT unnest($1::text[])
+        ),
+        updated_files AS (
+            SELECT jsonb_agg(elem) as new_array
+            FROM ticket, unnest(support_file) as elem
+            WHERE id = $2
+            AND (elem ->> 'file_path') NOT IN (SELECT path FROM files_to_remove)
+        )
         UPDATE ticket
         SET 
-            support_file = (
-                SELECT array_agg(elem)
-                FROM unnest(support_file) AS elem
-                WHERE elem <> ALL($1)
-            ),
+            support_file = (SELECT new_array FROM updated_files),
             updated_at = NOW()
         WHERE id = $2`
 
@@ -593,13 +613,13 @@ func (r *TicketRepository) FindOldestTicket() (*dto.OldestTicketResponse, error)
 	return &oldestTicket, nil
 }
 
-func (r *TicketRepository) GetSupportFilesByTicketID(ctx context.Context, ticketID int) ([]string, time.Time, error) {
-	var supportFiles pq.StringArray
+func (r *TicketRepository) GetSupportFilesByTicketID(ctx context.Context, ticketID int) ([]model.FileMetadata, time.Time, error) {
+	var jsonFiles []byte
 	var updatedAt time.Time
 
-	query := "SELECT COALESCE(support_file, '{}'), updated_at FROM ticket WHERE id = $1"
+	query := "SELECT COALESCE(support_file, '[]'::jsonb), updated_at FROM ticket WHERE id = $1"
 
-	err := r.DB.QueryRowContext(ctx, query, ticketID).Scan(&supportFiles, &updatedAt)
+	err := r.DB.QueryRowContext(ctx, query, ticketID).Scan(&jsonFiles, &updatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, time.Time{}, errors.New("ticket not found")
@@ -607,5 +627,13 @@ func (r *TicketRepository) GetSupportFilesByTicketID(ctx context.Context, ticket
 		return nil, time.Time{}, err
 	}
 
-	return supportFiles, updatedAt, nil
+	var filesMetadata []model.FileMetadata
+	if string(jsonFiles) == "null" || len(jsonFiles) == 0 || string(jsonFiles) == "[]" {
+		return []model.FileMetadata{}, updatedAt, nil
+	}
+	if err := json.Unmarshal(jsonFiles, &filesMetadata); err != nil {
+		return nil, time.Time{}, fmt.Errorf("failed to unmarshal support files: %w", err)
+	}
+
+	return filesMetadata, updatedAt, nil
 }

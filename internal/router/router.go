@@ -60,6 +60,7 @@ func SetupRouter(h *AllHandlers, r *AllRepositories, authMiddleware *auth.AuthMi
 	{
 		private.POST("/logout", h.AuthHandler.Logout)
 		private.GET("/files/download", h.FileHandler.DownloadFile)
+		private.GET("/files/view", h.FileHandler.ViewFile)
 		private.POST("/auth/ws-ticket", h.AuthHandler.GenerateWebSocketTicket)
 
 		setupMasterDataRoutes(private, h, r)
