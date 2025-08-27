@@ -30,7 +30,7 @@ func NewTicketPriorityService(db *sql.DB, hub *websocket.Hub, ticketRepo *reposi
 
 // RE ORDER
 func (s *TicketPriorityService) ReorderTickets(ctx context.Context, req dto.ReorderTicketsRequest, userNPK string) error {
-	user, err := s.employeeRepo.FindByNPK(userNPK)
+	_, err := s.employeeRepo.FindByNPK(userNPK)
 	if err != nil {
 		return errors.New("action performer not found")
 	}
@@ -38,14 +38,6 @@ func (s *TicketPriorityService) ReorderTickets(ctx context.Context, req dto.Reor
 	ticketIDs := make([]int, len(req.Items))
 	for i, item := range req.Items {
 		ticketIDs[i] = item.TicketID
-	}
-
-	validTicketCount, err := s.ticketRepo.CheckTicketsFromDepartment(ticketIDs, user.DepartmentID)
-	if err != nil {
-		return err
-	}
-	if validTicketCount != len(req.Items) {
-		return errors.New("user can only reorder tickets requested by their own department")
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
