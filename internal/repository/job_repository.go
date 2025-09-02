@@ -183,29 +183,44 @@ func (r *JobRepository) FindByID(id int) (*model.Job, error) {
 	return &j, err
 }
 
-func (r *JobRepository) AddReportFilesTransactional(ctx context.Context, tx *sql.Tx, ticketID int, filesMetadata []model.FileMetadata) error {
-	if len(filesMetadata) == 0 {
-		return nil
+// [GANTI FUNGSI INI]
+func (r *JobRepository) UpdateJobCompletionDetails(ctx context.Context, tx *sql.Tx, ticketID int, filesMetadata []model.FileMetadata, spendingAmount *int64) error {
+	if len(filesMetadata) > 0 {
+		for _, fm := range filesMetadata {
+			jsonBytes, err := json.Marshal(fm)
+			if err != nil {
+				return fmt.Errorf("failed to marshal file metadata: %w", err)
+			}
+
+			query := `
+                UPDATE job 
+                SET report_file = jsonb_set(
+                                    COALESCE(report_file, '[]'::jsonb), 
+                                    '{999999}', 
+                                    $1::jsonb, 
+                                    true
+                                ), 
+                    updated_at = NOW()
+                WHERE ticket_id = $2`
+
+			result, err := tx.ExecContext(ctx, query, string(jsonBytes), ticketID)
+			if err != nil {
+				return err
+			}
+			rowsAffected, _ := result.RowsAffected()
+			if rowsAffected == 0 {
+				return sql.ErrNoRows 
+			}
+		}
 	}
 
-	for _, fm := range filesMetadata {
-		jsonBytes, err := json.Marshal(fm)
-		if err != nil {
-			return fmt.Errorf("failed to marshal file metadata: %w", err)
-		}
-
+	if spendingAmount != nil {
 		query := `
             UPDATE job 
-            SET report_file = jsonb_set(
-                                COALESCE(report_file, '[]'::jsonb), 
-                                '{999999}', 
-                                $1::jsonb, 
-                                true
-                            ), 
-                updated_at = NOW()
+            SET spending_amount = $1, updated_at = NOW()
             WHERE ticket_id = $2`
 
-		result, err := tx.ExecContext(ctx, query, string(jsonBytes), ticketID)
+		result, err := tx.ExecContext(ctx, query, *spendingAmount, ticketID)
 		if err != nil {
 			return err
 		}
@@ -214,5 +229,6 @@ func (r *JobRepository) AddReportFilesTransactional(ctx context.Context, tx *sql
 			return sql.ErrNoRows
 		}
 	}
+
 	return nil
 }

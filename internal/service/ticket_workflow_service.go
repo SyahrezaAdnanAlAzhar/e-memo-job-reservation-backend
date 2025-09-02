@@ -96,9 +96,12 @@ func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int,
 
 	if req.ActionName == "Selesaikan Job" {
 		if len(filesMetadata) > 0 {
-			err := s.jobRepo.AddReportFilesTransactional(ctx, tx, ticketID, filesMetadata)
+			err := s.jobRepo.UpdateJobCompletionDetails(ctx, tx, ticketID, filesMetadata, req.SpendingAmount)
 			if err != nil {
-				return errors.New("failed to save report files to job")
+				if err == sql.ErrNoRows {
+					return errors.New("job associated with this ticket not found")
+				}
+				return errors.New("failed to update job completion details")
 			}
 		}
 	}

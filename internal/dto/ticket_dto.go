@@ -33,8 +33,9 @@ type RejectTicketRequest struct {
 }
 
 type ExecuteActionRequest struct {
-	ActionName string `json:"action_name" binding:"required"`
-	Reason     string `json:"reason"`
+	ActionName     string `json:"action_name" binding:"required"`
+	Reason         string `json:"reason"`
+	SpendingAmount *int64 `form:"spending_amount"`
 }
 
 type ReorderTicketItem struct {
