@@ -19,6 +19,7 @@ const baseJobQuery = `
         t.description,
         j.job_priority,
         t.ticket_priority,
+		j.spending_amount,
         j.version,
         t.department_target_id as assigned_department_id,
         dept.name as assigned_department_name,
@@ -173,7 +174,7 @@ func scanJobDetails(rows *sql.Rows) ([]dto.JobDetailResponse, error) {
 	for rows.Next() {
 		var j dto.JobDetailResponse
 		err := rows.Scan(
-			&j.JobID, &j.TicketID, &j.Description, &j.JobPriority, &j.TicketPriority,
+			&j.JobID, &j.TicketID, &j.Description, &j.JobPriority, &j.TicketPriority, &j.SpendingAmount,
 			&j.Version, &j.AssignedDepartmentID, &j.AssignedDepartmentName,
 			&j.CurrentStatus, &j.CurrentStatusHexCode, &j.CurrentSectionName,
 			&j.PicName, &j.RequestorName, &j.RequestorDepartment,

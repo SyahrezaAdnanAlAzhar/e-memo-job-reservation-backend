@@ -23,6 +23,7 @@ type JobDetailResponse struct {
 	Description    string `json:"description"`
 	JobPriority    int    `json:"job_priority"`
 	TicketPriority int    `json:"ticket_priority"`
+	SpendingAmount *int64 `json:"spending_amount"`
 	Version        int    `json:"version"`
 
 	// DEPARTMENT INFORMATION
