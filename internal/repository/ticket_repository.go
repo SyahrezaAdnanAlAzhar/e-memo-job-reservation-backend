@@ -494,7 +494,7 @@ func (r *TicketRepository) RemoveSupportFiles(ctx context.Context, ticketID int,
         ),
         updated_files AS (
             SELECT jsonb_agg(elem) as new_array
-            FROM ticket, unnest(support_file) as elem
+            FROM ticket, jsonb_array_elements(COALESCE(support_file, '[]'::jsonb)) as elem
             WHERE id = $2
             AND (elem ->> 'file_path') NOT IN (SELECT path FROM files_to_remove)
         )
