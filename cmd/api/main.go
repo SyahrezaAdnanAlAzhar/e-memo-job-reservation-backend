@@ -125,6 +125,7 @@ func main() {
 		ActorRoleRepo:         actorRoleRepo,
 		ActorRoleMappingRepo:  actorRoleMappingRepo,
 		TicketActionLogRepo:   ticketActionLogRepo,
+		WorkflowRepo:          workflowRepo,
 		ActionService:         ticketActionService,
 	})
 

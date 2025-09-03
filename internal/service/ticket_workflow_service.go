@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
@@ -23,6 +24,7 @@ type TicketWorkflowService struct {
 	actorRoleRepo         *repository.ActorRoleRepository
 	actorRoleMappingRepo  *repository.ActorRoleMappingRepository
 	ticketActionLogRepo   *repository.TicketActionLogRepository
+	workflowRepo          *repository.WorkflowRepository
 	actionService         *TicketActionService
 }
 
@@ -37,6 +39,7 @@ type TicketWorkflowServiceConfig struct {
 	ActorRoleRepo         *repository.ActorRoleRepository
 	ActorRoleMappingRepo  *repository.ActorRoleMappingRepository
 	TicketActionLogRepo   *repository.TicketActionLogRepository
+	WorkflowRepo          *repository.WorkflowRepository
 	ActionService         *TicketActionService
 }
 
@@ -52,6 +55,7 @@ func NewTicketWorkflowService(cfg *TicketWorkflowServiceConfig) *TicketWorkflowS
 		actorRoleRepo:         cfg.ActorRoleRepo,
 		actorRoleMappingRepo:  cfg.ActorRoleMappingRepo,
 		ticketActionLogRepo:   cfg.TicketActionLogRepo,
+		workflowRepo:          cfg.WorkflowRepo,
 		actionService:         cfg.ActionService,
 	}
 }
@@ -88,6 +92,24 @@ func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int,
 		return errors.New("file upload is required for this action")
 	}
 
+	var finalToStatusID int
+
+	if req.ActionName == "Revisi" {
+		user, err := s.employeeRepo.FindByNPK(userNPK)
+		if err != nil {
+			return errors.New("user not found")
+		}
+
+		initialStatusID, err := s.workflowRepo.GetInitialStatusByPosition(ctx, user.Position.ID)
+		if err != nil {
+			return errors.New("no workflow defined for this user's position")
+		}
+		finalToStatusID = initialStatusID
+		log.Printf("[ExecuteAction-Revisi] User %s (PositionID %d) is revising. New target status: %d", userNPK, user.Position.ID, finalToStatusID)
+	} else {
+		finalToStatusID = selectedAction.ToStatusID
+	}
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -120,13 +142,13 @@ func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int,
 		DetailsText:    sql.NullString{String: req.Reason, Valid: req.Reason != ""},
 		FilePath:       pq.StringArray(filePathsForLog),
 		FromStatusID:   sql.NullInt32{Int32: int32(currentStatusID), Valid: true},
-		ToStatusID:     selectedAction.ToStatusID,
+		ToStatusID:     finalToStatusID,
 	}
 	if err := s.ticketActionLogRepo.Create(ctx, tx, logEntry); err != nil {
 		return err
 	}
 
-	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, selectedAction.ToStatusID); err != nil {
+	if err := s.trackStatusTicketRepo.UpdateStatus(ctx, tx, ticketID, finalToStatusID); err != nil {
 		return err
 	}
 
