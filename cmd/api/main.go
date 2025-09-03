@@ -97,7 +97,7 @@ func main() {
 		db,
 	)
 
-	ticketQueryService := service.NewTicketQueryService(ticketRepo)
+	ticketQueryService := service.NewTicketQueryService(ticketRepo, trackStatusTicketRepo, ticketActionLogRepo)
 
 	ticketCommandService := service.NewTicketCommandService(&service.TicketCommandServiceConfig{
 		DB:                    db,

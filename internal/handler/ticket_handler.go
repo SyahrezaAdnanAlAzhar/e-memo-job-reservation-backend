@@ -360,3 +360,28 @@ func (h *TicketHandler) GetOldestTicket(c *gin.Context) {
 
 	util.SuccessResponse(c, http.StatusOK, oldestTicket)
 }
+
+// GET /tickets/:id/last-rejection
+func (h *TicketHandler) GetLastRejectionDetail(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid ticket ID format", nil)
+		return
+	}
+
+	rejectionDetail, err := h.queryService.GetLastRejectionDetail(c.Request.Context(), id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			util.SuccessResponse(c, http.StatusOK, nil)
+			return
+		}
+		if err.Error() == "ticket not found" {
+			util.ErrorResponse(c, http.StatusNotFound, err.Error(), nil)
+			return
+		}
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve last rejection detail", err.Error())
+		return
+	}
+
+	util.SuccessResponse(c, http.StatusOK, rejectionDetail)
+}

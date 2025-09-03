@@ -196,6 +196,7 @@ func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllRepositor
 		ticketRoutes.GET("/:id/files", h.FileHandler.GetAllFilesByTicketID)
 		ticketRoutes.POST("/:id/files", h.TicketHandler.AddSupportFiles)
 		ticketRoutes.DELETE("/:id/files", h.TicketHandler.RemoveSupportFiles)
+		ticketRoutes.GET("/:id/last-rejection", h.TicketHandler.GetLastRejectionDetail)
 	}
 
 	jobRoutes := group.Group("/jobs")
