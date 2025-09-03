@@ -123,3 +123,12 @@ type OldestTicketResponse struct {
 	TicketID  int       `json:"ticket_id"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+type RejectionDetailResponse struct {
+	Reason              string    `json:"reason"`
+	RejectorNPK         string    `json:"rejector_npk"`
+	RejectorName        string    `json:"rejector_name"`
+	RejectorPosition    string    `json:"rejector_position"`
+	RejectorDepartment  string    `json:"rejector_department"`
+	RejectedAt          time.Time `json:"rejected_at"`
+}
