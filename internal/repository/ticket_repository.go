@@ -461,18 +461,13 @@ func (r *TicketRepository) AddSupportFiles(ctx context.Context, ticketID int, fi
 
 		query := `
             UPDATE ticket 
-            SET support_file = jsonb_set(
-                                COALESCE(support_file, '[]'::jsonb), 
-                                '{999999}', 
-                                $1::jsonb, 
-                                true
-                            ), 
+            SET support_file = COALESCE(support_file, '[]'::jsonb) || $1::jsonb, 
                 updated_at = NOW()
             WHERE id = $2`
 
 		result, err := tx.ExecContext(ctx, query, string(jsonBytes), ticketID)
 		if err != nil {
-			return err 
+			return err
 		}
 		rowsAffected, _ := result.RowsAffected()
 		if rowsAffected == 0 {

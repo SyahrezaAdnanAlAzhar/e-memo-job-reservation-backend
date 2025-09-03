@@ -209,7 +209,7 @@ func (r *JobRepository) UpdateJobCompletionDetails(ctx context.Context, tx *sql.
 			}
 			rowsAffected, _ := result.RowsAffected()
 			if rowsAffected == 0 {
-				return sql.ErrNoRows 
+				return sql.ErrNoRows
 			}
 		}
 	}
