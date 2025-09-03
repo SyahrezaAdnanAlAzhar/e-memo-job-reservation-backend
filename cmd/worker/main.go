@@ -9,6 +9,7 @@ import (
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/scheduler"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/websocket"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/database"
 
 	"github.com/joho/godotenv"
@@ -24,12 +25,16 @@ func main() {
 	// INIT CONNECTION
 	db := database.Connect()
 	defer db.Close()
+
+	hub := websocket.NewHub()
+	go hub.Run()
+
 	ticketRepo := repository.NewTicketRepository(db)
 	jobRepo := repository.NewJobRepository(db)
 
 	// CREATE INSTANCE
-	ticketReorderJob := scheduler.NewTicketReorderJob(db, ticketRepo)
-	jobReorderJob := scheduler.NewJobReorderJob(db, jobRepo)
+	ticketReorderJob := scheduler.NewTicketReorderJob(db, ticketRepo, hub)
+	jobReorderJob := scheduler.NewJobReorderJob(db, jobRepo, hub)
 
 	// INIT SCHEDULER
 	jakartaLocation, err := time.LoadLocation("Asia/Jakarta")

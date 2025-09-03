@@ -9,6 +9,8 @@ import (
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/websocket"
+	"github.com/gin-gonic/gin"
 )
 
 type jobWithScore struct {
@@ -19,10 +21,11 @@ type jobWithScore struct {
 type JobReorderJob struct {
 	jobRepo *repository.JobRepository
 	db      *sql.DB
+	hub     *websocket.Hub
 }
 
-func NewJobReorderJob(db *sql.DB, jobRepo *repository.JobRepository) *JobReorderJob {
-	return &JobReorderJob{db: db, jobRepo: jobRepo}
+func NewJobReorderJob(db *sql.DB, jobRepo *repository.JobRepository, hub *websocket.Hub) *JobReorderJob {
+	return &JobReorderJob{db: db, jobRepo: jobRepo, hub: hub}
 }
 
 func (j *JobReorderJob) Run() {
@@ -41,6 +44,14 @@ func (j *JobReorderJob) Run() {
 			log.Printf("ERROR (Job Reorder): Failed to reorder jobs for department %d: %v", deptID, err)
 			continue
 		}
+	}
+
+	payload := gin.H{"message": "Job priorities have been recalculated by the system."}
+	message, err := websocket.NewMessage("JOB_PRIORITY_RECALCULATED", payload)
+	if err != nil {
+		log.Printf("CRITICAL: Failed to create websocket message for job cron job: %v", err)
+	} else {
+		j.hub.BroadcastMessage(message)
 	}
 
 	log.Println("JOB priority recalculation job finished.")
@@ -124,7 +135,7 @@ func (j *JobReorderJob) getActiveJobsByDepartment(ctx context.Context, tx *sql.T
 			return nil, err
 		}
 		job.TicketID = ticket.ID
-		job.Ticket = ticket 
+		job.Ticket = ticket
 		jobs = append(jobs, job)
 	}
 	return jobs, nil

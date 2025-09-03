@@ -10,6 +10,7 @@ import (
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/websocket"
 	"github.com/lib/pq"
 )
 
@@ -26,6 +27,8 @@ type TicketWorkflowService struct {
 	ticketActionLogRepo   *repository.TicketActionLogRepository
 	workflowRepo          *repository.WorkflowRepository
 	actionService         *TicketActionService
+	hub                   *websocket.Hub
+	queryService          *TicketQueryService
 }
 
 type TicketWorkflowServiceConfig struct {
@@ -41,6 +44,8 @@ type TicketWorkflowServiceConfig struct {
 	TicketActionLogRepo   *repository.TicketActionLogRepository
 	WorkflowRepo          *repository.WorkflowRepository
 	ActionService         *TicketActionService
+	Hub                   *websocket.Hub
+	QueryService          *TicketQueryService
 }
 
 func NewTicketWorkflowService(cfg *TicketWorkflowServiceConfig) *TicketWorkflowService {
@@ -57,6 +62,8 @@ func NewTicketWorkflowService(cfg *TicketWorkflowServiceConfig) *TicketWorkflowS
 		ticketActionLogRepo:   cfg.TicketActionLogRepo,
 		workflowRepo:          cfg.WorkflowRepo,
 		actionService:         cfg.ActionService,
+		hub:                   cfg.Hub,
+		queryService:          cfg.QueryService,
 	}
 }
 
@@ -152,7 +159,23 @@ func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int,
 		return err
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	updatedTicketDetail, err := s.queryService.GetTicketByID(ticketID)
+	if err != nil {
+		log.Printf("CRITICAL: Failed to fetch updated ticket for broadcast after action. TicketID: %d, Error: %v", ticketID, err)
+	} else {
+		message, err := websocket.NewMessage("TICKET_STATUS_CHANGED", updatedTicketDetail)
+		if err != nil {
+			log.Printf("CRITICAL: Failed to create websocket message for status change: %v", err)
+		} else {
+			s.hub.BroadcastMessage(message)
+		}
+	}
+
+	return nil
 }
 
 func (s *TicketWorkflowService) ValidateAndGetTransition(ctx context.Context, currentStatusID int, actionName string) (toStatusID int, allowedRoleIDs []int, err error) {

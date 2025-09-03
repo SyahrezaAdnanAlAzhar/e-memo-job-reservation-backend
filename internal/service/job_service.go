@@ -19,9 +19,10 @@ type JobService struct {
 	posPermRepo    *repository.PositionPermissionRepository
 	db             *sql.DB
 	hub            *websocket.Hub
+	queryService   *TicketQueryService
 }
 
-func NewJobService(jobCommandRepo *repository.JobRepository, jobQueryRepo *repository.JobQueryRepository, employeeRepo *repository.EmployeeRepository, posPermRepo *repository.PositionPermissionRepository, db *sql.DB, hub *websocket.Hub) *JobService {
+func NewJobService(jobCommandRepo *repository.JobRepository, jobQueryRepo *repository.JobQueryRepository, employeeRepo *repository.EmployeeRepository, posPermRepo *repository.PositionPermissionRepository, db *sql.DB, hub *websocket.Hub, queryService *TicketQueryService) *JobService {
 	return &JobService{
 		jobCommandRepo: jobCommandRepo,
 		jobQueryRepo:   jobQueryRepo,
@@ -29,6 +30,7 @@ func NewJobService(jobCommandRepo *repository.JobRepository, jobQueryRepo *repos
 		posPermRepo:    posPermRepo,
 		db:             db,
 		hub:            hub,
+		queryService:   queryService,
 	}
 }
 
@@ -60,7 +62,27 @@ func (s *JobService) AssignPIC(ctx context.Context, jobID int, req dto.AssignPIC
 		return errors.New("new PIC must be from the same department as the job")
 	}
 
-	return s.jobCommandRepo.AssignPIC(jobID, req.PicJob)
+	err = s.jobCommandRepo.AssignPIC(jobID, req.PicJob)
+	if err != nil {
+		return err
+	}
+
+	job, _ = s.jobQueryRepo.FindByID(jobID)
+	if job != nil {
+		updatedTicketDetail, err := s.queryService.GetTicketByID(job.TicketID)
+		if err != nil {
+			log.Printf("CRITICAL: Failed to fetch updated ticket for broadcast after PIC assign. TicketID: %d, Error: %v", job.TicketID, err)
+		} else {
+			message, err := websocket.NewMessage("TICKET_UPDATED", updatedTicketDetail)
+			if err != nil {
+				log.Printf("CRITICAL: Failed to create websocket message for PIC assign: %v", err)
+			} else {
+				s.hub.BroadcastMessage(message)
+			}
+		}
+	}
+
+	return nil
 }
 
 // ReorderJobs

@@ -10,6 +10,8 @@ import (
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/websocket"
+	"github.com/gin-gonic/gin"
 )
 
 type ticketWithScore struct {
@@ -20,10 +22,11 @@ type ticketWithScore struct {
 type TicketReorderJob struct {
 	ticketRepo *repository.TicketRepository
 	db         *sql.DB
+	hub        *websocket.Hub
 }
 
-func NewTicketReorderJob(db *sql.DB, ticketRepo *repository.TicketRepository) *TicketReorderJob {
-	return &TicketReorderJob{db: db, ticketRepo: ticketRepo}
+func NewTicketReorderJob(db *sql.DB, ticketRepo *repository.TicketRepository, hub *websocket.Hub) *TicketReorderJob {
+	return &TicketReorderJob{db: db, ticketRepo: ticketRepo, hub: hub}
 }
 
 // RUN
@@ -45,6 +48,14 @@ func (j *TicketReorderJob) Run() {
 			log.Printf("ERROR: Failed to reorder tickets for department %d: %v", deptID, err)
 			continue
 		}
+	}
+
+	payload := gin.H{"message": "Ticket priorities have been recalculated by the system."}
+	message, err := websocket.NewMessage("TICKET_PRIORITY_RECALCULATED", payload)
+	if err != nil {
+		log.Printf("CRITICAL: Failed to create websocket message for ticket cron job: %v", err)
+	} else {
+		j.hub.BroadcastMessage(message)
 	}
 
 	log.Println("Ticket priority recalculation job finished.")
