@@ -168,3 +168,17 @@ func (s *AuthService) GenerateWebSocketTicket(ctx context.Context, userID int) (
 
 	return ticket, nil
 }
+
+func (s *AuthService) GeneratePublicWebSocketTicket(ctx context.Context) (string, error) {
+	ticket := uuid.New().String()
+
+	expiresIn := 15 * time.Second
+
+	const publicUserID = 0
+	err := s.authRepo.StoreWebSocketTicket(ctx, ticket, publicUserID, expiresIn)
+	if err != nil {
+		return "", err
+	}
+
+	return ticket, nil
+}

@@ -105,3 +105,14 @@ func (h *AuthHandler) GenerateWebSocketTicket(c *gin.Context) {
 
 	util.SuccessResponse(c, http.StatusOK, gin.H{"ticket": ticket})
 }
+
+// POST /auth/ws-public-ticket
+func (h *AuthHandler) GeneratePublicWebSocketTicket(c *gin.Context) {
+	ticket, err := h.Service.GeneratePublicWebSocketTicket(c.Request.Context())
+	if err != nil {
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to generate public WebSocket ticket", err.Error())
+		return
+	}
+
+	util.SuccessResponse(c, http.StatusOK, gin.H{"ticket": ticket})
+}

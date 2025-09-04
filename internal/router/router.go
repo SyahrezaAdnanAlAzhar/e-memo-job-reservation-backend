@@ -47,6 +47,7 @@ func SetupRouter(h *AllHandlers, r *AllRepositories, authMiddleware *auth.AuthMi
 		public.GET("/status-ticket", h.StatusTicketHandler.GetAllStatusTickets)
 		public.GET("/actions", h.ActionHandler.GetAllActions)
 		public.GET("/ws", wsHandler.ServeWs)
+		public.POST("/auth/ws-public-ticket", h.AuthHandler.GeneratePublicWebSocketTicket)
 	}
 
 	reportRoutes := api.Group("/reports")
