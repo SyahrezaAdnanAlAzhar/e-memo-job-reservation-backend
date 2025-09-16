@@ -85,11 +85,11 @@ type TicketDetailResponse struct {
 type TicketFilter struct {
 	// FILTER BY ID
 	SectionID             int    `form:"section_id"`
-	StatusID              int    `form:"status_id"`
+	StatusID              []int    `form:"status_id"`
 	DepartmentTargetID    int    `form:"department_target_id"`
-	RequestorDepartmentID int    `form:"requestor_department_id"`
-	Requestor             string `form:"requestor"`
-	PicNPK                string `form:"pic_npk"`
+	RequestorDepartmentID []int    `form:"requestor_department_id"`
+	Requestor             []string `form:"requestor"`
+	PicNPK                []string `form:"pic_npk"`
 
 	// FILTER BY SEARCH QUERY
 	SearchQuery string `form:"search"`

@@ -112,9 +112,9 @@ func (r *TicketRepository) FindAll(filters dto.TicketFilter) ([]dto.TicketDetail
 		argID++
 	}
 
-	if filters.StatusID != 0 {
-		conditions = append(conditions, fmt.Sprintf("current_st.id = $%d", argID))
-		args = append(args, filters.StatusID)
+	if len(filters.StatusID) > 0 {
+		conditions = append(conditions, fmt.Sprintf("current_st.id = ANY($%d)", argID))
+		args = append(args, pq.Array(filters.StatusID))
 		argID++
 	}
 
@@ -124,9 +124,9 @@ func (r *TicketRepository) FindAll(filters dto.TicketFilter) ([]dto.TicketDetail
 		argID++
 	}
 
-	if filters.RequestorDepartmentID != 0 {
-		conditions = append(conditions, fmt.Sprintf("req_emp.department_id = $%d", argID))
-		args = append(args, filters.RequestorDepartmentID)
+	if len(filters.RequestorDepartmentID) > 0 {
+		conditions = append(conditions, fmt.Sprintf("req_emp.department_id = ANY($%d)", argID))
+		args = append(args, pq.Array(filters.RequestorDepartmentID))
 		argID++
 	}
 
@@ -136,15 +136,15 @@ func (r *TicketRepository) FindAll(filters dto.TicketFilter) ([]dto.TicketDetail
 		argID++
 	}
 
-	if filters.Requestor != "" {
-		conditions = append(conditions, fmt.Sprintf("t.requestor = $%d", argID))
-		args = append(args, filters.Requestor)
+	if len(filters.Requestor) > 0 {
+		conditions = append(conditions, fmt.Sprintf("t.requestor = ANY($%d)", argID))
+		args = append(args, pq.Array(filters.Requestor))
 		argID++
 	}
 
-	if filters.PicNPK != "" {
-		conditions = append(conditions, fmt.Sprintf("j.pic_job = $%d", argID))
-		args = append(args, filters.PicNPK)
+	if len(filters.PicNPK) > 0 {
+		conditions = append(conditions, fmt.Sprintf("j.pic_job = ANY($%d)", argID))
+		args = append(args, pq.Array(filters.PicNPK))
 		argID++
 	}
 
