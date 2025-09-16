@@ -44,18 +44,15 @@ func (h *StatusTicketHandler) CreateStatusTicket(c *gin.Context) {
 
 // GET /status-ticket
 func (h *StatusTicketHandler) GetAllStatusTickets(c *gin.Context) {
-	filters := make(map[string]string)
-	if isActive, exists := c.GetQuery("is_active"); exists {
-		filters["is_active"] = isActive
-	}
-
-	if sectionID, exists := c.GetQuery("section_id"); exists {
-		filters["section_id"] = sectionID
+	var filters dto.StatusTicketFilter
+	if err := c.ShouldBindQuery(&filters); err != nil {
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid query parameters", err.Error())
+		return
 	}
 
 	statuses, err := h.service.GetAllStatusTickets(filters)
 	if err != nil {
-		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve status tickets", nil)
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve status tickets", err.Error())
 		return
 	}
 

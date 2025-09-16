@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"strconv"
+	"fmt"
 	"strings"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
@@ -41,21 +41,20 @@ func (r *StatusTicketRepository) Create(req dto.CreateStatusTicketRequest) (*mod
 }
 
 // GET ALL
-func (r *StatusTicketRepository) FindAll(filters map[string]string) ([]model.StatusTicket, error) {
+func (r *StatusTicketRepository) FindAll(filters dto.StatusTicketFilter) ([]model.StatusTicket, error) {
 	baseQuery := "SELECT id, name, sequence, is_active, section_id, hex_color, created_at, updated_at FROM status_ticket"
 	var conditions []string
 	var args []interface{}
 	argID := 1
 
-	if val, ok := filters["is_active"]; ok {
-		conditions = append(conditions, "is_active = $"+strconv.Itoa(argID))
-		args = append(args, val)
+	if filters.SectionID != 0 {
+		conditions = append(conditions, fmt.Sprintf("section_id = $%d", argID))
+		args = append(args, filters.SectionID)
 		argID++
 	}
-
-	if val, ok := filters["section_id"]; ok {
-		conditions = append(conditions, "section_id = $"+strconv.Itoa(argID))
-		args = append(args, val)
+	if filters.IsActive != nil {
+		conditions = append(conditions, fmt.Sprintf("is_active = $%d", argID))
+		args = append(args, *filters.IsActive)
 		argID++
 	}
 

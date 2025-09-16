@@ -14,3 +14,8 @@ type ReorderStatusTicketsRequest struct {
 	ApprovalSectionOrder []int `json:"approval_section_order"`
 	ActualSectionOrder   []int `json:"actual_section_order"`
 }
+
+type StatusTicketFilter struct {
+	SectionID int   `form:"section_id"`
+	IsActive  *bool `form:"is_active"`
+}

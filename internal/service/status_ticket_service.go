@@ -32,7 +32,7 @@ func (s *StatusTicketService) CreateStatusTicket(req dto.CreateStatusTicketReque
 }
 
 // GET ALL
-func (s *StatusTicketService) GetAllStatusTickets(filters map[string]string) ([]model.StatusTicket, error) {
+func (s *StatusTicketService) GetAllStatusTickets(filters dto.StatusTicketFilter) ([]model.StatusTicket, error) {
 	return s.repo.FindAll(filters)
 }
 
