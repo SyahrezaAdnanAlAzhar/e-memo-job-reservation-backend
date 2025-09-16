@@ -162,3 +162,25 @@ func (h *DepartmentHandler) UpdateDepartmentActiveStatus(c *gin.Context) {
 
 	util.SuccessResponse(c, http.StatusOK, gin.H{"message": "Department status updated successfully"})
 }
+
+// GET /department/options
+func (h *DepartmentHandler) GetRequestorDepartmentOptions(c *gin.Context) {
+	var filters dto.DepartmentOptionsFilter
+	if err := c.ShouldBindQuery(&filters); err != nil {
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid query parameters", err.Error())
+		return
+	}
+
+	options, err := h.service.GetRequestorDepartmentOptions(filters)
+	if err != nil {
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve department options", err.Error())
+		return
+	}
+
+	if options == nil {
+		util.SuccessResponse(c, http.StatusOK, []dto.DepartmentOptionResponse{})
+		return
+	}
+
+	util.SuccessResponse(c, http.StatusOK, options)
+}

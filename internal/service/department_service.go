@@ -76,3 +76,7 @@ func (s *DepartmentService) UpdateDepartment(id int, req dto.UpdateDepartmentReq
 func (s *DepartmentService) UpdateDepartmentActiveStatus(id int, req dto.UpdateStatusRequest) error {
 	return s.repo.UpdateActiveStatus(id, req.IsActive)
 }
+
+func (s *DepartmentService) GetRequestorDepartmentOptions(filters dto.DepartmentOptionsFilter) ([]dto.DepartmentOptionResponse, error) {
+	return s.repo.FindRequestorDepartmentOptions(filters)
+}

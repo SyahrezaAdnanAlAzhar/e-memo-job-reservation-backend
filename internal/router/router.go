@@ -83,6 +83,7 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllReposit
 			deptRoutes.DELETE("/:id", h.DepartmentHandler.DeleteDepartment)
 			deptRoutes.PUT("/:id", h.DepartmentHandler.UpdateDepartment)
 			deptRoutes.PATCH("/:id/status", h.DepartmentHandler.UpdateDepartmentActiveStatus)
+			deptRoutes.GET("/options", h.DepartmentHandler.GetRequestorDepartmentOptions)
 		}
 
 		employeeRoutes := group.Group("/employee")

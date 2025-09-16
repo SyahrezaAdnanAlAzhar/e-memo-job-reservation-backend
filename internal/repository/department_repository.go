@@ -210,3 +210,40 @@ func (r *DepartmentRepository) IsReceiver(departmentID int) (bool, error) {
 	
 	return canReceiveJob, nil
 }
+
+// FindRequestorDepartmentOptions mencari daftar unik departemen requestor
+// berdasarkan filter tiket yang relevan.
+func (r *DepartmentRepository) FindRequestorDepartmentOptions(filters dto.DepartmentOptionsFilter) ([]dto.DepartmentOptionResponse, error) {
+	query := `
+        SELECT DISTINCT
+            req_dept.id,
+            req_dept.name
+        FROM ticket t
+        JOIN employee req_emp ON t.requestor = req_emp.npk
+        JOIN department req_dept ON req_emp.department_id = req_dept.id
+        JOIN (
+            SELECT DISTINCT ON (ticket_id) ticket_id, status_ticket_id
+            FROM track_status_ticket
+            ORDER BY ticket_id, start_date DESC, id DESC
+        ) current_tst ON t.id = current_tst.ticket_id
+        JOIN status_ticket st ON current_tst.status_ticket_id = st.id
+        WHERE ($1 = 0 OR st.section_id = $1)
+          AND ($2 = 0 OR t.department_target_id = $2)
+        ORDER BY req_dept.name ASC`
+
+	rows, err := r.DB.Query(query, filters.SectionID, filters.DepartmentTargetID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var departments []dto.DepartmentOptionResponse
+	for rows.Next() {
+		var d dto.DepartmentOptionResponse
+		if err := rows.Scan(&d.ID, &d.Name); err != nil {
+			return nil, err
+		}
+		departments = append(departments, d)
+	}
+	return departments, nil
+}

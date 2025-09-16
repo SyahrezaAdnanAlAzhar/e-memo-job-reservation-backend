@@ -20,3 +20,13 @@ type DepartmentFilter struct {
 	IsActive   *bool  `form:"is_active"`
 	ReceiveJob *bool  `form:"receive_job"`
 }
+
+type DepartmentOptionsFilter struct {
+	SectionID          int `form:"section_id"`
+	DepartmentTargetID int `form:"department_target_id"`
+}
+
+type DepartmentOptionResponse struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
