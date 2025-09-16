@@ -36,3 +36,30 @@ func (h *EmployeeHandler) GetAllEmployees(c *gin.Context) {
 	}
 	util.SuccessResponse(c, http.StatusOK, employees)
 }
+
+// GET /employee/options
+func (h *EmployeeHandler) GetEmployeeOptions(c *gin.Context) {
+	var filters dto.EmployeeOptionsFilter
+	if err := c.ShouldBindQuery(&filters); err != nil {
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid query parameters", err.Error())
+		return
+	}
+
+	if filters.Role == "" {
+		util.ErrorResponse(c, http.StatusBadRequest, "Query parameter 'role' is required", nil)
+		return
+	}
+
+	options, err := h.service.GetEmployeeOptions(filters)
+	if err != nil {
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve employee options", err.Error())
+		return
+	}
+
+	if options == nil {
+		util.SuccessResponse(c, http.StatusOK, []dto.EmployeeOptionResponse{})
+		return
+	}
+
+	util.SuccessResponse(c, http.StatusOK, options)
+}

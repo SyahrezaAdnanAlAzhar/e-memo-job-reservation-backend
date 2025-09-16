@@ -114,3 +114,63 @@ func (r *EmployeeRepository) GetEmployeePositionID(ctx context.Context, npk stri
 	err := r.DB.QueryRowContext(ctx, query, npk).Scan(&positionID)
 	return positionID, err
 }
+
+func (r *EmployeeRepository) FindOptions(filters dto.EmployeeOptionsFilter) ([]dto.EmployeeOptionResponse, error) {
+	var query string
+	var args []interface{}
+
+	baseQuery := `
+        SELECT DISTINCT e.npk, e.name
+        FROM employee e
+        JOIN ticket t ON %s = e.npk
+        JOIN (
+            SELECT DISTINCT ON (ticket_id) ticket_id, status_ticket_id
+            FROM track_status_ticket
+            ORDER BY ticket_id, start_date DESC, id DESC
+        ) current_tst ON t.id = current_tst.ticket_id
+        JOIN status_ticket st ON current_tst.status_ticket_id = st.id
+        WHERE ($1 = 0 OR st.section_id = $1)
+          AND ($2 = 0 OR t.department_target_id = $2)
+        ORDER BY e.name ASC`
+
+	switch filters.Role {
+	case "requestor":
+		query = fmt.Sprintf(baseQuery, "t.requestor")
+	case "pic":
+		baseQuery = `
+            SELECT DISTINCT e.npk, e.name
+            FROM employee e
+            JOIN job j ON j.pic_job = e.npk
+            JOIN ticket t ON j.ticket_id = t.id
+            JOIN (
+                SELECT DISTINCT ON (ticket_id) ticket_id, status_ticket_id
+                FROM track_status_ticket
+                ORDER BY ticket_id, start_date DESC, id DESC
+            ) current_tst ON t.id = current_tst.ticket_id
+            JOIN status_ticket st ON current_tst.status_ticket_id = st.id
+            WHERE ($1 = 0 OR st.section_id = $1)
+              AND ($2 = 0 OR t.department_target_id = $2)
+            ORDER BY e.name ASC`
+		query = baseQuery
+	default:
+		return []dto.EmployeeOptionResponse{}, nil
+	}
+
+	args = append(args, filters.SectionID, filters.DepartmentTargetID)
+
+	rows, err := r.DB.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var employees []dto.EmployeeOptionResponse
+	for rows.Next() {
+		var e dto.EmployeeOptionResponse
+		if err := rows.Scan(&e.NPK, &e.Name); err != nil {
+			return nil, err
+		}
+		employees = append(employees, e)
+	}
+	return employees, nil
+}

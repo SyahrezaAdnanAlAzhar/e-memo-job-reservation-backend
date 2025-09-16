@@ -89,6 +89,7 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllReposit
 		employeeRoutes := group.Group("/employee")
 		{
 			employeeRoutes.GET("", h.EmployeeHandler.GetAllEmployees)
+			employeeRoutes.GET("/options", h.EmployeeHandler.GetEmployeeOptions)
 		}
 
 		physicalLocationRoutes := group.Group("/physical-location")

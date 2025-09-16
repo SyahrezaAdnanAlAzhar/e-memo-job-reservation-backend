@@ -17,3 +17,7 @@ func NewEmployeeService(repo *repository.EmployeeRepository) *EmployeeService {
 func (s *EmployeeService) GetAllEmployees(filters dto.EmployeeFilter) ([]model.Employee, error) {
 	return s.repo.FindAll(filters)
 }
+
+func (s *EmployeeService) GetEmployeeOptions(filters dto.EmployeeOptionsFilter) ([]dto.EmployeeOptionResponse, error) {
+	return s.repo.FindOptions(filters)
+}

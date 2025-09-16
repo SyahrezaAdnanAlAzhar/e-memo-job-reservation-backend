@@ -8,3 +8,14 @@ type EmployeeFilter struct {
 	NPK                string `form:"npk"`
 	IsActive           *bool  `form:"is_active"`
 }
+
+type EmployeeOptionsFilter struct {
+	Role               string `form:"role"`
+	SectionID          int    `form:"section_id"`
+	DepartmentTargetID int    `form:"department_target_id"`
+}
+
+type EmployeeOptionResponse struct {
+	NPK  string `json:"npk"`
+	Name string `json:"name"`
+}
