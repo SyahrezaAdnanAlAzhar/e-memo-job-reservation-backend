@@ -3,20 +3,20 @@ package dto
 import "time"
 
 type CreateTicketRequest struct {
-	DepartmentTargetID  int     `form:"department_target_id" binding:"required,gt=0"`
-	PhysicalLocationID  *int    `form:"physical_location_id"`
-	SpecifiedLocationID *int    `form:"specified_location_id"`
-	Description         string  `form:"description" binding:"required"`
-	Deadline            *string `form:"deadline"` // "YYYY-MM-DD"
+	DepartmentTargetID    int     `form:"department_target_id" binding:"required,gt=0"`
+	PhysicalLocationID    *int    `form:"physical_location_id"`
+	SpecifiedLocationName *string `form:"specified_location_name"`
+	Description           string  `form:"description" binding:"required"`
+	Deadline              *string `form:"deadline"` // "YYYY-MM-DD"
 }
 
 type UpdateTicketRequest struct {
-	DepartmentTargetID  int     `json:"department_target_id" binding:"required"`
-	Description         string  `json:"description" binding:"required"`
-	PhysicalLocationID  *int    `json:"physical_location_id"`
-	SpecifiedLocationID *int    `json:"specified_location_id"`
-	Deadline            *string `json:"deadline"`
-	Version             int     `json:"version" binding:"required,gte=1"`
+	DepartmentTargetID    int     `json:"department_target_id" binding:"required"`
+	Description           string  `json:"description" binding:"required"`
+	PhysicalLocationID    *int    `json:"physical_location_id"`
+	SpecifiedLocationName *string `json:"specified_location_name"`
+	Deadline              *string `json:"deadline"`
+	Version               int     `json:"version" binding:"required,gte=1"`
 }
 
 type ReorderTicketsRequest struct {
@@ -84,9 +84,9 @@ type TicketDetailResponse struct {
 
 type TicketFilter struct {
 	// FILTER BY ID
-	SectionID             int    `form:"section_id"`
+	SectionID             int      `form:"section_id"`
 	StatusID              []int    `form:"status_id"`
-	DepartmentTargetID    int    `form:"department_target_id"`
+	DepartmentTargetID    int      `form:"department_target_id"`
 	RequestorDepartmentID []int    `form:"requestor_department_id"`
 	Requestor             []string `form:"requestor"`
 	PicNPK                []string `form:"pic_npk"`
@@ -125,10 +125,10 @@ type OldestTicketResponse struct {
 }
 
 type RejectionDetailResponse struct {
-	Reason              string    `json:"reason"`
-	RejectorNPK         string    `json:"rejector_npk"`
-	RejectorName        string    `json:"rejector_name"`
-	RejectorPosition    string    `json:"rejector_position"`
-	RejectorDepartment  string    `json:"rejector_department"`
-	RejectedAt          time.Time `json:"rejected_at"`
+	Reason             string    `json:"reason"`
+	RejectorNPK        string    `json:"rejector_npk"`
+	RejectorName       string    `json:"rejector_name"`
+	RejectorPosition   string    `json:"rejector_position"`
+	RejectorDepartment string    `json:"rejector_department"`
+	RejectedAt         time.Time `json:"rejected_at"`
 }

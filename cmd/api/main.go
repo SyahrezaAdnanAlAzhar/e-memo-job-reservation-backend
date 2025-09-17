@@ -109,6 +109,7 @@ func main() {
 		ActorRoleMappingRepo:  actorRoleMappingRepo,
 		ActorRoleRepo:         actorRoleRepo,
 		StatusTransitionRepo:  statusTransitionRepo,
+		SpecifiedLocationRepo: specifiedLocationRepo,
 		Hub:                   hub,
 		QueryService:          ticketQueryService,
 	})

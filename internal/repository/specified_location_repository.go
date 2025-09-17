@@ -1,7 +1,9 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
+
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 )
@@ -143,4 +145,29 @@ func (r *SpecifiedLocationRepository) IsNameTakenInPhysicalLocation(name string,
 	query := "SELECT EXISTS(SELECT 1 FROM specified_location WHERE name = $1 AND physical_location_id = $2 AND id != $3)"
 	err := r.DB.QueryRow(query, name, physicalLocationID, currentID).Scan(&exists)
 	return exists, err
+}
+
+func (r *SpecifiedLocationRepository) FindOrCreate(ctx context.Context, tx *sql.Tx, name string, physicalLocationID int) (int, error) {
+	var locationID int
+
+	querySelect := "SELECT id FROM specified_location WHERE name ILIKE $1 AND physical_location_id = $2"
+	err := tx.QueryRowContext(ctx, querySelect, name, physicalLocationID).Scan(&locationID)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			queryInsert := `
+                INSERT INTO specified_location (name, physical_location_id, is_active) 
+                VALUES ($1, $2, true)
+                RETURNING id`
+			
+			errInsert := tx.QueryRowContext(ctx, queryInsert, name, physicalLocationID).Scan(&locationID)
+			if errInsert != nil {
+				return 0, errInsert 
+			}
+			return locationID, nil
+		}
+		return 0, err
+	}
+
+	return locationID, nil
 }

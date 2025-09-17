@@ -237,7 +237,7 @@ func (r *TicketRepository) FindByIDAsStruct(ctx context.Context, id int) (*model
 }
 
 // UPDATE TICKET
-func (r *TicketRepository) Update(ctx context.Context, tx *sql.Tx, id int, req dto.UpdateTicketRequest) (int64, error) {
+func (r *TicketRepository) Update(ctx context.Context, tx *sql.Tx, id int, req dto.UpdateTicketRequest, specifiedLocationID sql.NullInt64) (int64, error) {
 	query := `
         UPDATE ticket 
         SET 
@@ -259,7 +259,7 @@ func (r *TicketRepository) Update(ctx context.Context, tx *sql.Tx, id int, req d
 		req.DepartmentTargetID,
 		req.Description,
 		toNullInt64(req.PhysicalLocationID),
-		toNullInt64(req.SpecifiedLocationID),
+		specifiedLocationID,
 		deadline,
 		id,
 		req.Version,

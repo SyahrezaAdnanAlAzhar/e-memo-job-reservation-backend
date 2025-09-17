@@ -29,6 +29,7 @@ type TicketCommandService struct {
 	actorRoleMappingRepo  *repository.ActorRoleMappingRepository
 	actorRoleRepo         *repository.ActorRoleRepository
 	statusTransitionRepo  *repository.StatusTransitionRepository
+	specifiedLocationRepo *repository.SpecifiedLocationRepository
 	hub                   *websocket.Hub
 	queryService          *TicketQueryService
 }
@@ -44,6 +45,7 @@ type TicketCommandServiceConfig struct {
 	ActorRoleMappingRepo  *repository.ActorRoleMappingRepository
 	ActorRoleRepo         *repository.ActorRoleRepository
 	StatusTransitionRepo  *repository.StatusTransitionRepository
+	SpecifiedLocationRepo *repository.SpecifiedLocationRepository
 	Hub                   *websocket.Hub
 	QueryService          *TicketQueryService
 }
@@ -60,6 +62,7 @@ func NewTicketCommandService(cfg *TicketCommandServiceConfig) *TicketCommandServ
 		actorRoleMappingRepo:  cfg.ActorRoleMappingRepo,
 		actorRoleRepo:         cfg.ActorRoleRepo,
 		statusTransitionRepo:  cfg.StatusTransitionRepo,
+		specifiedLocationRepo: cfg.SpecifiedLocationRepo,
 		hub:                   cfg.Hub,
 		queryService:          cfg.QueryService,
 	}
@@ -104,6 +107,15 @@ func (s *TicketCommandService) CreateTicket(ctx context.Context, req dto.CreateT
 	}
 	defer tx.Rollback()
 
+	var specifiedLocationID sql.NullInt64
+	if req.SpecifiedLocationName != nil && req.PhysicalLocationID != nil {
+		id, err := s.specifiedLocationRepo.FindOrCreate(ctx, tx, *req.SpecifiedLocationName, *req.PhysicalLocationID)
+		if err != nil {
+			return nil, errors.New("failed to find or create specified location")
+		}
+		specifiedLocationID = toNullInt64(&id)
+	}
+
 	// GET LAST PRIORITY
 	lastPriority, err := s.ticketRepo.GetLastPriority(ctx, tx, req.DepartmentTargetID)
 	if err != nil {
@@ -114,7 +126,7 @@ func (s *TicketCommandService) CreateTicket(ctx context.Context, req dto.CreateT
 		Requestor:           requestor,
 		DepartmentTargetID:  req.DepartmentTargetID,
 		PhysicalLocationID:  toNullInt64(req.PhysicalLocationID),
-		SpecifiedLocationID: toNullInt64(req.SpecifiedLocationID),
+		SpecifiedLocationID: specifiedLocationID,
 		Description:         req.Description,
 		TicketPriority:      lastPriority,
 		Deadline:            deadline,
@@ -228,7 +240,16 @@ func (s *TicketCommandService) UpdateTicket(ctx context.Context, ticketID int, r
 	}
 	defer tx.Rollback()
 
-	rowsAffected, err := s.ticketRepo.Update(ctx, tx, ticketID, req)
+	var specifiedLocationID sql.NullInt64
+	if req.SpecifiedLocationName != nil && req.PhysicalLocationID != nil {
+		id, err := s.specifiedLocationRepo.FindOrCreate(ctx, tx, *req.SpecifiedLocationName, *req.PhysicalLocationID)
+		if err != nil {
+			return errors.New("failed to find or create specified location")
+		}
+		specifiedLocationID = toNullInt64(&id)
+	}
+
+	rowsAffected, err := s.ticketRepo.Update(ctx, tx, ticketID, req, specifiedLocationID)
 	if err != nil {
 		if strings.Contains(err.Error(), "invalid") {
 			return errors.New("invalid deadline format, please use YYYY-MM-DD")
