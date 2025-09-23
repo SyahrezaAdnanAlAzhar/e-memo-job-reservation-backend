@@ -33,7 +33,7 @@ type AllRepositories struct {
 	PositionPermissionRepo *repository.PositionPermissionRepository
 }
 
-func SetupRouter(h *AllHandlers, r *AllRepositories, authMiddleware *auth.AuthMiddleware, wsHandler *handler.WebSocketHandler) *gin.Engine {
+func SetupRouter(h *AllHandlers, r *AllRepositories, authMiddleware *auth.AuthMiddleware, wsHandler *handler.WebSocketHandler, editModeMiddleware *auth.EditModeMiddleware) *gin.Engine {
 	router := gin.Default()
 
 	api := router.Group("/api/e-memo-job-reservation")
@@ -73,7 +73,7 @@ func SetupRouter(h *AllHandlers, r *AllRepositories, authMiddleware *auth.AuthMi
 
 		setupMasterDataRoutes(private, h, r)
 
-		setupMainDataRoutes(private, h, r)
+		setupMainDataRoutes(private, h, r, editModeMiddleware)
 	}
 
 	return router
@@ -195,17 +195,17 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllReposit
 }
 
 // MAIN TICKET
-func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllRepositories) {
+func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllRepositories, editModeMiddleware *auth.EditModeMiddleware) {
 	ticketRoutes := group.Group("/tickets")
 	{
-		ticketRoutes.POST("", auth.RequirePermission("CREATE_TICKET", r.PositionPermissionRepo), h.TicketHandler.CreateTicket)
-		ticketRoutes.PUT("/:id", h.TicketHandler.UpdateTicket)
-		ticketRoutes.PUT("/reorder", auth.RequirePermission("TICKET_PRIORITY_MANAGE", r.PositionPermissionRepo), h.TicketHandler.ReorderTickets)
-		ticketRoutes.POST("/:id/action", h.TicketHandler.ExecuteAction)
+		ticketRoutes.POST("", editModeMiddleware.CheckEditMode(), auth.RequirePermission("CREATE_TICKET", r.PositionPermissionRepo), h.TicketHandler.CreateTicket)
+		ticketRoutes.PUT("/:id", editModeMiddleware.CheckEditMode(), h.TicketHandler.UpdateTicket)
+		ticketRoutes.PUT("/reorder", editModeMiddleware.CheckEditMode(), auth.RequirePermission("TICKET_PRIORITY_MANAGE", r.PositionPermissionRepo), h.TicketHandler.ReorderTickets)
+		ticketRoutes.POST("/:id/action", editModeMiddleware.CheckEditMode(), h.TicketHandler.ExecuteAction)
 		ticketRoutes.GET("/:id/available-actions", h.TicketHandler.GetAvailableActions)
 		ticketRoutes.GET("/:id/files", h.FileHandler.GetAllFilesByTicketID)
-		ticketRoutes.POST("/:id/files", h.TicketHandler.AddSupportFiles)
-		ticketRoutes.DELETE("/:id/files", h.TicketHandler.RemoveSupportFiles)
+		ticketRoutes.POST("/:id/files", editModeMiddleware.CheckEditMode(), h.TicketHandler.AddSupportFiles)
+		ticketRoutes.DELETE("/:id/files", editModeMiddleware.CheckEditMode(), h.TicketHandler.RemoveSupportFiles)
 		ticketRoutes.GET("/:id/last-rejection", h.TicketHandler.GetLastRejectionDetail)
 	}
 
@@ -214,7 +214,7 @@ func setupMainDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllRepositor
 		jobRoutes.GET("", h.JobHandler.GetAllJobs)
 		jobRoutes.GET("/:id", h.JobHandler.GetJobByID)
 		jobRoutes.GET("/:id/available-actions", h.JobHandler.GetAvailableActions)
-		jobRoutes.PUT("/:id/assign", auth.RequirePermission("JOB_ASSIGN_PIC", r.PositionPermissionRepo), h.JobHandler.AssignPIC)
-		jobRoutes.PUT("/reorder", auth.RequirePermission("JOB_PRIORITY_MANAGE", r.PositionPermissionRepo), h.JobHandler.ReorderJobs)
+		jobRoutes.PUT("/:id/assign", editModeMiddleware.CheckEditMode(), auth.RequirePermission("JOB_ASSIGN_PIC", r.PositionPermissionRepo), h.JobHandler.AssignPIC)
+		jobRoutes.PUT("/reorder", editModeMiddleware.CheckEditMode(), auth.RequirePermission("JOB_PRIORITY_MANAGE", r.PositionPermissionRepo), h.JobHandler.ReorderJobs)
 	}
 }

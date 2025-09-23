@@ -167,7 +167,7 @@ func main() {
 		ActionHandler:              handler.NewActionHandler(actionService),
 		TicketHandler:              ticketHandler,
 		FileHandler:                handler.NewFileHandler(fileService),
-		SystemHandler: handler.NewSystemHandler(systemService),
+		SystemHandler:              handler.NewSystemHandler(systemService),
 	}
 
 	allRepositories := &router.AllRepositories{
@@ -176,9 +176,10 @@ func main() {
 
 	// MIDDLEWARE
 	authMiddleware := auth.NewAuthMiddleware(authRepo)
+	editModeMiddleware := auth.NewEditModeMiddleware(authRepo)
 
 	// SET UP AND RUN SERVER
-	appRouter := router.SetupRouter(allHandlers, allRepositories, authMiddleware, wsHandler)
+	appRouter := router.SetupRouter(allHandlers, allRepositories, authMiddleware, wsHandler, editModeMiddleware)
 
 	log.Println("Starting server on :8080...")
 	appRouter.Run(":8080")
