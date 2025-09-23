@@ -63,6 +63,8 @@ func (h *WebSocketHandler) ServeWs(c *gin.Context) {
 	}
 	client.Hub.Register <- client
 
+	go h.hub.SendConnectionEstablished(client)
+
 	go client.WritePump()
 	go client.ReadPump()
 }

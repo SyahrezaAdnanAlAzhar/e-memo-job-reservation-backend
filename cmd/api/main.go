@@ -28,9 +28,6 @@ func main() {
 	rdb := redisClient.Connect()
 	defer rdb.Close()
 
-	hub := websocket.NewHub()
-	go hub.Run()
-
 	// DEPENDENCY INITIALIZATION (WIRING)
 	// REPOSITORY
 	actorRoleRepo := repository.NewActorRoleRepository(db)
@@ -58,6 +55,9 @@ func main() {
 	rejectedTicketRepo := repository.NewRejectedTicketRepository(db)
 	ticketActionLogRepo := repository.NewTicketActionLogRepository(db)
 	actionRepo := repository.NewActionRepository(db)
+
+	hub := websocket.NewHub(authRepo)
+	go hub.Run()
 
 	// SERVICE
 	authService := service.NewAuthService(authRepo, appUserRepo, positionPermissionRepo, employeeRepo)

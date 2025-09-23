@@ -1,9 +1,13 @@
 package websocket
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
+
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"github.com/gin-gonic/gin"
 )
 
 type Hub struct {
@@ -14,6 +18,7 @@ type Hub struct {
 	incomingMessages chan clientMessage
 	editingSessions  map[string]*Client
 	sessionCommands  chan sessionCommand
+	authRepo         *repository.AuthRepository
 }
 
 type EditingSession struct {
@@ -34,7 +39,7 @@ type clientMessage struct {
 	message []byte
 }
 
-func NewHub() *Hub {
+func NewHub(authRepo *repository.AuthRepository) *Hub {
 	return &Hub{
 		Broadcast:        make(chan []byte),
 		Register:         make(chan *Client),
@@ -43,6 +48,7 @@ func NewHub() *Hub {
 		incomingMessages: make(chan clientMessage),
 		editingSessions:  make(map[string]*Client),
 		sessionCommands:  make(chan sessionCommand),
+		authRepo:         authRepo,
 	}
 }
 
@@ -198,4 +204,24 @@ func (h *Hub) GetClientByUserID(userID int) *Client {
 		return client
 	}
 	return nil
+}
+
+func (h *Hub) SendConnectionEstablished(client *Client) {
+	isEditing, err := h.authRepo.GetEditMode(context.Background())
+	if err != nil {
+		log.Printf("Error getting edit mode for new client: %v", err)
+	}
+
+	payload := gin.H{
+		"system_status": gin.H{
+			"is_editing": isEditing,
+		},
+	}
+	message, err := NewMessage("CONNECTION_ESTABLISHED", payload)
+	if err != nil {
+		log.Printf("CRITICAL: Failed to create connection established message: %v", err)
+		return
+	}
+
+	client.Send <- message
 }

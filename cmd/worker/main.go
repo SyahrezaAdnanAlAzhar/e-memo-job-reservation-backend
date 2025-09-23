@@ -12,6 +12,7 @@ import (
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/websocket"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/database"
 
+	redisClient "github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/redis"
 	"github.com/joho/godotenv"
 	"github.com/robfig/cron/v3"
 )
@@ -26,11 +27,15 @@ func main() {
 	db := database.Connect()
 	defer db.Close()
 
-	hub := websocket.NewHub()
-	go hub.Run()
+	rdb := redisClient.Connect()
+	defer rdb.Close()
 
+	authRepo := repository.NewAuthRepository(rdb)
 	ticketRepo := repository.NewTicketRepository(db)
 	jobRepo := repository.NewJobRepository(db)
+
+	hub := websocket.NewHub(authRepo)
+	go hub.Run()
 
 	// CREATE INSTANCE
 	ticketReorderJob := scheduler.NewTicketReorderJob(db, ticketRepo, hub)
