@@ -26,6 +26,7 @@ type AllHandlers struct {
 	JobHandler                 *handler.JobHandler
 	ActionHandler              *handler.ActionHandler
 	FileHandler                *handler.FileHandler
+	SystemHandler              *handler.SystemHandler
 }
 
 type AllRepositories struct {
@@ -63,6 +64,12 @@ func SetupRouter(h *AllHandlers, r *AllRepositories, authMiddleware *auth.AuthMi
 		private.GET("/files/download", h.FileHandler.DownloadFile)
 		private.GET("/files/view", h.FileHandler.ViewFile)
 		private.POST("/auth/ws-ticket", h.AuthHandler.GenerateWebSocketTicket)
+
+		systemRoutes := private.Group("/system")
+		systemRoutes.Use(auth.RequirePermission("MASTER_USER", r.PositionPermissionRepo))
+		{
+			systemRoutes.POST("/edit-mode", h.SystemHandler.UpdateEditMode)
+		}
 
 		setupMasterDataRoutes(private, h, r)
 

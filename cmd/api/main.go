@@ -144,6 +144,7 @@ func main() {
 
 	actionService := service.NewActionService(actionRepo)
 	fileService := service.NewFileService(ticketRepo, jobRepo)
+	systemService := service.NewSystemService(authRepo, hub)
 
 	// HANDLER
 	wsHandler := handler.NewWebSocketHandler(hub, authRepo)
@@ -166,6 +167,7 @@ func main() {
 		ActionHandler:              handler.NewActionHandler(actionService),
 		TicketHandler:              ticketHandler,
 		FileHandler:                handler.NewFileHandler(fileService),
+		SystemHandler: handler.NewSystemHandler(systemService),
 	}
 
 	allRepositories := &router.AllRepositories{
