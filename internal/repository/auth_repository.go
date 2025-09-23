@@ -10,6 +10,8 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+const editModeKey = "system:edit_mode"
+
 type AuthRepository struct {
 	RDB *redis.Client
 }
@@ -90,4 +92,23 @@ func (r *AuthRepository) ValidateAndDelWebSocketTicket(ctx context.Context, tick
 	}
 
 	return userID, nil
+}
+
+func (r *AuthRepository) SetEditMode(ctx context.Context, status bool) error {
+	value := "0"
+	if status {
+		value = "1"
+	}
+	return r.RDB.Set(ctx, editModeKey, value, 0).Err()
+}
+
+func (r *AuthRepository) GetEditMode(ctx context.Context) (bool, error) {
+	result, err := r.RDB.Get(ctx, editModeKey).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return false, nil
+		}
+		return false, err
+	}
+	return result == "1", nil
 }

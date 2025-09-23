@@ -112,7 +112,6 @@ func (s *TicketWorkflowService) ExecuteAction(ctx context.Context, ticketID int,
 			return errors.New("no workflow defined for this user's position")
 		}
 		finalToStatusID = initialStatusID
-		log.Printf("[ExecuteAction-Revisi] User %s (PositionID %d) is revising. New target status: %d", userNPK, user.Position.ID, finalToStatusID)
 	} else {
 		finalToStatusID = selectedAction.ToStatusID
 	}
