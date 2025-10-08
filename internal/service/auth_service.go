@@ -159,7 +159,7 @@ func (s *AuthService) Logout(ctx context.Context, tokenString string) error {
 func (s *AuthService) GenerateWebSocketTicket(ctx context.Context, userID int) (string, error) {
 	ticket := uuid.New().String()
 
-	expiresIn := 15 * time.Second
+	expiresIn := 105 * time.Second
 
 	err := s.authRepo.StoreWebSocketTicket(ctx, ticket, userID, expiresIn)
 	if err != nil {
@@ -172,7 +172,7 @@ func (s *AuthService) GenerateWebSocketTicket(ctx context.Context, userID int) (
 func (s *AuthService) GeneratePublicWebSocketTicket(ctx context.Context) (string, error) {
 	ticket := uuid.New().String()
 
-	expiresIn := 15 * time.Second
+	expiresIn := 105 * time.Second
 
 	const publicUserID = 0
 	err := s.authRepo.StoreWebSocketTicket(ctx, ticket, publicUserID, expiresIn)

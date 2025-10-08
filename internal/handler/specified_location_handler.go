@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
+	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/util"
 
@@ -45,24 +46,20 @@ func (h *SpecifiedLocationHandler) CreateSpecifiedLocation(c *gin.Context) {
 
 // GET /specified-location
 func (h *SpecifiedLocationHandler) GetAllSpecifiedLocations(c *gin.Context) {
-	if physicalLocationIDStr := c.Query("physical_location_id"); physicalLocationIDStr != "" {
-		id, err := strconv.Atoi(physicalLocationIDStr)
-		if err != nil {
-			util.ErrorResponse(c, http.StatusBadRequest, "Invalid physical_location_id format", nil)
-			return
-		}
-		locations, err := h.service.GetSpecifiedLocationsByPhysicalLocationID(id)
-		if err != nil {
-			util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve specified locations", nil)
-			return
-		}
-		util.SuccessResponse(c, http.StatusOK, locations)
+	var filters dto.SpecifiedLocationFilter
+	if err := c.ShouldBindQuery(&filters); err != nil {
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid query parameters", err.Error())
 		return
 	}
 
-	locations, err := h.service.GetAllSpecifiedLocations()
+	locations, err := h.service.GetAllSpecifiedLocations(filters)
 	if err != nil {
-		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve all specified locations", nil)
+		util.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve specified locations", err.Error())
+		return
+	}
+
+	if locations == nil {
+		util.SuccessResponse(c, http.StatusOK, []model.SpecifiedLocation{})
 		return
 	}
 	util.SuccessResponse(c, http.StatusOK, locations)

@@ -3,6 +3,8 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"strings"
 
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
@@ -34,9 +36,29 @@ func (r *SpecifiedLocationRepository) Create(req dto.CreateSpecifiedLocationRequ
 }
 
 // GET ALL
-func (r *SpecifiedLocationRepository) FindAll() ([]model.SpecifiedLocation, error) {
-	query := "SELECT id, physical_location_id, name, is_active, created_at, updated_at FROM specified_location ORDER BY physical_location_id, id ASC"
-	rows, err := r.DB.Query(query)
+func (r *SpecifiedLocationRepository) FindAll(filters dto.SpecifiedLocationFilter) ([]model.SpecifiedLocation, error) {
+	query := "SELECT id, physical_location_id, name, is_active, created_at, updated_at FROM specified_location"
+	var conditions []string
+	var args []interface{}
+	argID := 1
+
+	if filters.PhysicalLocationID != 0 {
+		conditions = append(conditions, fmt.Sprintf("physical_location_id = $%d", argID))
+		args = append(args, filters.PhysicalLocationID)
+		argID++
+	}
+	if filters.IsActive != nil {
+		conditions = append(conditions, fmt.Sprintf("is_active = $%d", argID))
+		args = append(args, *filters.IsActive)
+		argID++
+	}
+
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+	query += " ORDER BY id ASC"
+
+	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}

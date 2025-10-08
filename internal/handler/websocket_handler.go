@@ -23,7 +23,8 @@ var upgrader = websocket.Upgrader{
 				return true
 			}
 		}
-		return false
+		// TODO: ADJUST ALLOWED ORIGIN WITH PRODUCTION IP ADDRESS
+		return true
 	},
 }
 

@@ -13,3 +13,8 @@ type UpdateSpecifiedLocationRequest struct {
 type UpdateSpecifiedLocationStatusRequest struct {
 	IsActive bool `json:"is_active"`
 }
+
+type SpecifiedLocationFilter struct {
+	PhysicalLocationID int   `form:"physical_location_id"`
+	IsActive           *bool `form:"is_active"`
+}

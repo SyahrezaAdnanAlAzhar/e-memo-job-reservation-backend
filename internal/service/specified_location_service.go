@@ -36,8 +36,8 @@ func (s *SpecifiedLocationService) CreateSpecifiedLocation(req dto.CreateSpecifi
 }
 
 // GET ALL
-func (s *SpecifiedLocationService) GetAllSpecifiedLocations() ([]model.SpecifiedLocation, error) {
-	return s.repo.FindAll()
+func (s *SpecifiedLocationService) GetAllSpecifiedLocations(filters dto.SpecifiedLocationFilter) ([]model.SpecifiedLocation, error) {
+	return s.repo.FindAll(filters)
 }
 
 // GET ALL BY PHYSICAL LOCATION ID

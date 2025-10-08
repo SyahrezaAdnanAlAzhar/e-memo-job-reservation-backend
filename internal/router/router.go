@@ -42,11 +42,43 @@ func SetupRouter(h *AllHandlers, r *AllRepositories, authMiddleware *auth.AuthMi
 	{
 		public.POST("/login", h.AuthHandler.Login)
 		public.POST("/refresh", h.AuthHandler.RefreshToken)
+
+		// DEPARTMENT
 		public.GET("/departments", h.DepartmentHandler.GetAllDepartments)
+		public.GET("/department/:id", h.DepartmentHandler.GetDepartmentByID)
+		public.GET("/department/options", h.DepartmentHandler.GetRequestorDepartmentOptions)
+
+		// AREA
+		public.GET("/areas", h.AreaHandler.GetAllAreas)
+		public.GET("/area/:id", h.AreaHandler.GetAreaByID)
+
+		// PHYSICAL LOCATION
+		public.GET("/physical-location", h.PhysicalLocationHandler.GetAllPhysicalLocations)
+		public.GET("/physical-location/:id", h.PhysicalLocationHandler.GetPhysicalLocationByID)
+
+		// SPECIFIED LOCATION
+		public.GET("/specified-location", h.SpecifiedLocationHandler.GetAllSpecifiedLocations)
+		public.GET("/specified-location/:id", h.SpecifiedLocationHandler.GetSpecifiedLocationByID)
+
+		// EMPLOYEE
+		public.GET("/employee", h.EmployeeHandler.GetAllEmployees)
+		public.GET("/employee/options", h.EmployeeHandler.GetEmployeeOptions)
+
+		// EMPLOYEE POSITION
+		public.GET("/employee-positions", h.EmployeePositionHandler.GetAllEmployeePositions)
+		public.GET("/employee-positions/:id", h.EmployeePositionHandler.GetEmployeePositionByID)		
+
+		// TICKET
 		public.GET("/tickets", h.TicketHandler.GetAllTickets)
 		public.GET("/tickets/:id", h.TicketHandler.GetTicketByID)
+
+		// STATUS TICKET
 		public.GET("/status-ticket", h.StatusTicketHandler.GetAllStatusTickets)
+
+		// ACTIONS
 		public.GET("/actions", h.ActionHandler.GetAllActions)
+
+		// WEB SOCKET
 		public.GET("/ws", wsHandler.ServeWs)
 		public.POST("/auth/ws-public-ticket", h.AuthHandler.GeneratePublicWebSocketTicket)
 	}
@@ -83,30 +115,42 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllReposit
 	masterGroup := group.Group("")
 	masterGroup.Use(auth.RequirePermission("MASTER_USER", r.PositionPermissionRepo))
 	{
-		deptRoutes := group.Group("/department")
+		deptRoutes := masterGroup.Group("/department")
 		{
 			deptRoutes.POST("", h.DepartmentHandler.CreateDepartment)
-			deptRoutes.GET("/:id", h.DepartmentHandler.GetDepartmentByID)
 			deptRoutes.DELETE("/:id", h.DepartmentHandler.DeleteDepartment)
 			deptRoutes.PUT("/:id", h.DepartmentHandler.UpdateDepartment)
 			deptRoutes.PATCH("/:id/status", h.DepartmentHandler.UpdateDepartmentActiveStatus)
-			deptRoutes.GET("/options", h.DepartmentHandler.GetRequestorDepartmentOptions)
 		}
 
-		employeeRoutes := group.Group("/employee")
+		areaRoutes := masterGroup.Group("/area")
 		{
-			employeeRoutes.GET("", h.EmployeeHandler.GetAllEmployees)
-			employeeRoutes.GET("/options", h.EmployeeHandler.GetEmployeeOptions)
+			areaRoutes.POST("", h.AreaHandler.CreateArea)
+			areaRoutes.PUT("/:id", h.AreaHandler.UpdateArea)
+			areaRoutes.PATCH("/:id/status", h.AreaHandler.UpdateAreaActiveStatus)
+		}
+
+		employeeRoutes := masterGroup.Group("/employee")
+		{
+			employeeRoutes.POST("", h.EmployeeHandler.CreateEmployee)
+			employeeRoutes.PUT("/:npk", h.EmployeeHandler.UpdateEmployee)
+			employeeRoutes.PATCH("/:npk/status", h.EmployeeHandler.UpdateEmployeeActiveStatus)
 		}
 
 		physicalLocationRoutes := group.Group("/physical-location")
 		{
 			physicalLocationRoutes.POST("", h.PhysicalLocationHandler.CreatePhysicalLocation)
-			physicalLocationRoutes.GET("", h.PhysicalLocationHandler.GetAllPhysicalLocations)
-			physicalLocationRoutes.GET("/:id", h.PhysicalLocationHandler.GetPhysicalLocationByID)
 			physicalLocationRoutes.PUT("/:id", h.PhysicalLocationHandler.UpdatePhysicalLocation)
 			physicalLocationRoutes.DELETE("/:id", h.PhysicalLocationHandler.DeletePhysicalLocation)
 			physicalLocationRoutes.PATCH("/:id/status", h.PhysicalLocationHandler.UpdatePhysicalLocationActiveStatus)
+		}
+
+		specLocRoutes := group.Group("/specified-location")
+		{
+			specLocRoutes.POST("", h.SpecifiedLocationHandler.CreateSpecifiedLocation)
+			specLocRoutes.PUT("/:id", h.SpecifiedLocationHandler.UpdateSpecifiedLocation)
+			specLocRoutes.DELETE("/:id", h.SpecifiedLocationHandler.DeleteSpecifiedLocation)
+			specLocRoutes.PATCH("/:id/status", h.SpecifiedLocationHandler.UpdateSpecifiedLocationActiveStatus)
 		}
 
 		accessPermissionRoutes := group.Group("/access-permission")
@@ -117,15 +161,6 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllReposit
 			accessPermissionRoutes.PUT("/:id", h.AccessPermissionHandler.UpdateAccessPermission)
 			accessPermissionRoutes.DELETE("/:id", h.AccessPermissionHandler.DeleteAccessPermission)
 			accessPermissionRoutes.PATCH("/:id/status", h.AccessPermissionHandler.UpdateAccessPermissionActiveStatus)
-		}
-
-		areaRoutes := group.Group("/area")
-		{
-			areaRoutes.POST("", h.AreaHandler.CreateArea)
-			areaRoutes.GET("", h.AreaHandler.GetAllAreas)
-			areaRoutes.GET("/:id", h.AreaHandler.GetAreaByID)
-			areaRoutes.PUT("/:id", h.AreaHandler.UpdateArea)
-			areaRoutes.PATCH("/:id/status", h.AreaHandler.UpdateAreaActiveStatus)
 		}
 
 		statusTicketRoutes := group.Group("/status-ticket")
@@ -158,8 +193,6 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllReposit
 		posRoutes := group.Group("/employee-position")
 		{
 			posRoutes.POST("", h.EmployeePositionHandler.CreateEmployeePosition)
-			posRoutes.GET("", h.EmployeePositionHandler.GetAllEmployeePositions)
-			posRoutes.GET("/:id", h.EmployeePositionHandler.GetEmployeePositionByID)
 			posRoutes.PUT("/:id", h.EmployeePositionHandler.UpdateEmployeePosition)
 			posRoutes.DELETE("/:id", h.EmployeePositionHandler.DeleteEmployeePosition)
 			posRoutes.PATCH("/:id/status", h.EmployeePositionHandler.UpdateEmployeePositionActiveStatus)
@@ -181,15 +214,6 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllReposit
 				stepRoutes.DELETE("/:id", h.WorkflowHandler.DeleteWorkflowStep)
 				stepRoutes.PATCH("/:id/status", h.WorkflowHandler.UpdateWorkflowStepActiveStatus)
 			}
-		}
-		specLocRoutes := group.Group("/specified-location")
-		{
-			specLocRoutes.POST("", h.SpecifiedLocationHandler.CreateSpecifiedLocation)
-			specLocRoutes.GET("", h.SpecifiedLocationHandler.GetAllSpecifiedLocations)
-			specLocRoutes.GET("/:id", h.SpecifiedLocationHandler.GetSpecifiedLocationByID)
-			specLocRoutes.PUT("/:id", h.SpecifiedLocationHandler.UpdateSpecifiedLocation)
-			specLocRoutes.DELETE("/:id", h.SpecifiedLocationHandler.DeleteSpecifiedLocation)
-			specLocRoutes.PATCH("/:id/status", h.SpecifiedLocationHandler.UpdateSpecifiedLocationActiveStatus)
 		}
 	}
 }

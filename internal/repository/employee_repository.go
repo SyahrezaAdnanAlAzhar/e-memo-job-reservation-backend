@@ -19,8 +19,10 @@ func NewEmployeeRepository(db *sql.DB) *EmployeeRepository {
 	return &EmployeeRepository{DB: db}
 }
 
-func (r *EmployeeRepository) FindAll(filters dto.EmployeeFilter) ([]model.Employee, error) {
-	query := "SELECT npk, department_id, area_id, name, is_active, created_at, updated_at, employee_position_id FROM employee"
+func (r *EmployeeRepository) FindAll(filters dto.EmployeeFilter) ([]model.Employee, int64, error) {
+	baseQuery := "SELECT npk, department_id, area_id, name, is_active, created_at, updated_at, employee_position_id FROM employee"
+	countQuery := "SELECT COUNT(npk) FROM employee"
+	
 	var conditions []string
 	var args []interface{}
 	argID := 1
@@ -56,14 +58,29 @@ func (r *EmployeeRepository) FindAll(filters dto.EmployeeFilter) ([]model.Employ
 		argID++
 	}
 
+	whereClause := ""
 	if len(conditions) > 0 {
-		query += " WHERE " + strings.Join(conditions, " AND ")
+		whereClause = " WHERE " + strings.Join(conditions, " AND ")
 	}
-	query += " ORDER BY name ASC"
+
+	var totalItems int64
+	err := r.DB.QueryRow(countQuery+whereClause, args...).Scan(&totalItems)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if totalItems == 0 {
+		return []model.Employee{}, 0, nil
+	}
+
+	query := baseQuery + whereClause + " ORDER BY name ASC"
+	
+	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argID, argID+1)
+	args = append(args, filters.Limit, (filters.Page-1)*filters.Limit)
 
 	rows, err := r.DB.Query(query, args...)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
@@ -72,11 +89,12 @@ func (r *EmployeeRepository) FindAll(filters dto.EmployeeFilter) ([]model.Employ
 		var e model.Employee
 		err := rows.Scan(&e.NPK, &e.DepartmentID, &e.AreaID, &e.Name, &e.IsActive, &e.CreatedAt, &e.UpdatedAt, &e.Position.ID)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		employees = append(employees, e)
 	}
-	return employees, nil
+	
+	return employees, totalItems, nil
 }
 
 func (r *EmployeeRepository) FindByNPK(npk string) (*model.Employee, error) {
@@ -173,4 +191,59 @@ func (r *EmployeeRepository) FindOptions(filters dto.EmployeeOptionsFilter) ([]d
 		employees = append(employees, e)
 	}
 	return employees, nil
+}
+
+func (r *EmployeeRepository) Create(req dto.CreateEmployeeRequest) (*model.Employee, error) {
+	query := `
+        INSERT INTO employee (npk, name, department_id, area_id, employee_position_id, is_active)
+        VALUES ($1, $2, $3, $4, $5, true)
+        RETURNING npk, name, department_id, area_id, employee_position_id, is_active, created_at, updated_at`
+
+	var areaID sql.NullInt64
+	if req.AreaID != nil {
+		areaID = sql.NullInt64{Int64: int64(*req.AreaID), Valid: true}
+	}
+
+	row := r.DB.QueryRow(query, req.NPK, req.Name, req.DepartmentID, areaID, req.EmployeePositionID)
+
+	var newEmployee model.Employee
+	err := row.Scan(
+		&newEmployee.NPK, &newEmployee.Name, &newEmployee.DepartmentID, &newEmployee.AreaID,
+		&newEmployee.Position.ID, &newEmployee.IsActive, &newEmployee.CreatedAt, &newEmployee.UpdatedAt,
+	)
+	return &newEmployee, err
+}
+
+func (r *EmployeeRepository) Update(npk string, req dto.UpdateEmployeeRequest) (*model.Employee, error) {
+	query := `
+        UPDATE employee SET name = $1, department_id = $2, area_id = $3, employee_position_id = $4, updated_at = NOW()
+        WHERE npk = $5
+        RETURNING npk, name, department_id, area_id, employee_position_id, is_active, created_at, updated_at`
+
+	var areaID sql.NullInt64
+	if req.AreaID != nil {
+		areaID = sql.NullInt64{Int64: int64(*req.AreaID), Valid: true}
+	}
+
+	row := r.DB.QueryRow(query, req.Name, req.DepartmentID, areaID, req.EmployeePositionID, npk)
+
+	var updatedEmployee model.Employee
+	err := row.Scan(
+		&updatedEmployee.NPK, &updatedEmployee.Name, &updatedEmployee.DepartmentID, &updatedEmployee.AreaID,
+		&updatedEmployee.Position.ID, &updatedEmployee.IsActive, &updatedEmployee.CreatedAt, &updatedEmployee.UpdatedAt,
+	)
+	return &updatedEmployee, err
+}
+
+func (r *EmployeeRepository) UpdateActiveStatus(npk string, isActive bool) error {
+	query := "UPDATE employee SET is_active = $1, updated_at = NOW() WHERE npk = $2"
+	result, err := r.DB.Exec(query, isActive, npk)
+	if err != nil {
+		return err
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }

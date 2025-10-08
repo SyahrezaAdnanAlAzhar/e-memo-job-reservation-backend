@@ -48,20 +48,8 @@ func main() {
 	}
 	c := cron.New(cron.WithLocation(jakartaLocation))
 
-	// SCHEDULES
-	// CRON FORMAT: "minute hour * * Day of the Week"
-	// EXAMPLE: EVERY DAY 06:00, 14:00, AND 22:00
-	// c.AddJob("0 6 * * *", ticketReorderJob)
-	// c.AddJob("0 14 * * *", ticketReorderJob)
-	// c.AddJob("0 22 * * *", ticketReorderJob)
-
-	// c.AddJob("0 6 * * *", jobReorderJob)
-	// c.AddJob("0 14 * * *", jobReorderJob)
-	// c.AddJob("0 22 * * *", jobReorderJob)
-
-	// FOR DEVELOPMENT ONLY
-	c.AddJob("0 * * * *", ticketReorderJob)
-	c.AddJob("0 * * * *", jobReorderJob)
+	c.AddJob("*/30 * * * *", ticketReorderJob)
+	c.AddJob("1-59/30 * * * *", jobReorderJob)
 
 	c.Start()
 	log.Println("Cron job scheduler started.")
