@@ -1,15 +1,16 @@
 package dto
 
-import "github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+import (
+	"database/sql"
+)
 
 type EmployeeFilter struct {
 	DepartmentID       int    `form:"department_id"`
 	AreaID             int    `form:"area_id"`
 	EmployeePositionID int    `form:"employee_position_id"`
-	Name               string `form:"name"`
-	NPK                string `form:"npk"`
+	Search             string `form:"search"` // <-- DIUBAH
 	IsActive           *bool  `form:"is_active"`
-	// PAGINATION
+
 	Page  int `form:"page"`
 	Limit int `form:"limit"`
 }
@@ -28,8 +29,9 @@ type Pagination struct {
 }
 
 type PaginatedEmployeeResponse struct {
-	Data       []model.Employee `json:"data"`
-	Pagination Pagination       `json:"pagination"`
+	Data []EmployeeDetailResponse `json:"data"`
+
+	Pagination Pagination `json:"pagination"`
 }
 
 type EmployeeOptionResponse struct {
@@ -54,4 +56,20 @@ type UpdateEmployeeRequest struct {
 
 type UpdateEmployeeStatusRequest struct {
 	IsActive bool `json:"is_active"`
+}
+
+type EmployeeDetailResponse struct {
+	NPK            string        `json:"npk"`
+	Name           string        `json:"name"`
+	IsActive       bool          `json:"is_active"`
+	DepartmentID   int           `json:"department_id"`
+	DepartmentName string        `json:"department_name"`
+	AreaID         sql.NullInt64 `json:"area_id"`
+	AreaName       *string       `json:"area_name"`
+	Position       Position      `json:"position"`
+}
+
+type Position struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
 }

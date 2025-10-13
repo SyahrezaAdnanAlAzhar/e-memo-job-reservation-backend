@@ -19,43 +19,49 @@ func NewEmployeeRepository(db *sql.DB) *EmployeeRepository {
 	return &EmployeeRepository{DB: db}
 }
 
-func (r *EmployeeRepository) FindAll(filters dto.EmployeeFilter) ([]model.Employee, int64, error) {
-	baseQuery := "SELECT npk, department_id, area_id, name, is_active, created_at, updated_at, employee_position_id FROM employee"
-	countQuery := "SELECT COUNT(npk) FROM employee"
+func (r *EmployeeRepository) FindAll(filters dto.EmployeeFilter) ([]dto.EmployeeDetailResponse, int64, error) {
+	baseQuery := `
+        FROM employee e
+        LEFT JOIN department d ON e.department_id = d.id
+        LEFT JOIN area a ON e.area_id = a.id
+        LEFT JOIN employee_position p ON e.employee_position_id = p.id
+    `
+	selectQuery := `
+        SELECT e.npk, e.name, e.is_active, e.department_id, d.name as department_name,
+               e.area_id, a.name as area_name, e.employee_position_id, p.name as position_name
+    ` + baseQuery
+	
+	countQuery := "SELECT COUNT(e.npk)" + baseQuery
 	
 	var conditions []string
 	var args []interface{}
 	argID := 1
 
 	if filters.DepartmentID != 0 {
-		conditions = append(conditions, fmt.Sprintf("department_id = $%d", argID))
+		conditions = append(conditions, fmt.Sprintf("e.department_id = $%d", argID))
 		args = append(args, filters.DepartmentID)
 		argID++
 	}
 	if filters.AreaID != 0 {
-		conditions = append(conditions, fmt.Sprintf("area_id = $%d", argID))
+		conditions = append(conditions, fmt.Sprintf("e.area_id = $%d", argID))
 		args = append(args, filters.AreaID)
 		argID++
 	}
 	if filters.EmployeePositionID != 0 {
-		conditions = append(conditions, fmt.Sprintf("employee_position_id = $%d", argID))
+		conditions = append(conditions, fmt.Sprintf("e.employee_position_id = $%d", argID))
 		args = append(args, filters.EmployeePositionID)
 		argID++
 	}
-	if filters.Name != "" {
-		conditions = append(conditions, fmt.Sprintf("name ILIKE $%d", argID))
-		args = append(args, "%"+filters.Name+"%")
-		argID++
-	}
-	if filters.NPK != "" {
-		conditions = append(conditions, fmt.Sprintf("npk ILIKE $%d", argID))
-		args = append(args, "%"+filters.NPK+"%")
-		argID++
-	}
 	if filters.IsActive != nil {
-		conditions = append(conditions, fmt.Sprintf("is_active = $%d", argID))
+		conditions = append(conditions, fmt.Sprintf("e.is_active = $%d", argID))
 		args = append(args, *filters.IsActive)
 		argID++
+	}
+
+	if filters.Search != "" {
+		conditions = append(conditions, fmt.Sprintf("(e.name ILIKE $%d OR e.npk ILIKE $%d)", argID, argID+1))
+		args = append(args, "%"+filters.Search+"%", "%"+filters.Search+"%")
+		argID += 2
 	}
 
 	whereClause := ""
@@ -70,12 +76,14 @@ func (r *EmployeeRepository) FindAll(filters dto.EmployeeFilter) ([]model.Employ
 	}
 
 	if totalItems == 0 {
-		return []model.Employee{}, 0, nil
+		return []dto.EmployeeDetailResponse{}, 0, nil
 	}
 
-	query := baseQuery + whereClause + " ORDER BY name ASC"
+	query := selectQuery + whereClause + " ORDER BY e.npk ASC"
 	
-	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argID, argID+1)
+	limitArg := argID
+	offsetArg := argID + 1
+	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", limitArg, offsetArg)
 	args = append(args, filters.Limit, (filters.Page-1)*filters.Limit)
 
 	rows, err := r.DB.Query(query, args...)
@@ -84,12 +92,19 @@ func (r *EmployeeRepository) FindAll(filters dto.EmployeeFilter) ([]model.Employ
 	}
 	defer rows.Close()
 
-	var employees []model.Employee
+	var employees []dto.EmployeeDetailResponse
 	for rows.Next() {
-		var e model.Employee
-		err := rows.Scan(&e.NPK, &e.DepartmentID, &e.AreaID, &e.Name, &e.IsActive, &e.CreatedAt, &e.UpdatedAt, &e.Position.ID)
+		var e dto.EmployeeDetailResponse
+		var areaName sql.NullString
+		err := rows.Scan(
+			&e.NPK, &e.Name, &e.IsActive, &e.DepartmentID, &e.DepartmentName,
+			&e.AreaID, &areaName, &e.Position.ID, &e.Position.Name,
+		)
 		if err != nil {
 			return nil, 0, err
+		}
+		if areaName.Valid {
+			e.AreaName = &areaName.String
 		}
 		employees = append(employees, e)
 	}
