@@ -148,6 +148,17 @@ func (r *TicketRepository) FindAll(filters dto.TicketFilter) ([]dto.TicketDetail
 		argID++
 	}
 
+	if filters.Year != 0 {
+		conditions = append(conditions, fmt.Sprintf("EXTRACT(YEAR FROM t.created_at) = $%d", argID))
+		args = append(args, filters.Year)
+		argID++
+	}
+	if filters.Month != 0 {
+		conditions = append(conditions, fmt.Sprintf("EXTRACT(MONTH FROM t.created_at) = $%d", argID))
+		args = append(args, filters.Month)
+		argID++
+	}
+
 	if filters.SearchQuery != "" {
 		searchQuery := strings.ReplaceAll(strings.TrimSpace(filters.SearchQuery), " ", " | ")
 

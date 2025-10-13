@@ -97,6 +97,10 @@ type TicketFilter struct {
 	// FILTER BY NAME
 	DepartmentTargetName string `form:"department_target_name"`
 
+	// FILTER BY DATE
+	Year  int `form:"year"`
+	Month int `form:"month"`
+
 	// SORTING OPTION
 	SortBy string `form:"sort_by"`
 }
