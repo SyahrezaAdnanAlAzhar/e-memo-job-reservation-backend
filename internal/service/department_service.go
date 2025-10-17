@@ -1,10 +1,11 @@
 package service
 
 import (
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/model"
+	"e-memo-job-reservation-api/internal/repository"
 	"errors"
+
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -34,12 +35,10 @@ func (s *DepartmentService) CreateDepartment(req dto.CreateDepartmentRequest) (*
 	return newDept, nil
 }
 
-
 // GET ALL
 func (s *DepartmentService) GetAllDepartments(filters dto.DepartmentFilter) ([]model.Department, error) {
 	return s.repo.FindAll(filters)
 }
-
 
 // GET BY ID
 func (s *DepartmentService) GetDepartmentByID(id int) (*model.Department, error) {
@@ -56,12 +55,11 @@ func (s *DepartmentService) DeleteDepartment(id int) error {
 	return s.repo.Delete(id)
 }
 
-
 // UPDATE
 func (s *DepartmentService) UpdateDepartment(id int, req dto.UpdateDepartmentRequest) (*model.Department, error) {
 	isTaken, err := s.repo.IsNameTaken(req.Name, id)
 	if err != nil {
-		
+
 		return nil, err
 	}
 	if isTaken {
@@ -70,7 +68,6 @@ func (s *DepartmentService) UpdateDepartment(id int, req dto.UpdateDepartmentReq
 
 	return s.repo.Update(id, req)
 }
-
 
 // CHANGE ACTIVE STATUS
 func (s *DepartmentService) UpdateDepartmentActiveStatus(id int, req dto.UpdateStatusRequest) error {

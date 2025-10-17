@@ -2,8 +2,8 @@ package repository
 
 import (
 	"database/sql"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/model"
 )
 
 type AccessPermissionRepository struct {

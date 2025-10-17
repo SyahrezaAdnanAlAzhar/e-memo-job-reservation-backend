@@ -1,8 +1,8 @@
 package service
 
 import (
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/repository"
 )
 
 type ActionService struct {

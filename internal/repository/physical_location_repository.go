@@ -2,11 +2,11 @@ package repository
 
 import (
 	"database/sql"
+	"e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/model"
+	"errors"
 	"strconv"
 	"strings"
-	"errors"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 )
 
 type PhysicalLocationRepository struct {
@@ -49,7 +49,6 @@ func (r *PhysicalLocationRepository) Create(req dto.CreatePhysicalLocationReques
 	return &newLoc, nil
 }
 
-
 // GET ALL
 func (r *PhysicalLocationRepository) FindAll(filters map[string]string) ([]model.PhysicalLocation, error) {
 	baseQuery := "SELECT id, name, is_active, created_at, updated_at FROM physical_location"
@@ -86,7 +85,6 @@ func (r *PhysicalLocationRepository) FindAll(filters map[string]string) ([]model
 	return locations, nil
 }
 
-
 // GET BY ID
 func (r *PhysicalLocationRepository) FindByID(id int) (*model.PhysicalLocation, error) {
 	query := "SELECT id, name, is_active, created_at, updated_at FROM physical_location WHERE id = $1"
@@ -99,7 +97,6 @@ func (r *PhysicalLocationRepository) FindByID(id int) (*model.PhysicalLocation, 
 	}
 	return &loc, nil
 }
-
 
 // UPDATE
 func (r *PhysicalLocationRepository) Update(id int, req dto.UpdatePhysicalLocationRequest) (*model.PhysicalLocation, error) {
@@ -127,7 +124,7 @@ func (r *PhysicalLocationRepository) Delete(id int) error {
 		return err
 	}
 	rowsAffected, err := result.RowsAffected()
-	
+
 	if err != nil {
 		return err
 	}

@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"e-memo-job-reservation-api/internal/repository"
+
 	"github.com/gin-gonic/gin"
 )
 

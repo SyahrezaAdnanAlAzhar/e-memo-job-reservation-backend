@@ -3,19 +3,20 @@ package main
 import (
 	"log"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/auth"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/handler"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/router"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/websocket"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/database"
-	redisClient "github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/redis"
+	"e-memo-job-reservation-api/internal/auth"
+	"e-memo-job-reservation-api/internal/handler"
+	"e-memo-job-reservation-api/internal/repository"
+	"e-memo-job-reservation-api/internal/router"
+	"e-memo-job-reservation-api/internal/service"
+	"e-memo-job-reservation-api/internal/websocket"
+	"e-memo-job-reservation-api/pkg/database"
+	"e-memo-job-reservation-api/pkg/logger"
 
 	"github.com/joho/godotenv"
 )
 
 func main() {
+	logger.Init()
 	// INITIAL SET UP
 	err := godotenv.Load()
 	if err != nil {
@@ -25,15 +26,12 @@ func main() {
 	db := database.Connect()
 	defer db.Close()
 
-	rdb := redisClient.Connect()
-	defer rdb.Close()
-
 	// DEPENDENCY INITIALIZATION (WIRING)
 	// REPOSITORY
 	actorRoleRepo := repository.NewActorRoleRepository(db)
 	actorRoleMappingRepo := repository.NewActorRoleMappingRepository(db)
 	appUserRepo := repository.NewAppUserRepository(db)
-	authRepo := repository.NewAuthRepository(rdb)
+	authRepo := repository.NewAuthRepository(db)
 	employeeRepo := repository.NewEmployeeRepository(db)
 	departmentRepo := repository.NewDepartmentRepository(db)
 	areaRepo := repository.NewAreaRepository(db)

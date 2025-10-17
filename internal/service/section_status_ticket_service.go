@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/model"
+	"e-memo-job-reservation-api/internal/repository"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -56,9 +56,11 @@ func (s *SectionStatusTicketService) UpdateSectionStatusTicketActiveStatus(ctx c
 		return err
 	}
 
-	if !req.IsActive { 
+	if !req.IsActive {
 		activeCount, err := s.repo.CountActiveSections()
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 		if activeCount <= 2 {
 			return errors.New("cannot deactivate, must have at least two active sections")
 		}
@@ -68,7 +70,9 @@ func (s *SectionStatusTicketService) UpdateSectionStatusTicketActiveStatus(ctx c
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	defer tx.Rollback()
 
 	if err := s.repo.UpdateActiveStatus(ctx, tx, id, req.IsActive); err != nil {
@@ -86,7 +90,7 @@ func (s *SectionStatusTicketService) UpdateSectionStatusTicketActiveStatus(ctx c
 			}
 			return err
 		}
-		
+
 		if err := s.ticketRepo.MoveTicketsToFallbackStatus(ctx, tx, id, fallbackStatusID); err != nil {
 			return err
 		}

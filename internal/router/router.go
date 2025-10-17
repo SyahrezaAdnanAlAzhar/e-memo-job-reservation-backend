@@ -1,10 +1,13 @@
 package router
 
 import (
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/auth"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/handler"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"e-memo-job-reservation-api/internal/auth"
+	"e-memo-job-reservation-api/internal/handler"
+	"e-memo-job-reservation-api/internal/repository"
+	"os"
+	"strings"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -36,6 +39,17 @@ type AllRepositories struct {
 func SetupRouter(h *AllHandlers, r *AllRepositories, authMiddleware *auth.AuthMiddleware, wsHandler *handler.WebSocketHandler, editModeMiddleware *auth.EditModeMiddleware) *gin.Engine {
 	router := gin.Default()
 
+	config := cors.DefaultConfig()
+	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
+	if allowedOrigins != "" {
+		config.AllowOrigins = strings.Split(allowedOrigins, ",")
+	} else {
+		config.AllowOrigins = []string{"http://localhost:3000", "http://localhost:5173", "http://localhost"}
+	}
+	config.AllowCredentials = true
+	config.AddAllowHeaders("Authorization")
+	router.Use(cors.New(config))
+
 	api := router.Group("/api/e-memo-job-reservation")
 
 	public := api.Group("")
@@ -66,7 +80,7 @@ func SetupRouter(h *AllHandlers, r *AllRepositories, authMiddleware *auth.AuthMi
 
 		// EMPLOYEE POSITION
 		public.GET("/employee-positions", h.EmployeePositionHandler.GetAllEmployeePositions)
-		public.GET("/employee-positions/:id", h.EmployeePositionHandler.GetEmployeePositionByID)		
+		public.GET("/employee-positions/:id", h.EmployeePositionHandler.GetEmployeePositionByID)
 
 		// TICKET
 		public.GET("/tickets", h.TicketHandler.GetAllTickets)

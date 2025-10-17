@@ -8,7 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"e-memo-job-reservation-api/internal/model"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )

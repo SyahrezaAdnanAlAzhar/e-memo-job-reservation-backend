@@ -3,8 +3,8 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/model"
 )
 
 type RejectedTicketRepository struct {
@@ -37,7 +37,7 @@ func (r *RejectedTicketRepository) UpdateFeedback(id int64, feedback string) (*m
 	query := `
         UPDATE rejected_ticket SET feedback = $1, updated_at = NOW() WHERE id = $2
         RETURNING id, ticket_id, rejector, feedback, already_seen, created_at, updated_at`
-	
+
 	row := r.DB.QueryRow(query, feedback, id)
 
 	var updatedRejection model.RejectedTicket

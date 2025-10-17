@@ -1,10 +1,10 @@
 package service
 
 import (
+	"e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/model"
+	"e-memo-job-reservation-api/internal/repository"
 	"errors"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -22,7 +22,7 @@ func (s *AccessPermissionService) CreateAccessPermission(req dto.CreateAccessPer
 	newPermission, err := s.repo.Create(req)
 	if err != nil {
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" { 
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			return nil, errors.New("permission name already exists")
 		}
 		return nil, err

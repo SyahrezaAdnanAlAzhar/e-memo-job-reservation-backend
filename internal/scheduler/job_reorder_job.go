@@ -7,9 +7,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/websocket"
+	"e-memo-job-reservation-api/internal/model"
+	"e-memo-job-reservation-api/internal/repository"
+	"e-memo-job-reservation-api/internal/websocket"
+
 	"github.com/gin-gonic/gin"
 )
 

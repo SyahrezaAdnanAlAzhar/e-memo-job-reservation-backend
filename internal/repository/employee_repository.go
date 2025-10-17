@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/model"
 )
 
 type EmployeeRepository struct {
@@ -30,9 +30,9 @@ func (r *EmployeeRepository) FindAll(filters dto.EmployeeFilter) ([]dto.Employee
         SELECT e.npk, e.name, e.is_active, e.department_id, d.name as department_name,
                e.area_id, a.name as area_name, e.employee_position_id, p.name as position_name
     ` + baseQuery
-	
+
 	countQuery := "SELECT COUNT(e.npk)" + baseQuery
-	
+
 	var conditions []string
 	var args []interface{}
 	argID := 1
@@ -80,7 +80,7 @@ func (r *EmployeeRepository) FindAll(filters dto.EmployeeFilter) ([]dto.Employee
 	}
 
 	query := selectQuery + whereClause + " ORDER BY e.npk ASC"
-	
+
 	limitArg := argID
 	offsetArg := argID + 1
 	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", limitArg, offsetArg)
@@ -108,7 +108,7 @@ func (r *EmployeeRepository) FindAll(filters dto.EmployeeFilter) ([]dto.Employee
 		}
 		employees = append(employees, e)
 	}
-	
+
 	return employees, totalItems, nil
 }
 

@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/model"
 )
 
 type SectionStatusTicketRepository struct {

@@ -4,9 +4,10 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/model"
+	"e-memo-job-reservation-api/internal/repository"
+
 	"github.com/jackc/pgx/v5/pgconn"
 )
 

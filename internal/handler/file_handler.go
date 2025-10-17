@@ -7,8 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/util"
+	"e-memo-job-reservation-api/internal/service"
+	"e-memo-job-reservation-api/internal/util"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -74,7 +75,7 @@ func (h *FileHandler) ViewFile(c *gin.Context) {
 	if storagePath == "" {
 		storagePath = "./uploads"
 	}
-	
+
 	cleanedPath := filepath.Clean(filePath)
 	if !strings.HasPrefix(cleanedPath, storagePath) {
 		util.ErrorResponse(c, http.StatusForbidden, "Access to the requested file path is forbidden", nil)

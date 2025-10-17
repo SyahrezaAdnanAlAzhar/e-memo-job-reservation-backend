@@ -2,113 +2,121 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
-
-	"github.com/redis/go-redis/v9"
 )
 
-const editModeKey = "system:edit_mode"
-
 type AuthRepository struct {
-	RDB *redis.Client
+	DB *sql.DB
 }
 
-func NewAuthRepository(rdb *redis.Client) *AuthRepository {
-	return &AuthRepository{RDB: rdb}
+func NewAuthRepository(db *sql.DB) *AuthRepository {
+	return &AuthRepository{DB: db}
 }
 
-// STORE REFRESH TOKEN TO Redis WITH Time-to-live (TTL)
-func (r *AuthRepository) StoreRefreshToken(ctx context.Context, userID int, tokenID string, expiresIn time.Duration) error {
-	key := fmt.Sprintf("refresh_tokens:%d", userID)
-	err := r.RDB.SAdd(ctx, key, tokenID).Err()
-	if err != nil {
-		return err
-	}
-	return r.RDB.Expire(ctx, key, expiresIn).Err()
+func (r *AuthRepository) StoreRefreshToken(ctx context.Context, userID int, tokenID string, expiresAt time.Time) error {
+	query := "INSERT INTO active_refresh_tokens (token_id, user_id, expires_at) VALUES ($1, $2, $3)"
+	_, err := r.DB.ExecContext(ctx, query, tokenID, userID, expiresAt)
+	return err
 }
 
-// VALIDATE AND DELETE TOKEN
 func (r *AuthRepository) ValidateAndDelRefreshToken(ctx context.Context, userID int, tokenID string) error {
-	key := fmt.Sprintf("refresh_tokens:%d", userID)
-
-	result, err := r.RDB.SRem(ctx, key, tokenID).Result()
+	tx, err := r.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
-	if result == 0 {
-		return errors.New("token not found or already used")
+	defer tx.Rollback()
+
+	var exists bool
+	queryCheck := "SELECT EXISTS(SELECT 1 FROM active_refresh_tokens WHERE token_id = $1 AND user_id = $2 AND expires_at > NOW())"
+	err = tx.QueryRowContext(ctx, queryCheck, tokenID, userID).Scan(&exists)
+	if err != nil {
+		return err
 	}
-	return nil
+	if !exists {
+		return errors.New("token not found, invalid, or expired")
+	}
+
+	queryDelete := "DELETE FROM active_refresh_tokens WHERE token_id = $1"
+	_, err = tx.ExecContext(ctx, queryDelete, tokenID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
-// BLACKLIST TOKEN
-func (r *AuthRepository) BlacklistToken(ctx context.Context, tokenID string, expiresIn time.Duration) error {
-	key := "blacklist:" + tokenID
-	return r.RDB.Set(ctx, key, 1, expiresIn).Err()
+func (r *AuthRepository) BlacklistToken(ctx context.Context, tokenID string, expiresAt time.Time) error {
+	query := "INSERT INTO token_blacklist (token_id, expires_at) VALUES ($1, $2) ON CONFLICT (token_id) DO NOTHING"
+	_, err := r.DB.ExecContext(ctx, query, tokenID, expiresAt)
+	return err
 }
 
-// CHECK TOKEN
 func (r *AuthRepository) IsTokenBlacklisted(ctx context.Context, tokenID string) (bool, error) {
-	key := "blacklist:" + tokenID
-	// EXISTS WILL RETURN 1 IF THERE IS KEY,
-	result, err := r.RDB.Exists(ctx, key).Result()
-	if err != nil {
-		return false, err
-	}
-	return result == 1, nil
+	var exists bool
+	query := "SELECT EXISTS(SELECT 1 FROM token_blacklist WHERE token_id = $1 AND expires_at > NOW())"
+	err := r.DB.QueryRowContext(ctx, query, tokenID).Scan(&exists)
+	return exists, err
 }
 
-// DELETE REFRESH TOKEN WHEN USER LOG OUT
 func (r *AuthRepository) DeleteAllUserRefreshTokens(ctx context.Context, userID int) error {
-	key := fmt.Sprintf("refresh_tokens:%d", userID)
-	return r.RDB.Del(ctx, key).Err()
+	query := "DELETE FROM active_refresh_tokens WHERE user_id = $1"
+	_, err := r.DB.ExecContext(ctx, query, userID)
+	return err
 }
 
-// STORE WEB SOCKET TICKET
-// Key: "ws_ticket:<ticket>", Value: UserID
-func (r *AuthRepository) StoreWebSocketTicket(ctx context.Context, ticket string, userID int, expiresIn time.Duration) error {
-	key := "ws_ticket:" + ticket
-	return r.RDB.Set(ctx, key, userID, expiresIn).Err()
+func (r *AuthRepository) StoreWebSocketTicket(ctx context.Context, ticket string, userID int, expiresAt time.Time) error {
+	query := "INSERT INTO websocket_tickets (ticket, user_id, expires_at) VALUES ($1, $2, $3)"
+	_, err := r.DB.ExecContext(ctx, query, ticket, userID, expiresAt)
+	return err
 }
 
-// VALIDATE AND DEL WEB SOCKET TICKET
 func (r *AuthRepository) ValidateAndDelWebSocketTicket(ctx context.Context, ticket string) (userID int, err error) {
-	key := "ws_ticket:" + ticket
-
-	result, err := r.RDB.GetDel(ctx, key).Result()
+	tx, err := r.DB.BeginTx(ctx, nil)
 	if err != nil {
-		if err == redis.Nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+
+	queryCheck := "SELECT user_id FROM websocket_tickets WHERE ticket = $1 AND expires_at > NOW()"
+	err = tx.QueryRowContext(ctx, queryCheck, ticket).Scan(&userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
 			return 0, errors.New("invalid or expired websocket ticket")
 		}
 		return 0, err
 	}
 
-	userID, err = strconv.Atoi(result)
+	queryDelete := "DELETE FROM websocket_tickets WHERE ticket = $1"
+	_, err = tx.ExecContext(ctx, queryDelete, ticket)
 	if err != nil {
-		return 0, errors.New("invalid user ID format in websocket ticket")
+		return 0, err
 	}
 
-	return userID, nil
+	err = tx.Commit()
+	return userID, err
 }
 
 func (r *AuthRepository) SetEditMode(ctx context.Context, status bool) error {
-	value := "0"
-	if status {
-		value = "1"
-	}
-	return r.RDB.Set(ctx, editModeKey, value, 0).Err()
+	query := `
+        INSERT INTO system_config (key, value) 
+        VALUES ('edit_mode', $1) 
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`
+	_, err := r.DB.ExecContext(ctx, query, fmt.Sprintf("%t", status))
+	return err
 }
 
 func (r *AuthRepository) GetEditMode(ctx context.Context) (bool, error) {
-	result, err := r.RDB.Get(ctx, editModeKey).Result()
+	var value string
+	query := "SELECT value FROM system_config WHERE key = 'edit_mode'"
+	err := r.DB.QueryRowContext(ctx, query).Scan(&value)
 	if err != nil {
-		if err == redis.Nil {
+		if err == sql.ErrNoRows {
 			return false, nil
 		}
 		return false, err
 	}
-	return result == "1", nil
+	return value == "true", nil
 }

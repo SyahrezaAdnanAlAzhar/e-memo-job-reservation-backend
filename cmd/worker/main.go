@@ -7,12 +7,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/scheduler"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/websocket"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/database"
+	"e-memo-job-reservation-api/internal/repository"
+	"e-memo-job-reservation-api/internal/scheduler"
+	"e-memo-job-reservation-api/internal/websocket"
+	"e-memo-job-reservation-api/pkg/database"
 
-	redisClient "github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/pkg/redis"
 	"github.com/joho/godotenv"
 	"github.com/robfig/cron/v3"
 )
@@ -27,10 +26,7 @@ func main() {
 	db := database.Connect()
 	defer db.Close()
 
-	rdb := redisClient.Connect()
-	defer rdb.Close()
-
-	authRepo := repository.NewAuthRepository(rdb)
+	authRepo := repository.NewAuthRepository(db)
 	ticketRepo := repository.NewTicketRepository(db)
 	jobRepo := repository.NewJobRepository(db)
 

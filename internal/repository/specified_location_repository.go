@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/model"
 )
 
 type SpecifiedLocationRepository struct {
@@ -181,10 +181,10 @@ func (r *SpecifiedLocationRepository) FindOrCreate(ctx context.Context, tx *sql.
                 INSERT INTO specified_location (name, physical_location_id, is_active) 
                 VALUES ($1, $2, true)
                 RETURNING id`
-			
+
 			errInsert := tx.QueryRowContext(ctx, queryInsert, name, physicalLocationID).Scan(&locationID)
 			if errInsert != nil {
-				return 0, errInsert 
+				return 0, errInsert
 			}
 			return locationID, nil
 		}

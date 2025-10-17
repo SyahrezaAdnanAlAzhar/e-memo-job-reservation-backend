@@ -1,6 +1,6 @@
 package service
 
-import "github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+import "e-memo-job-reservation-api/internal/model"
 
 func determineUserContexts(user *model.Employee, ticket *model.Ticket, requestor *model.Employee, job *model.Job) []string {
 	var contexts []string

@@ -1,10 +1,10 @@
 package service
 
 import (
+	"e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/model"
+	"e-memo-job-reservation-api/internal/repository"
 	"errors"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -17,13 +17,12 @@ func NewPhysicalLocationService(repo *repository.PhysicalLocationRepository) *Ph
 	return &PhysicalLocationService{repo: repo}
 }
 
-
 // CREATE
 func (s *PhysicalLocationService) CreatePhysicalLocation(req dto.CreatePhysicalLocationRequest) (*model.PhysicalLocation, error) {
 	newLoc, err := s.repo.Create(req)
 	if err != nil {
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" { 
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			return nil, errors.New("physical location name already exists")
 		}
 		return nil, err
@@ -31,18 +30,15 @@ func (s *PhysicalLocationService) CreatePhysicalLocation(req dto.CreatePhysicalL
 	return newLoc, nil
 }
 
-
 // GET ALL
 func (s *PhysicalLocationService) GetAllPhysicalLocations(filters map[string]string) ([]model.PhysicalLocation, error) {
 	return s.repo.FindAll(filters)
 }
 
-
 // GET BY ID
 func (s *PhysicalLocationService) GetPhysicalLocationByID(id int) (*model.PhysicalLocation, error) {
 	return s.repo.FindByID(id)
 }
-
 
 // UPDATE
 func (s *PhysicalLocationService) UpdatePhysicalLocation(id int, req dto.UpdatePhysicalLocationRequest) (*model.PhysicalLocation, error) {

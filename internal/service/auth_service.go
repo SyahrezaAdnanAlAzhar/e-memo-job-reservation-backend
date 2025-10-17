@@ -6,10 +6,11 @@ import (
 	"errors"
 	"time"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/auth"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"e-memo-job-reservation-api/internal/auth"
+	"e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/model"
+	"e-memo-job-reservation-api/internal/repository"
+
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -143,12 +144,11 @@ func (s *AuthService) Logout(ctx context.Context, tokenString string) error {
 		return nil
 	}
 
-	remainingDuration := time.Until(claims.ExpiresAt.Time)
-	if remainingDuration <= 0 {
+	if time.Now().After(claims.ExpiresAt.Time) {
 		return nil
 	}
 
-	err = s.authRepo.BlacklistToken(ctx, claims.TokenID, remainingDuration)
+	err = s.authRepo.BlacklistToken(ctx, claims.TokenID, claims.ExpiresAt.Time)
 	if err != nil {
 		return err
 	}
@@ -158,10 +158,10 @@ func (s *AuthService) Logout(ctx context.Context, tokenString string) error {
 
 func (s *AuthService) GenerateWebSocketTicket(ctx context.Context, userID int) (string, error) {
 	ticket := uuid.New().String()
+	expiresIn := 15 * time.Second
+	expiresAt := time.Now().Add(expiresIn)
 
-	expiresIn := 105 * time.Second
-
-	err := s.authRepo.StoreWebSocketTicket(ctx, ticket, userID, expiresIn)
+	err := s.authRepo.StoreWebSocketTicket(ctx, ticket, userID, expiresAt)
 	if err != nil {
 		return "", err
 	}
@@ -171,11 +171,11 @@ func (s *AuthService) GenerateWebSocketTicket(ctx context.Context, userID int) (
 
 func (s *AuthService) GeneratePublicWebSocketTicket(ctx context.Context) (string, error) {
 	ticket := uuid.New().String()
-
-	expiresIn := 105 * time.Second
-
+	expiresIn := 15 * time.Second
+	expiresAt := time.Now().Add(expiresIn)
 	const publicUserID = 0
-	err := s.authRepo.StoreWebSocketTicket(ctx, ticket, publicUserID, expiresIn)
+
+	err := s.authRepo.StoreWebSocketTicket(ctx, ticket, publicUserID, expiresAt)
 	if err != nil {
 		return "", err
 	}

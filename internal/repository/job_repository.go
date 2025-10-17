@@ -8,7 +8,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"e-memo-job-reservation-api/internal/model"
+
 	"github.com/lib/pq"
 )
 

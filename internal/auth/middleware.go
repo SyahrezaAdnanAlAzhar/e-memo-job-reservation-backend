@@ -4,7 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"e-memo-job-reservation-api/internal/repository"
+
 	"github.com/gin-gonic/gin"
 )
 

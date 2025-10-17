@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository" 
+	"e-memo-job-reservation-api/internal/repository"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

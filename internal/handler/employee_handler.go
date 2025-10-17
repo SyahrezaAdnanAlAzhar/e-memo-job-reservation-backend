@@ -3,9 +3,10 @@ package handler
 import (
 	"net/http"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/service"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/util"
+	"e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/service"
+	"e-memo-job-reservation-api/internal/util"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -99,6 +100,7 @@ func (h *EmployeeHandler) GetAllEmployees(c *gin.Context) {
 
 	util.SuccessResponse(c, http.StatusOK, paginatedResponse)
 }
+
 // GET /employee/options
 func (h *EmployeeHandler) GetEmployeeOptions(c *gin.Context) {
 	var filters dto.EmployeeOptionsFilter

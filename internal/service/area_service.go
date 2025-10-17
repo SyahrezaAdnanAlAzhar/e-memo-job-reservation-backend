@@ -1,10 +1,11 @@
 package service
 
-import (	
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
+import (
+	"e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/model"
+	"e-memo-job-reservation-api/internal/repository"
 	"errors"
+
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -28,7 +29,7 @@ func (s *AreaService) CreateArea(req dto.CreateAreaRequest) (*model.Area, error)
 	newArea, err := s.repo.Create(req)
 	if err != nil {
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" { 
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			return nil, errors.New("area name already exists in this department")
 		}
 		return nil, err
@@ -37,18 +38,15 @@ func (s *AreaService) CreateArea(req dto.CreateAreaRequest) (*model.Area, error)
 	return newArea, nil
 }
 
-
 // GET ALL
 func (s *AreaService) GetAllAreas(filters map[string]string) ([]model.Area, error) {
 	return s.repo.FindAll(filters)
 }
 
-
-// GET BY ID 
+// GET BY ID
 func (s *AreaService) GetAreaByID(id int) (*model.Area, error) {
 	return s.repo.FindByID(id)
 }
-
 
 // DELETE
 func (s *AreaService) DeleteArea(id int) error {

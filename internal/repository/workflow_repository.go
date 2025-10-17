@@ -3,8 +3,8 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/model"
 )
 
 type WorkflowRepository struct {
@@ -20,7 +20,7 @@ func (r *WorkflowRepository) Create(ctx context.Context, tx *sql.Tx, name string
 	query := `
         INSERT INTO workflow (name, is_active) VALUES ($1, false)
         RETURNING id, name, is_active, created_at, updated_at`
-	
+
 	row := tx.QueryRowContext(ctx, query, name)
 
 	var newWorkflow model.Workflow
@@ -135,7 +135,7 @@ func (r *WorkflowRepository) GetInitialStatusByPosition(ctx context.Context, pos
         WHERE ptwm.employee_position_id = $1
 		ORDER BY ws.step_sequence ASC
         LIMIT 1`
-	
+
 	err := r.DB.QueryRowContext(ctx, query, positionID).Scan(&statusID)
 	if err != nil {
 		return 0, err

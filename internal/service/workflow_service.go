@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/model"
+	"e-memo-job-reservation-api/internal/repository"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -42,7 +42,7 @@ func (s *WorkflowService) CreateWorkflowWithSteps(ctx context.Context, req dto.C
 
 	// LOOP FOR EACH WORKFLOW STEP
 	for i, statusID := range req.StatusTicketIDs {
-		stepSequence := i 
+		stepSequence := i
 		err := s.stepRepo.Create(ctx, tx, newWorkflow.ID, statusID, stepSequence)
 		if err != nil {
 			var pgErr *pgconn.PgError
@@ -98,7 +98,7 @@ func (s *WorkflowService) AddWorkflowStep(ctx context.Context, req dto.AddWorkfl
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
-    
+
 	return nil, nil
 }
 

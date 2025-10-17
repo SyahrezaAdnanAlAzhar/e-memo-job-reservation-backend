@@ -3,7 +3,7 @@ package repository
 import (
 	"database/sql"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"e-memo-job-reservation-api/internal/model"
 )
 
 type ActionRepository struct {

@@ -5,21 +5,21 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
+	"e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/repository"
 )
 
 type TicketQueryService struct {
-	ticketRepo *repository.TicketRepository
+	ticketRepo            *repository.TicketRepository
 	trackStatusTicketRepo *repository.TrackStatusTicketRepository
-	ticketActionLogRepo *repository.TicketActionLogRepository
+	ticketActionLogRepo   *repository.TicketActionLogRepository
 }
 
 func NewTicketQueryService(ticketRepo *repository.TicketRepository, trackStatusTicketRepo *repository.TrackStatusTicketRepository, ticketActionLogRepo *repository.TicketActionLogRepository) *TicketQueryService {
 	return &TicketQueryService{
-		ticketRepo: ticketRepo,
+		ticketRepo:            ticketRepo,
 		trackStatusTicketRepo: trackStatusTicketRepo,
-		ticketActionLogRepo: ticketActionLogRepo,
+		ticketActionLogRepo:   ticketActionLogRepo,
 	}
 }
 

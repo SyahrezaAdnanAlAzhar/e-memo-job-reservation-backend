@@ -1,11 +1,11 @@
 package service
 
 import (
-	"errors"
 	"context"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository" 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/model"
+	"e-memo-job-reservation-api/internal/repository"
+	"errors"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -58,7 +58,7 @@ func (s *StatusTicketService) ReorderStatusTickets(req dto.ReorderStatusTicketsR
 	if err != nil {
 		return err
 	}
-	
+
 	defer tx.Rollback()
 
 	// Delete Section (Sequence <= -100)

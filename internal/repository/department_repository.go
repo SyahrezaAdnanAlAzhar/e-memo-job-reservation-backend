@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/model"
 )
 
 type DepartmentRepository struct {
@@ -35,8 +35,7 @@ func (r *DepartmentRepository) IsNameTaken(name string, currentID int) (bool, er
 	}
 
 	return true, nil
-} 
-
+}
 
 // MAIN
 
@@ -48,10 +47,10 @@ func (r *DepartmentRepository) Create(req dto.CreateDepartmentRequest) (*model.D
         RETURNING id, name, receive_job, is_active, created_at, updated_at`
 
 	row := r.DB.QueryRow(query, req.Name, req.ReceiveJob)
-	
+
 	var newDept model.Department
 	err := row.Scan(
-		&newDept.ID, &newDept.Name, &newDept.ReceiveJob, 
+		&newDept.ID, &newDept.Name, &newDept.ReceiveJob,
 		&newDept.IsActive, &newDept.CreatedAt, &newDept.UpdatedAt,
 	)
 	if err != nil {
@@ -59,7 +58,6 @@ func (r *DepartmentRepository) Create(req dto.CreateDepartmentRequest) (*model.D
 	}
 	return &newDept, nil
 }
-
 
 // GET ALL
 func (r *DepartmentRepository) FindAll(filters dto.DepartmentFilter) ([]model.Department, error) {
@@ -70,7 +68,7 @@ func (r *DepartmentRepository) FindAll(filters dto.DepartmentFilter) ([]model.De
 
 	if filters.Name != "" {
 		conditions = append(conditions, fmt.Sprintf("name ILIKE $%d", argID))
-		args = append(args, "%"+filters.Name+"%") 
+		args = append(args, "%"+filters.Name+"%")
 		argID++
 	}
 	if filters.IsActive != nil {
@@ -88,7 +86,7 @@ func (r *DepartmentRepository) FindAll(filters dto.DepartmentFilter) ([]model.De
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
 	query += " ORDER BY id ASC"
-	
+
 	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, err
@@ -106,7 +104,6 @@ func (r *DepartmentRepository) FindAll(filters dto.DepartmentFilter) ([]model.De
 	}
 	return departments, nil
 }
-
 
 // GET BY ID
 func (r *DepartmentRepository) FindByID(id int) (*model.Department, error) {
@@ -134,7 +131,6 @@ func (r *DepartmentRepository) FindByName(name string) (*model.Department, error
 	return &d, nil
 }
 
-
 // DELETE
 func (r *DepartmentRepository) Delete(id int) error {
 	query := "DELETE FROM department WHERE id = $1"
@@ -154,7 +150,6 @@ func (r *DepartmentRepository) Delete(id int) error {
 
 	return nil
 }
-
 
 // UPDATE
 func (r *DepartmentRepository) Update(id int, req dto.UpdateDepartmentRequest) (*model.Department, error) {
@@ -179,7 +174,6 @@ func (r *DepartmentRepository) Update(id int, req dto.UpdateDepartmentRequest) (
 	return &updatedDept, nil
 }
 
-
 // CHANGE ACTIVE STATUS
 func (r *DepartmentRepository) UpdateActiveStatus(id int, isActive bool) error {
 	query := "UPDATE department SET is_active = $1, updated_at = NOW() WHERE id = $2"
@@ -190,7 +184,7 @@ func (r *DepartmentRepository) UpdateActiveStatus(id int, isActive bool) error {
 
 	rowsAffected, _ := result.RowsAffected()
 	if rowsAffected == 0 {
-		return sql.ErrNoRows 
+		return sql.ErrNoRows
 	}
 	return nil
 }
@@ -199,7 +193,7 @@ func (r *DepartmentRepository) UpdateActiveStatus(id int, isActive bool) error {
 func (r *DepartmentRepository) IsReceiver(departmentID int) (bool, error) {
 	var canReceiveJob bool
 	query := "SELECT receive_job FROM department WHERE id = $1 AND is_active = true"
-	
+
 	err := r.DB.QueryRow(query, departmentID).Scan(&canReceiveJob)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -207,7 +201,7 @@ func (r *DepartmentRepository) IsReceiver(departmentID int) (bool, error) {
 		}
 		return false, err
 	}
-	
+
 	return canReceiveJob, nil
 }
 

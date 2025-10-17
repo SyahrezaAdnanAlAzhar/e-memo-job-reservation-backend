@@ -8,7 +8,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"e-memo-job-reservation-api/internal/model"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
@@ -25,7 +26,7 @@ type Claims struct {
 }
 
 type TokenStorer interface {
-	StoreRefreshToken(ctx context.Context, userID int, tokenID string, expiresIn time.Duration) error
+	StoreRefreshToken(ctx context.Context, userID int, tokenID string, expiresAt time.Time) error
 }
 
 func GenerateTokens(user *model.AppUser, employee *model.Employee, tokenStore TokenStorer) (accessToken string, refreshToken string, err error) {
@@ -77,11 +78,14 @@ func GenerateTokens(user *model.AppUser, employee *model.Employee, tokenStore To
 		refreshDuration = 720 * time.Hour
 	}
 
+	// [BARU] Hitung waktu kedaluwarsa absolut
+	expiresAt := time.Now().Add(refreshDuration)
+
 	refreshClaims := &Claims{
 		UserID:             user.ID,
 		EmployeePositionID: user.EmployeePositionID,
 		TokenID:            uuid.New().String(),
-		RegisteredClaims:   jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(refreshDuration))},
+		RegisteredClaims:   jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(expiresAt)}, // Gunakan expiresAt
 	}
 
 	refreshToken, err = jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString([]byte(os.Getenv("JWT_REFRESH_SECRET_KEY")))
@@ -89,8 +93,8 @@ func GenerateTokens(user *model.AppUser, employee *model.Employee, tokenStore To
 		return "", "", err
 	}
 
-	// STORE REFRESH TOKEN TO REDIS
-	err = tokenStore.StoreRefreshToken(context.Background(), user.ID, refreshClaims.TokenID, refreshDuration)
+	// --- STORE REFRESH TOKEN ---
+	err = tokenStore.StoreRefreshToken(context.Background(), user.ID, refreshClaims.TokenID, expiresAt)
 	if err != nil {
 		return "", "", err
 	}

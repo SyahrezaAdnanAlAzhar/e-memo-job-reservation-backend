@@ -3,8 +3,8 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
+	"e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/model"
 )
 
 type EmployeePositionRepository struct {
@@ -101,7 +101,7 @@ func (r *EmployeePositionRepository) UpdateActiveStatus(id int, isActive bool) e
 
 // MAKE STATUS TICKET "DIBATALKAN" CAUSE OF IN ACTIVE EMPLOYEE POSITION
 func (r *TicketRepository) CancelTicketsByPosition(ctx context.Context, tx *sql.Tx, positionID int, cancelledStatusID int) error {
-    finishQuery := `
+	finishQuery := `
         UPDATE track_status_ticket
         SET finish_date = NOW()
         WHERE finish_date IS NULL
@@ -110,19 +110,19 @@ func (r *TicketRepository) CancelTicketsByPosition(ctx context.Context, tx *sql.
             JOIN employee e ON t.requestor = e.npk
             WHERE e.employee_position_id = $1
         )`
-    _, err := tx.ExecContext(ctx, finishQuery, positionID)
-    if err != nil {
-        return err
-    }
+	_, err := tx.ExecContext(ctx, finishQuery, positionID)
+	if err != nil {
+		return err
+	}
 
-    createQuery := `
+	createQuery := `
         INSERT INTO track_status_ticket (ticket_id, status_ticket_id, start_date)
         SELECT t.id, $1, NOW()
         FROM ticket t
         JOIN employee e ON t.requestor = e.npk
         WHERE e.employee_position_id = $2`
-    _, err = tx.ExecContext(ctx, createQuery, cancelledStatusID, positionID)
-    return err
+	_, err = tx.ExecContext(ctx, createQuery, cancelledStatusID, positionID)
+	return err
 }
 
 // HELPER

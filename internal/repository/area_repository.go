@@ -2,10 +2,10 @@ package repository
 
 import (
 	"database/sql"
+	"e-memo-job-reservation-api/internal/dto"
+	"e-memo-job-reservation-api/internal/model"
 	"strconv"
 	"strings"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/model"
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/dto"
 )
 
 type UpdateAreaStatusRequest struct {
@@ -20,7 +20,6 @@ func NewAreaRepository(db *sql.DB) *AreaRepository {
 	return &AreaRepository{DB: db}
 }
 
-
 // HELPER
 
 // CHECK UNIQUE NAME
@@ -30,7 +29,7 @@ func (r *AreaRepository) IsNameTakenInDepartment(name string, departmentID int, 
         SELECT id FROM area 
         WHERE name = $1 AND department_id = $2 AND id != $3 
         LIMIT 1`
-	
+
 	err := r.DB.QueryRow(query, name, departmentID, currentAreaID).Scan(&existsID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -40,7 +39,6 @@ func (r *AreaRepository) IsNameTakenInDepartment(name string, departmentID int, 
 	}
 	return true, nil
 }
-
 
 // MAIN
 
@@ -64,7 +62,6 @@ func (r *AreaRepository) Create(req dto.CreateAreaRequest) (*model.Area, error) 
 
 	return &newArea, nil
 }
-
 
 // GET ALL
 func (r *AreaRepository) FindAll(filters map[string]string) ([]model.Area, error) {
@@ -108,7 +105,6 @@ func (r *AreaRepository) FindAll(filters map[string]string) ([]model.Area, error
 	return areas, nil
 }
 
-
 // GET BY ID
 func (r *AreaRepository) FindByID(id int) (*model.Area, error) {
 	query := "SELECT id, department_id, name, is_active, created_at, updated_at FROM area WHERE id = $1"
@@ -122,7 +118,6 @@ func (r *AreaRepository) FindByID(id int) (*model.Area, error) {
 
 	return &a, nil
 }
-
 
 // DELETE
 func (r *AreaRepository) Delete(id int) error {
@@ -138,12 +133,11 @@ func (r *AreaRepository) Delete(id int) error {
 	}
 
 	if rowsAffected == 0 {
-		return sql.ErrNoRows 
+		return sql.ErrNoRows
 	}
 
 	return nil
 }
-
 
 // UPDATE
 func (r *AreaRepository) Update(id int, req dto.UpdateAreaRequest) (*model.Area, error) {
@@ -165,7 +159,6 @@ func (r *AreaRepository) Update(id int, req dto.UpdateAreaRequest) (*model.Area,
 	}
 	return &updatedArea, nil
 }
-
 
 // CHANGE ACTIVE STATUS
 func (r *AreaRepository) UpdateActiveStatus(id int, isActive bool) error {

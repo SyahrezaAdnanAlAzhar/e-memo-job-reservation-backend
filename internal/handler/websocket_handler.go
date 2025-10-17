@@ -6,8 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/repository"
-	ws "github.com/SyahrezaAdnanAlAzhar/e-memo-job-reservation-api/internal/websocket"
+	"e-memo-job-reservation-api/internal/repository"
+	ws "e-memo-job-reservation-api/internal/websocket"
+
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
